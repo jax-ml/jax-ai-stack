@@ -1,0 +1,24 @@
+name: Lint
+
+on:
+  # Trigger the workflow on push or pull request, but only on main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read  # to fetch code
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+      - uses: pre-commit/action@v3.0.0
