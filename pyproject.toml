@@ -16,6 +16,8 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "jax",
+    "flax",
+    "optax",
 ]
 
 [project.urls]
@@ -29,8 +31,6 @@ repository = "https://github.com/jax-ml/jax_ml_stack"
 dev = [
     "pytest",
     "pytest-xdist",
-    "pylint>=2.6.0",
-    "pyink",
 ]
 
 [tool.pyink]
