@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: debug-statements
+  - repo: https://github.com/google/pyink
+    rev: 24.3.0
+    hooks:
+      - id: pyink
+        language_version: python3.12
+        args: [
+          "--line-length=80",
+          "--preview",
+          "--pyink-indentation=2",
+          "--pyink-use-majority-quotes"
+        ]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.1
+    hooks:
+    - id: ruff
