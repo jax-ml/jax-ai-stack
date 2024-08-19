@@ -1,0 +1,51 @@
+[project]
+name = "jax_ml_stack"
+version = "0.0.1"  # keep in sync with jax_ml_stack/__init__.py
+description = ""
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "jax_ml_stack authors", email="jax_ml_stack@google.com"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+]
+keywords = []
+
+# pip dependencies of the project
+dependencies = [
+    "jax",
+]
+
+[project.urls]
+homepage = "https://github.com/jax-ml/jax_ml_stack"
+repository = "https://github.com/jax-ml/jax_ml_stack"
+# Other: `documentation`, `changelog`
+
+[project.optional-dependencies]
+# Development deps (unittest, linting, formating,...)
+# Installed through `pip install .[dev]`
+dev = [
+    "pytest",
+    "pytest-xdist",
+    "pylint>=2.6.0",
+    "pyink",
+]
+
+[tool.pyink]
+# Formatting configuration to follow Google style-guide
+line-length = 80
+preview = true
+pyink-indentation = 2
+pyink-use-majority-quotes = true
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools",
+]
+
+[tool.setuptools]
+packages = ["jax_ml_stack"]
+include-package-data = false
