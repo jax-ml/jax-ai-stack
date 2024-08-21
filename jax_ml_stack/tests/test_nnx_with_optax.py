@@ -51,3 +51,7 @@ class NNXOptaxTest(unittest.TestCase):
     final_loss = loss(model)
 
     self.assertNotAlmostEqual(initial_loss, final_loss)
+
+
+if __name__ == '__main__':
+  unittest.main()
