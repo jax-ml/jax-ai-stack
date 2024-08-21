@@ -33,6 +33,10 @@ dev = [
     "pytest",
     "pytest-xdist",
 ]
+tfds = [
+    "tensorflow==2.17.0",
+    "tensorflow_datasets==4.9.6",
+]
 
 [tool.pyink]
 # Formatting configuration to follow Google style-guide
