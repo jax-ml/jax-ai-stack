@@ -17,6 +17,7 @@ keywords = []
 dependencies = [
     "jax==0.4.31",
     "flax==0.8.5",
+    "grain==0.2.0",
     "optax==0.2.3",
     "orbax==0.1.9",
 ]
@@ -33,9 +34,16 @@ dev = [
     "pytest",
     "pytest-xdist",
 ]
+
+# TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
     "tensorflow==2.17.0",
     "tensorflow_datasets==4.9.6",
+]
+
+# Grain is an extra because as of v0.2.0 it has no OSX wheels.
+grain = [
+    "grain==0.2.0",
 ]
 
 [tool.pyink]
