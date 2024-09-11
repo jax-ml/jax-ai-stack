@@ -46,7 +46,7 @@ class NNXOptaxTest(unittest.TestCase):
       return jnp.mean((model(x) - y) ** 2)
 
     initial_loss = loss(model)
-    grads = nnx.grad(loss, wrt=nnx.Param)(state.model)
+    grads = nnx.grad(loss)(state.model)
     state.update(grads)
     final_loss = loss(model)
 
