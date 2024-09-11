@@ -15,7 +15,7 @@ permissions:
 # TODO(jakevdp): add testing on macOS-11 and windows-2019 when grain supports them,
 # or alternatively run a subset of tests without grain.
 jobs:
-  built-latest:
+  build-latest:
     name: Latest packages (${{ matrix.os }} Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -34,7 +34,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -U jax flax grain optax orbax tensorflow tensorflow_datasets pytest pytest-xdist
+        pip install -U jax flax grain ml_dtypes optax orbax tensorflow tensorflow_datasets pytest pytest-xdist
     - name: Run tests
       run: |
         pytest -n auto jax_ml_stack
