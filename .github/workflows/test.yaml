@@ -37,7 +37,7 @@ jobs:
         pip install -U jax flax grain ml_dtypes optax orbax tensorflow tensorflow_datasets pytest pytest-xdist
     - name: Run tests
       run: |
-        pytest -n auto jax_ml_stack
+        pytest -n auto jax_ai_stack
 
   build:
     name: Pinned packages (${{ matrix.os }} Python ${{ matrix.python-version }})
@@ -61,4 +61,4 @@ jobs:
         pip install .[dev,tfds,grain]
     - name: Run tests
       run: |
-        pytest -n auto jax_ml_stack
+        pytest -n auto jax_ai_stack

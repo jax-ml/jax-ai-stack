@@ -1,10 +1,10 @@
 [project]
-name = "jax_ml_stack"
-version = "0.0.0"  # keep in sync with jax_ml_stack/__init__.py
+name = "jax-ai-stack"
+version = "0.0.0"  # keep in sync with jax_ai_stack/__init__.py
 description = ""
 readme = "README.md"
 license = {file = "LICENSE"}
-authors = [{name = "jax_ml_stack authors", email="jax_ml_stack@google.com"}]
+authors = [{name = "jax-ai-stack authors", email="jax-dev+jax-ai-stack@google.com"}]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -23,8 +23,8 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/jax-ml/jax_ml_stack"
-repository = "https://github.com/jax-ml/jax_ml_stack"
+homepage = "https://github.com/jax-ml/jax_-ai-stack"
+repository = "https://github.com/jax-ml/jax-ai-stack"
 # Other: `documentation`, `changelog`
 
 [project.optional-dependencies]
@@ -60,5 +60,5 @@ requires = [
 ]
 
 [tool.setuptools]
-packages = ["jax_ml_stack"]
+packages = ["jax_ai_stack"]
 include-package-data = false
