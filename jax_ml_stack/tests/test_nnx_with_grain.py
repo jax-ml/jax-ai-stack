@@ -16,6 +16,7 @@ import contextlib
 import functools
 import unittest
 from flax import nnx
+import grain.python as grain
 import numpy as np
 import optax
 import tensorflow_datasets as tfds
@@ -52,19 +53,48 @@ class NNXTFDSTest(unittest.TestCase):
         stack.enter_context(tfds.testing.mock_data(num_examples=5))
         self.addCleanup(stack.pop_all().close)
 
-  def test_nnx_with_tfds(self):
-    train_ds = tfds.load('mnist', split='train')
+  def test_nnx_with_grain(self):
+    data_source = tfds.data_source('mnist', split='train')
+
+    sampler = grain.IndexSampler(
+        num_records=5,
+        num_epochs=1,
+        shard_options=grain.NoSharding(),
+        shuffle=True,
+        seed=0,
+    )
+
+    class DownSample(grain.MapTransform):
+      shape: tuple[int, int]
+
+      def __init__(self, shape: tuple[int, int]):
+        self.shape = shape
+
+      def map(self, element: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+        image = element['image']
+        element['image_scaled'] = image - image.mean()
+        return element
+
+    operations = [DownSample((16, 16))]
+
+    loader = grain.DataLoader(
+        data_source=data_source,
+        operations=operations,
+        sampler=sampler,
+        worker_count=0,  # Scale to multiple workers in multiprocessing
+    )
+
     model = CNN(rngs=nnx.Rngs(0))
     optimizer = nnx.Optimizer(model, optax.adamw(learning_rate=0.005))
 
     def loss_fn(model, batch):
-      logits = model(batch['image'])
+      logits = model(batch['image_scaled'])
       loss = optax.softmax_cross_entropy_with_integer_labels(
           logits=logits, labels=np.ravel(batch['label'])
       ).mean()
       return loss, logits
 
-    for batch in train_ds.as_numpy_iterator():
+    for batch in loader:
       grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
       _, grads = grad_fn(model, batch)
       optimizer.update(grads)
