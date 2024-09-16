@@ -12,12 +12,17 @@ on:
 permissions:
   contents: read  # to fetch code
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 # TODO(jakevdp): add testing on macOS-11 and windows-2019 when grain supports them,
 # or alternatively run a subset of tests without grain.
 jobs:
   build-latest:
     name: Latest packages (${{ matrix.os }} Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       matrix:
         os: ["ubuntu-latest"]
@@ -42,6 +47,7 @@ jobs:
   build:
     name: Pinned packages (${{ matrix.os }} Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       matrix:
         os: ["ubuntu-latest"]

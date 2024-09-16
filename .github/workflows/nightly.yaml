@@ -10,10 +10,14 @@ on:
     paths:
       - '**workflows/nightly.yaml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   new-releases:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       checks: write  # for upload-artifact
@@ -63,6 +67,7 @@ jobs:
     name: report
     needs: new-releases
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       issues: write
