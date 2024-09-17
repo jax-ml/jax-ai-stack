@@ -19,28 +19,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  new-releases:
+  latest-releases:
+    name: Test with latest package releases
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        shell: bash -l {0}
     strategy:
       fail-fast: false
-      matrix:
-        python-version: ["3.12"]
-    outputs:
-      artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
+      - uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.12
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -U jax flax grain ml_dtypes optax orbax tensorflow tensorflow_datasets pytest pytest-xdist
+          python -m pip install pytest pytest-xdist
+          python -m pip install -U jax flax grain ml_dtypes optax orbax tensorflow tensorflow_datasets
+      - name: Run tests
+        run: |
+          pytest -n auto jax_ai_stack
+      - name: Notify failed build
+        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        if: failure() && github.event.pull_request == null
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  jax-nightly:
+    name: Test with JAX nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      - uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
+        with:
+          python-version: 3.12
+      - name: Install dependencies with jax nightly
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev,tfds,grain]
+          python -m pip install -U --pre jax jaxlib -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
