@@ -45,7 +45,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   jax-nightly:
-    name: Test with JAX nightly
+    name: Test with jax nightly
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -80,7 +80,7 @@ jobs:
       - uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
         with:
           python-version: 3.12
-      - name: Install dependencies with jax nightly
+      - name: Install dependencies with flax nightly
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds,grain]
@@ -105,11 +105,36 @@ jobs:
       - uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
         with:
           python-version: 3.12
-      - name: Install dependencies with jax nightly
+      - name: Install dependencies with optax nightly
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds,grain]
           python -m pip install --upgrade git+https://github.com/google-deepmind/optax.git
+      - name: Run tests
+        run: |
+          pytest -n auto jax_ai_stack
+      - name: Notify failed build
+        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        if: failure() && github.event.pull_request == null
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  orbax-nightly:
+    name: Test with orbax nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
+      - uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3  # v5.2.0
+        with:
+          python-version: 3.12
+      - name: Install dependencies with orbax-checkpoint and orbax-export nightly
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev,tfds,grain]
+          python -m pip install --upgrade 'git+https://github.com/google/orbax/#subdirectory=checkpoint' 'git+https://github.com/google/orbax/#subdirectory=export'
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
