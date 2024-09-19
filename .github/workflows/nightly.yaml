@@ -34,7 +34,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install pytest pytest-xdist
-          python -m pip install -U jax flax grain ml_dtypes optax orbax tensorflow tensorflow_datasets
+          python -m pip install -U jax flax grain ml_dtypes optax orbax-checkpoint orbax-export tensorflow tensorflow_datasets
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
