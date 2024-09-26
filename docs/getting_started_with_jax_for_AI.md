@@ -103,7 +103,7 @@ print(f"{images_test.shape=}  {label_test.shape=}")
 
 ### Defining the flax model
 
-We can now use the [Flax](http://flax.readthedocs.io) package to create a simple [Feedforward](https://en.wikipedia.org/wiki/Feedforward_neural_network) neural network withone hidden layer, and use a *scaled exponential linear unit* (SELU) activation function:
+We can now use the [Flax](http://flax.readthedocs.io) package to create a simple [Feedforward](https://en.wikipedia.org/wiki/Feedforward_neural_network) neural network with one hidden layer, and use a *scaled exponential linear unit* (SELU) activation function:
 
 ```{code-cell}
 :id: U77VMQwRjTfH
@@ -129,6 +129,8 @@ class SimpleNN(nnx.Module):
     return x
 
 model = SimpleNN(rngs=nnx.Rngs(0))
+
+nnx.display(model)  # Interactive display if penzai is installed.
 ```
 
 +++ {"id": "FIXmNs5-lrEf"}
@@ -136,7 +138,8 @@ model = SimpleNN(rngs=nnx.Rngs(0))
 ### Training the model
 
 With this model defined, we can now use the [optax](http://optax.readthedocs.io) package to train it.
-First we define a loss function using [`optax.softmax_cross_entropy_with_integer_labels`](https://optax.readthedocs.io/en/latest/api/losses.html#optax.losses.softmax_cross_entropy_with_integer_labels), and then a training step based on this optimizer:
+First we need to decide on a loss function: since we have an output layer with each node corresponding to an integer label, an appropriate metric is [`optax.softmax_cross_entropy_with_integer_labels`](https://optax.readthedocs.io/en/latest/api/losses.html#optax.losses.softmax_cross_entropy_with_integer_labels).
+We can then define a training step based on this optimizer:
 
 ```{code-cell}
 :id: QwRvFPkYl5b2
