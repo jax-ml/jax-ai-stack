@@ -30,6 +30,9 @@ html_theme = 'alabaster'
 html_static_path = ['_static']
 
 exclude_patterns = [
+    # Sometimes sphinx reads its own outputs as inputs!
+    'build/html',
+    'build/jupyter_execute',
     # Exclude markdown sources for notebooks:
     'getting_started_with_jax_for_AI.md',
 ]

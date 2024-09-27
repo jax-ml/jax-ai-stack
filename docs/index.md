@@ -1,6 +1,22 @@
 # JAX AI Stack
 
-## About
+`jax-ai-stack` provides a one-line installation command for JAX and associated
+packages:
+```
+pip install jax-ai-stack
+```
+This will install mutually-compatible versions of the following packages:
+
+- [JAX](http://github.com/google/jax): the core JAX package, which includes array operations
+  and program transformations like `jit`, `vmap`, `grad`, etc.
+- [flax](http://github.com/google/flax): build neural networks with JAX
+- [ml_dtypes](http://github.com/jax-ml/ml_dtypes): NumPy dtype extensions for machine learning.
+- [optax](https://github.com/google-deepmind/optax): gradient processing and optimization in JAX.
+- [orbax](https://github.com/google/orbax): checkpointing and persistence utilities for JAX.
+
+To get started using the stack, see {doc}`getting_started_with_jax_for_AI`.
+
+## Why the JAX AI stack?
 
 [JAX](http://github.com/jax-ml/jax) is a Python package for array-oriented
 computation and program transformation. Built around it is a growing ecosystem
@@ -27,10 +43,9 @@ https://github.com/jax-ml/jax-ai-stack/blob/main/docs/getting_started_with_jax_f
 This is still a work-in-progress, please check back for more documentation and tutorials
 in the coming weeks!
 
-## Tutorials
-
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
-getting_started_with_jax_for_AI
+tutorials
 ```
