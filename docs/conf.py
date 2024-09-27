@@ -14,10 +14,13 @@ release = '0.0.0'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+    'myst_nb',
+]
 
 templates_path = ['_templates']
 exclude_patterns = []
+source_suffix = ['.rst', '.ipynb', '.md']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -25,3 +28,8 @@ exclude_patterns = []
 
 html_theme = 'alabaster'
 html_static_path = ['_static']
+
+exclude_patterns = [
+    # Exclude markdown sources for notebooks:
+    'getting_started_with_jax_for_AI.md',
+]

@@ -1,5 +1,6 @@
-JAX AI Stack
-============
+# JAX AI Stack
+
+## About
 
 [JAX](http://github.com/jax-ml/jax) is a Python package for array-oriented
 computation and program transformation. Built around it is a growing ecosystem
@@ -26,7 +27,10 @@ https://github.com/jax-ml/jax-ai-stack/blob/main/docs/getting_started_with_jax_f
 This is still a work-in-progress, please check back for more documentation and tutorials
 in the coming weeks!
 
+## Tutorials
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+```{toctree}
+:maxdepth: 2
+
+getting_started_with_jax_for_AI
+```
