@@ -1,0 +1,11 @@
+# Sphinx-related requirements.
+sphinx
+myst-nb
+
+# Packages required for notebook execution
+matplotlib
+penzai
+scikit-learn
+
+# install jax-ai-stack from current directory
+.
