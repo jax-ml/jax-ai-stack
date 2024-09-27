@@ -44,7 +44,7 @@ tfds = [
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
 grain = [
-    "grain==0.2.0",
+    "grain==0.2.1",
 ]
 
 [tool.pyink]
