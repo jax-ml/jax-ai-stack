@@ -1,6 +1,6 @@
 [project]
 name = "jax-ai-stack"
-version = "0.0.0"  # keep in sync with jax_ai_stack/__init__.py
+version = "2024.10.1b1"  # keep in sync with jax_ai_stack/__init__.py
 description = ""
 readme = "README.md"
 license = {file = "LICENSE"}
