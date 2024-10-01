@@ -20,7 +20,7 @@ To create a new `jax-ai-stack` release, take the following steps:
    this new tag. Copy the change description from `CHANGELOG.md` into the
    release notes, and click *Publish release*.
 4. Publishing the release will trigger the CI jobs configured in
-   `.github/workflows/wheels.yml`, which will build the wheels and source
+   `.github/workflows/release.yml`, which will build the wheels and source
    distributions and publish them to PyPI. Navigate to
    https://github.com/jax-ml/jax-ai-stack/actions/workflows/release.yml and
    look for the job associated with this release; monitor it to ensure it

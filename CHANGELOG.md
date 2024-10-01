@@ -11,5 +11,5 @@
 - `jax-ai-stack[tfds]` packages:
   - `tensorflow==2.17.0`
   - `tensorflow_datasets==4.9.6`
-- `jax-ai-stac[grain]` packages:
+- `jax-ai-stack[grain]` packages:
   - `grain==0.2.1`
