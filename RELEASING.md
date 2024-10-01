@@ -5,6 +5,7 @@ To create a new `jax-ai-stack` release, take the following steps:
 1. Send a pull request updating the version in `pyproject.toml` and
    `jax-ai-stack/__init__.py` to the version based on the release date.
    Also update `CHANGELOG.md` with the pinned package versions.
+   (an example for the 2024.10.1 release is [PR #50]).
 2. Once this is merged, create the release tag and push it to github. An
    example from the 2024.10.1 release:
    ```
@@ -26,3 +27,5 @@ To create a new `jax-ai-stack` release, take the following steps:
    finishes green (this should take less than a minute).
 5. Once the build is complete, check https://pypi.org/project/jax-ai-stack/
    to ensure that the new release is present.
+
+[PR #50]: https://github.com/jax-ml/jax-ai-stack/pull/50
