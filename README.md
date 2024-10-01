@@ -1,4 +1,6 @@
 # JAX AI Stack
+[![Continuous integration](https://github.com/jax-ml/jax-ai-stack/actions/workflows/test.yaml/badge.svg)](https://github.com/jax-ml/jax-ai-stack/actions/workflows/test.yaml/)
+[![PyPI version](https://img.shields.io/pypi/v/jax-ai-stack)](https://pypi.org/project/jax-ai-stack/)
 
 [JAX](http://github.com/jax-ml/jax) is a Python package for array-oriented
 computation and program transformation. Built around it is a growing ecosystem
