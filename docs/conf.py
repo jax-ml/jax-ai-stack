@@ -36,3 +36,19 @@ exclude_patterns = [
     # Exclude markdown sources for notebooks:
     'getting_started_with_jax_for_AI.md',
 ]
+
+
+# -- Options for myst ----------------------------------------------
+myst_heading_anchors = 3  # auto-generate 3 levels of heading anchors
+myst_enable_extensions = ['dollarmath']
+nb_execution_mode = 'force'
+nb_execution_allow_errors = False
+nb_merge_streams = True
+nb_execution_show_tb = True
+
+# Notebook cell execution timeout; defaults to 30.
+nb_execution_timeout = 100
+
+# List of patterns, relative to source directory, that match notebook
+# files that will not be executed.
+nb_execution_excludepatterns = []
