@@ -63,3 +63,7 @@ requires = [
 [tool.setuptools]
 packages = ["jax_ai_stack"]
 include-package-data = false
+
+[tool.ruff.lint.per-file-ignores]
+# F811: Redefinition of unused name.
+"docs/digits_vae.ipynb" = ["F811"]
