@@ -34,9 +34,13 @@ exclude_patterns = [
     'build/html',
     'build/jupyter_execute',
     # Exclude markdown sources for notebooks:
+    'digits_vae.md',
     'getting_started_with_jax_for_AI.md',
 ]
 
+suppress_warnings = [
+    'misc.highlighting_failure',  # Suppress warning in exception in digits_vae
+]
 
 # -- Options for myst ----------------------------------------------
 myst_heading_anchors = 3  # auto-generate 3 levels of heading anchors

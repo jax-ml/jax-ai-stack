@@ -8,6 +8,7 @@ The following tutorials are meant as an intro to the full stack:
 :maxdepth: 2
 
 getting_started_with_jax_for_AI
+digits_vae
 ```
 
 Once you've gone through this content, you can refer to package-specific
