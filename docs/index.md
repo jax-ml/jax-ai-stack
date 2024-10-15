@@ -48,4 +48,5 @@ in the coming weeks!
 :hidden:
 
 tutorials
+contributing
 ```
