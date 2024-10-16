@@ -7,8 +7,5 @@ matplotlib
 penzai
 scikit-learn
 
-# Needed to conver from Jupyter to markdown
-jupytext
-
 # install jax-ai-stack from current directory
 .
