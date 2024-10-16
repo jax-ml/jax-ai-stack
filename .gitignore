@@ -1,4 +1,20 @@
-*.egg-info
-Pipfile
+# Distribution / packaging
+.Python
 build/
 dist/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Sphinx documentation
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pipenv
+Pipfile.lock
+Pipfile
+
+# cache
+__pycache__/
