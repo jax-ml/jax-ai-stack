@@ -12,15 +12,7 @@ you have in mind!
 
 To contribute to the documentation, you will need to set your development environment.
 
-You can create a virtual environment and install the dependencies with the following commands:
-
-```bash
-virtualenv jax-docs
-# activate the virtual environment
-source jax-docs/bin/activate
-# install the dependencies
-python -m pip install -r docs/requirements.txt
-```
+You can create a virtual environment or conda environment and install the packages in `docs/requirements.txt`.
 
 ## Documentation via Jupyter notebooks
 
@@ -29,6 +21,16 @@ directly into the website via the [myst-nb](https://myst-nb.readthedocs.io/) ext
 To ease review and diff of notebooks, we keep markdown versions of the content
 synced via [jupytext](https://jupytext.readthedocs.io/).
 
+Note you will need to install `jupytext` to sync the notebooks with markdown files:
+
+```bash
+# With pip
+python -m pip install jupytext
+
+# With conda
+conda install -c conda-forge jupytext
+```
+
 ### Adding a new notebook
 
 We aim to have one notebook per topic or tutorial covered.
@@ -36,7 +38,7 @@ To add a new notebook to the repository, first move the notebook into the approp
 location in the `docs` directory:
 
 ```bash
-mv ~/new-tutorial.ipynb jax-ai-stack/docs/new_tutorial.ipynb
+mv ~/new-tutorial.ipynb docs/new_tutorial.ipynb
 ```
 
 Next, we use `jupytext` to mark the notebook for syncing with Markdown:
