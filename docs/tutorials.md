@@ -10,6 +10,7 @@ The following tutorials are meant as an intro to the full stack:
 getting_started_with_jax_for_AI
 digits_vae
 JAX_for_PyTorch_users
+JAX_porting_PyTorch_model
 ```
 
 Once you've gone through this content, you can refer to package-specific
