@@ -36,6 +36,7 @@ exclude_patterns = [
     # Exclude markdown sources for notebooks:
     'digits_vae.md',
     'getting_started_with_jax_for_AI.md',
+    'JAX_for_PyTorch_users.md',
 ]
 
 suppress_warnings = [
@@ -55,4 +56,6 @@ nb_execution_timeout = 100
 
 # List of patterns, relative to source directory, that match notebook
 # files that will not be executed.
-nb_execution_excludepatterns = []
+nb_execution_excludepatterns = [
+    'JAX_for_PyTorch_users.ipynb',
+]
