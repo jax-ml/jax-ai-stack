@@ -37,6 +37,7 @@ exclude_patterns = [
     'digits_vae.md',
     'getting_started_with_jax_for_AI.md',
     'JAX_for_PyTorch_users.md',
+    'JAX_porting_PyTorch_model.md',
 ]
 
 suppress_warnings = [
@@ -61,4 +62,5 @@ nb_execution_timeout = 100
 # files that will not be executed.
 nb_execution_excludepatterns = [
     'JAX_for_PyTorch_users.ipynb',
+    'JAX_porting_PyTorch_model.ipynb',
 ]
