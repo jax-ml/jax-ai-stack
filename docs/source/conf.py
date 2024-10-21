@@ -16,10 +16,6 @@ release = '0.0.0'
 
 extensions = [
     'myst_nb',
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
 ]
 
@@ -34,6 +30,7 @@ source_suffix = ['.rst', '.ipynb', '.md']
 html_theme = 'sphinx_book_theme'
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_favicon = '_static/images/favicon.png'
 
 html_theme_options = {
     'show_toc_level': 2,

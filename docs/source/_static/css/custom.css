@@ -45,7 +45,8 @@ body:has(.hero) .bd-article > section > h1 {
         width: fill-available;
     }
 
-    body:has(.hero) .doc-body > section.hero {
+    body:has(.hero) .doc-body > section.hero,
+    body:has(.hero) .doc-body > section.banner {
         max-width: 90rem !important;
     }
 }
