@@ -71,7 +71,7 @@ body:has(.hero) .bd-article > section > h1 {
 .hero h1 {
     font: 700 52px 'Google Sans';
     color: white;
-    margin-bottom: 50px;
+    margin-bottom: 20px;
 }
 
 .hero-image {
