@@ -128,6 +128,10 @@ body:has(.hero) .bd-article > section > h1 {
     margin-top: 0;
 }
 
+.doc-body .hero p {
+    color: #bdc1c6;
+}
+
 .doc-body p,
 .doc-body ul {
     font: 400 16px 'Roboto';
@@ -140,7 +144,7 @@ body:has(.hero) .bd-article > section > h1 {
     flex-direction: row;
     justify-content: space-between;
     gap: 85px;
-    margin-bottom: 100px;
+    margin-bottom: 60px;
 }
 
 
@@ -243,7 +247,7 @@ html[data-theme="dark"] .banner {
 
 html[data-theme="dark"] .doc-body p,
 html[data-theme="dark"] .doc-body ul {
-    color: #9aa0a6;
+    color: #bdc1c6;
 }
 
 html[data-theme="dark"] .button-primary {
