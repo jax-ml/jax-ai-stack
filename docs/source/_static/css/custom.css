@@ -89,6 +89,10 @@ body:has(.hero) .bd-article > section > h1 {
     width: max-content;
 }
 
+.button-primary:visited:hover {
+    color: white !important;
+}
+
 .button-primary:hover {
     background-color: #1765cc;
     color: white;
