@@ -16,6 +16,7 @@ release = '0.0.0'
 
 extensions = [
     'myst_nb',
+    'sphinx.ext.intersphinx',
 ]
 
 templates_path = ['_templates']
@@ -26,8 +27,17 @@ source_suffix = ['.rst', '.ipynb', '.md']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = []
+html_theme = 'sphinx_book_theme'
+html_static_path = ["_static"]
+html_css_files = ["css/custom.css"]
+html_favicon = '_static/images/favicon.png'
+
+html_theme_options = {
+    'show_toc_level': 2,
+    'repository_url': 'https://github.com/google/jax',
+    'use_repository_button': True,     # add a "link to repository" button
+    'navigation_with_keys': False,
+}
 
 exclude_patterns = [
     # Sometimes sphinx reads its own outputs as inputs!
