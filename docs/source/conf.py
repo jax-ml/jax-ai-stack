@@ -46,6 +46,8 @@ exclude_patterns = [
     # Exclude markdown sources for notebooks:
     'digits_vae.md',
     'getting_started_with_jax_for_AI.md',
+    'JAX_for_PyTorch_users.md',
+    'JAX_porting_PyTorch_model.md',
 ]
 
 suppress_warnings = [
@@ -54,7 +56,10 @@ suppress_warnings = [
 
 # -- Options for myst ----------------------------------------------
 myst_heading_anchors = 3  # auto-generate 3 levels of heading anchors
-myst_enable_extensions = ['dollarmath']
+myst_enable_extensions = [
+    'dollarmath',
+    'linkify',
+]
 nb_execution_mode = 'force'
 nb_execution_allow_errors = False
 nb_merge_streams = True
@@ -65,4 +70,7 @@ nb_execution_timeout = 100
 
 # List of patterns, relative to source directory, that match notebook
 # files that will not be executed.
-nb_execution_excludepatterns = []
+nb_execution_excludepatterns = [
+    'JAX_for_PyTorch_users.ipynb',
+    'JAX_porting_PyTorch_model.ipynb',
+]

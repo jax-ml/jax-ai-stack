@@ -2,6 +2,7 @@
 sphinx
 sphinx-book-theme>=1.0.1
 myst-nb
+myst-parser[linkify]
 
 # Packages required for notebook execution
 matplotlib

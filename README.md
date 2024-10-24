@@ -8,7 +8,7 @@ of packages for specialized numerical computing across a range of domains; an
 up-to-date list of such projects can be found at
 [Awesome JAX](https://github.com/n2cholas/awesome-jax).
 
-Though JAX is often compared to neural network libraries like pytorch, the JAX
+Though JAX is often compared to neural network libraries like PyTorch, the JAX
 core package itself contains very little that is specific to neural network
 models. Instead, JAX encourages modularity, where domain-specific libraries
 are developed separately from the core package: this helps drive innovation

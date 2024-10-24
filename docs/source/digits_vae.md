@@ -15,6 +15,8 @@ kernelspec:
 
 # Debugging in JAX: a Variational autoencoder (VAE) model
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/digits_vae.ipynb)
+
 In [Getting started with JAX](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html) we built a simple neural network for classification of handwritten digits, and covered some of the key features of JAX, including its NumPy-style interface in the `jax.numpy`, as well as its transformations for JIT compilation with `jax.jit`, automatic vectorization with `jax.vmap`, and automatic differentiation with `jax.grad`.
 
 This tutorial will explore a slightly more involved model: a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the same simple digits data. Along the way, we'll learn a bit more about how JAX's JIT compilation actually works, and what this means for debugging JAX programs.
@@ -78,7 +80,7 @@ class SimpleNN(nnx.Module):
 
 In this network we had one output per class, and the loss function was designed such that once trained, the output corresponding to the correct class would return the strongest signal, thus predicting the correct label in upwards of 95% of cases.
 
-In this VAE example we use similar building blocks to instead output a small probabilisitic model representing the data. While classic `VAE` is generally based on convolutional layers, we use linear layers for simplicity. The sub-network that produces this probabilistic encoding is our `Encoder`:
+In this VAE example we use similar building blocks to instead output a small probabilistic model representing the data. While classic `VAE` is generally based on convolutional layers, we use linear layers for simplicity. The sub-network that produces this probabilistic encoding is our `Encoder`:
 
 ```{code-cell}
 :id: Hj7mtR5vmcGr
@@ -128,7 +130,7 @@ class Decoder(nnx.Module):
 +++ {"id": "0QaT-KY6npSc"}
 
 Now the full VAE model is a single network built from the encoder and decoder.
-It returns both the reconstructed image and then internal latent space model:
+It returns both the reconstructed image and the internal latent space model:
 
 ```{code-cell}
 :id: Myo2MdxXnzlT
@@ -163,7 +165,7 @@ Next is the loss function – there are two components to the model that we want
 1. the `logits` output faithfully reconstruct the input image.
 2. the model represented by `mean` and `std` faithfully represents the "true" latent distribution.
 
-VAE uses a loss function based on the [Evidence lower bound](https://en.wikipedia.org/wiki/Evidence_lower_bound) to quantify theset two goals in a single loss value:
+VAE uses a loss function based on the [Evidence lower bound](https://en.wikipedia.org/wiki/Evidence_lower_bound) to quantify these two goals in a single loss value:
 
 ```{code-cell}
 :id: bMpxj8-Wsvui
@@ -272,7 +274,7 @@ model = VAE(
 
 optimizer = nnx.Optimizer(model, optax.adam(1e-3))
 
-for epoch in range(301):
+for epoch in range(501):
   loss = train_step(model, optimizer, images_train)
   if epoch % 50 == 0:
     print(f'Epoch {epoch} loss: {loss}')
@@ -282,7 +284,7 @@ for epoch in range(301):
 
 It looks like our loss value is decreasing toward negative infinity until the point where the values are no longer well-represented by floating point math.
 
-At this point, we may wish to expect the values within the loss function itself to see where the diverging loss might be coming from.
+At this point, we may wish to inspect the values within the loss function itself to see where the diverging loss might be coming from.
 In typical Python programs you can do this by inserting either a `print` statement or a `breakpoint` in the loss function; it might look something like this:
 
 ```{code-cell}
