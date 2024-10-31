@@ -1,21 +1,23 @@
 ---
-jupyter:
-  jupytext:
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.16.4
-  kernelspec:
-    display_name: Python 3
-    name: python3
+jupytext:
+  main_language: python
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.4
+kernelspec:
+  display_name: Python 3
+  name: python3
 ---
 
-<!-- #region id="NIOXoY1xgiww" -->
-### Copyright 2024 Google LLC.
-<!-- #endregion -->
++++ {"id": "NIOXoY1xgiww"}
 
-```python id="XviGOo7EgmJS"
+### Copyright 2024 Google LLC.
+
+```{code-cell}
+:id: XviGOo7EgmJS
+
 # @title Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -29,19 +31,25 @@ jupyter:
 # limitations under the License.
 ```
 
-<!-- #region id="rvP1eNN_pExM" -->
++++ {"id": "rvP1eNN_pExM"}
+
 This notebook demonstrates how to use JAX/Flax for LLM pretraining via data and tensor parallelism.
 
 We will use Google TPUs and [SPMD](https://en.wikipedia.org/wiki/Single_program,_multiple_data) to train a language model `miniGPT`. Instead of using a GPU, you should use the free TPU on Colab or Kaggle for this tutorial.
-<!-- #endregion -->
 
-<!-- #region id="hTmz5Cbco7n_" -->
++++ {"id": "hTmz5Cbco7n_"}
+
 ## Setup
 
 Install JAX and Flax first. We will install Tiktoken for tokenization and Grain for data loading as well. Also confirm we have TPUs set up.
-<!-- #endregion -->
 
-```python colab={"base_uri": "https://localhost:8080/"} id="6zMsOIc7ouCO" outputId="b16b0781-d1bd-456a-9757-533562f581df"
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: 6zMsOIc7ouCO
+outputId: b16b0781-d1bd-456a-9757-533562f581df
+---
 !pip install jax-ai-stack
 !pip install -U tiktoken grain matplotlib
 
@@ -49,46 +57,53 @@ import jax
 jax.devices()
 ```
 
-<!-- #region id="OHzJ_bokoovZ" -->
-Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/roneneldan/TinyStories). We only use the training split.
-<!-- #endregion -->
++++ {"id": "OHzJ_bokoovZ"}
 
-```python colab={"base_uri": "https://localhost:8080/"} id="wUjQsgQEmI1N" outputId="431fc1e1-8f7b-4062-ec02-fbbbde4a90c4"
+Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/roneneldan/TinyStories). We only use the training split.
+
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: wUjQsgQEmI1N
+outputId: 431fc1e1-8f7b-4062-ec02-fbbbde4a90c4
+---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
 
-<!-- #region id="sKE2uUafLobI" -->
-Take care of the imports.
-<!-- #endregion -->
++++ {"id": "sKE2uUafLobI"}
 
-```python id="MKYFNOhdLq98"
+Take care of the imports.
+
+```{code-cell}
+:id: MKYFNOhdLq98
+
 import jax
 import jax.numpy as jnp
 import flax.nnx as nnx
-import optax, orbax
-from typing import Any
-import os
-from collections import Counter
+import optax
 from dataclasses import dataclass
 import grain.python as pygrain
 from jax.experimental import mesh_utils
 from jax.sharding import Mesh, PartitionSpec as P, NamedSharding
 import pandas as pd
-import tiktoken, time
+import tiktoken
+import time
 ```
 
-<!-- #region id="rPyt7MV6prz1" -->
++++ {"id": "rPyt7MV6prz1"}
+
 ## Build the model
 
 One of the biggest advantages of JAX is how easy it is to enable parallelism. To demonstrate this, we are going to use 4-way data parallel and 2-way tensor parallel. Tensor parallelism is one kind of model parallelism, which shards model tensors; there are other kinds of model parallelism, which we won't cover in this tutorial.
 
 As a background, data parallel means splitting a batch of training data into multiple parts (this is called sharding); this way you can use bigger batch sizes to accelerate training, if you have multiple devices that can run in parallel. On the other hand, you can shard not just the training data. Sometimes your model is so big that the model parameters don't fit on a single accelerator. In this case, tensor parallel helps splitting the parameter tensors within a model onto multiple accelerators so that the model can actually run. Both approaches can take advantage of modern accelerators. For example, TPU v2 on the free Colab tier offers 4 chips, each of which has 2 TPU cores. So this architeture works well with 4-way data parallel and 2-way tensor parallel.
 
-To get a detailed understanding of how JAX automatic parallelism works, please refer to this [JAX tutorial](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html#way-batch-data-parallelism-and-2-way-model-tensor-parallelism). In our case to leverage parallelism, we first need to define a `Mesh`, which declares the TPU resources with 2 axes: `batch` axis as 4 and `model` axis as 2, which maps to the TPU v2 cores. Here, the `model` axis enables the tensor parallel for us.
+To get a detailed understanding of how JAX automatic parallelism works, please refer to this [JAX tutorial](https://jax.readthedocs.io/en/latest/sharded-computation.html). In our case to leverage parallelism, we first need to define a `Mesh`, which declares the TPU resources with 2 axes: `batch` axis as 4 and `model` axis as 2, which maps to the TPU v2 cores. Here, the `model` axis enables the tensor parallel for us.
 
-<!-- #endregion -->
+```{code-cell}
+:id: xuMlCK3Q8WJD
 
-```python id="xuMlCK3Q8WJD"
 mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 
 ### Alternative 8-way data parallel with only one line of code change.
@@ -97,21 +112,25 @@ mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 ```
 
-<!-- #region id="_ZKdhNo98NgG" -->
-We are going to use the GPT-2 tokenizer via [Tiktoken](https://github.com/openai/tiktoken).
-<!-- #endregion -->
++++ {"id": "_ZKdhNo98NgG"}
 
-```python id="iWbkk1V7-Isg"
+We are going to use the GPT-2 tokenizer via [Tiktoken](https://github.com/openai/tiktoken).
+
+```{code-cell}
+:id: iWbkk1V7-Isg
+
 tokenizer = tiktoken.get_encoding("gpt2")
 ```
 
-<!-- #region id="0XHQ0BQ9-KIj" -->
++++ {"id": "0XHQ0BQ9-KIj"}
+
 To use model parallel, we need to tell JAX compiler how to shard the model tensors. We first use `PartitionSpec` (shorted to `P` in the code) to describe how to shard a tensor: in our case a tensor could be either sharded along the `model` axis or be replicated on other dimensions (which is denoted by `None`). [`NamedSharding`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.NamedSharding) can then specify how a model tensor is sharded across the devices mesh using a pair of `Mesh` and `PartitionSpec`.
 
 Finally, we use `nnx.with_partitioning` to let the layers know that their tensors need to be shared/replicated according to our spec. You need to do this for every tensor/layer in your model.
-<!-- #endregion -->
 
-```python id="z0p-IHurrB9i"
+```{code-cell}
+:id: z0p-IHurrB9i
+
 def causal_attention_mask(seq_len):
     return jnp.tril(jnp.ones((seq_len, seq_len)))
 
@@ -239,14 +258,15 @@ class MiniGPT(nnx.Module):
 
 def create_model(rngs):
     return MiniGPT(maxlen, vocab_size, embed_dim, num_heads, feed_forward_dim, num_transformer_blocks=4, rngs=rngs)
-
 ```
 
-<!-- #region id="igX_eoGNMTGR" -->
-Set some hyperparameters.
-<!-- #endregion -->
++++ {"id": "igX_eoGNMTGR"}
 
-```python id="GRhiDsCrMZRp"
+Set some hyperparameters.
+
+```{code-cell}
+:id: GRhiDsCrMZRp
+
 vocab_size = tokenizer.n_vocab
 num_transformer_blocks = 8
 maxlen = 256
@@ -257,13 +277,15 @@ batch_size = 256 # You can set a bigger batch size if using Kaggle TPU
 num_epochs = 1
 ```
 
-<!-- #region id="mI1ci-HyMspJ" -->
++++ {"id": "mI1ci-HyMspJ"}
+
 ## Prepare data
 
 Data loading and preprocessing with [Grain](https://github.com/google/grain).
-<!-- #endregion -->
 
-```python id="rGUFsn1GMuzh"
+```{code-cell}
+:id: rGUFsn1GMuzh
+
 @dataclass
 class TextDataset:
     data: list
@@ -307,13 +329,15 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 text_dl = load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen)
 ```
 
-<!-- #region id="BKVSD8KSM1um" -->
++++ {"id": "BKVSD8KSM1um"}
+
 ## Train the model
 
 Define loss function and training step function.
-<!-- #endregion -->
 
-```python id="8rRuTmABNV4b"
+```{code-cell}
+:id: 8rRuTmABNV4b
+
 def loss_fn(model, batch):
     logits = model(batch[0])
     loss = optax.softmax_cross_entropy_with_integer_labels(logits=logits, labels=batch[1]).mean()
@@ -327,15 +351,21 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     optimizer.update(grads)
 ```
 
-<!-- #region id="5um2vkeUNckm" -->
++++ {"id": "5um2vkeUNckm"}
+
 Start training. It takes ~50 minutes on Colab.
 
 Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put` with `NamedeSharding`.
 
-We are also using the `jax.vamp` transformation to produce the target sequences faster.
-<!-- #endregion -->
+We are also using the `jax.vmap` transformation to produce the target sequences faster.
 
-```python colab={"base_uri": "https://localhost:8080/"} id="Ysl6CsfENeJN" outputId="52c31101-dfba-4d84-ff09-77063b14e1c9"
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: Ysl6CsfENeJN
+outputId: 52c31101-dfba-4d84-ff09-77063b14e1c9
+---
 model = create_model(rngs=nnx.Rngs(0))
 optimizer = nnx.Optimizer(model, optax.adam(1e-3))
 metrics = nnx.MultiMetric(
@@ -361,7 +391,8 @@ step = 0
 for epoch in range(num_epochs):
     start_time = time.time()
     for batch in text_dl:
-        if len(batch) % len(jax.devices()) != 0: continue  # skip the remaining elements
+        if len(batch) % len(jax.devices()) != 0:
+          continue  # skip the remaining elements
         input_batch = jnp.array(jnp.array(batch).T)
         target_batch = prep_target_batch(input_batch)
         train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
@@ -388,11 +419,18 @@ generated_text = model.generate_text(
 print(f"Final generated text:\n{generated_text}")
 ```
 
-<!-- #region id="thaLs6TD0lt5" -->
-Visualize the training loss.
-<!-- #endregion -->
++++ {"id": "thaLs6TD0lt5"}
 
-```python id="B6Eg1Cz2y_iP" colab={"base_uri": "https://localhost:8080/", "height": 472} outputId="6723dbea-4e62-4cc4-8885-a2bc56f44541"
+Visualize the training loss.
+
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 472
+id: B6Eg1Cz2y_iP
+outputId: 6723dbea-4e62-4cc4-8885-a2bc56f44541
+---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
 plt.title('Training Loss')
@@ -401,16 +439,22 @@ plt.ylabel('Loss')
 plt.show()
 ```
 
-<!-- #region id="WB-ExEt1Zl1C" -->
-As you can see, the model goes from generating completely random words at the beginning to generating sensible tiny stories at the end of the training. So essentially we have pretrained a small LLM to write tiny stories for us.
-<!-- #endregion -->
++++ {"id": "WB-ExEt1Zl1C"}
 
-<!-- #region id="soPqiR1JNmjf" -->
+As you can see, the model goes from generating completely random words at the beginning to generating sensible tiny stories at the end of the training. So essentially we have pretrained a small LLM to write tiny stories for us.
+
++++ {"id": "soPqiR1JNmjf"}
+
 # Saving
 Save the model checkpoint.
-<!-- #endregion -->
 
-```python id="EkoFGCgSZ1yz" colab={"base_uri": "https://localhost:8080/"} outputId="fc901577-e9f5-4424-b1ba-d8c1ef78d7de"
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: EkoFGCgSZ1yz
+outputId: fc901577-e9f5-4424-b1ba-d8c1ef78d7de
+---
 import orbax.checkpoint as orbax
 
 state = nnx.state(model)
@@ -422,16 +466,19 @@ checkpointer.save('/content/save', state)
 !ls /content/save/
 ```
 
-<!-- #region id="jCApVd7671c1" -->
-# Disconnect the Colab runtime
-<!-- #endregion -->
++++ {"id": "jCApVd7671c1"}
 
-```python id="NsqYdbrDVKSq"
+# Disconnect the Colab runtime
+
+```{code-cell}
+:id: NsqYdbrDVKSq
+
 from google.colab import runtime
 runtime.unassign()
 ```
 
-<!-- #region id="Yj0vj28bIPwI" -->
++++ {"id": "Yj0vj28bIPwI"}
+
 # One more thing
 
 Remember in cell #4, we use 4-way data parallel and 2-way tensor parallel. Of course there are different ways to partition your model/data. For example, 8-way data parallel is another popular way. To switch to 8-way data parallel, uncomment the last line in cell # 4 to replace the `Mesh` definition with:
@@ -441,8 +488,9 @@ Remember in cell #4, we use 4-way data parallel and 2-way tensor parallel. Of co
 JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
 
 How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
-<!-- #endregion -->
 
-```python id="BdF8SJkHVMiw"
+```{code-cell}
+:id: BdF8SJkHVMiw
+
 
 ```
