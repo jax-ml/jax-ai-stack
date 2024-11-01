@@ -1,6 +1,5 @@
 ---
 jupytext:
-  main_language: python
   text_representation:
     extension: .md
     format_name: myst
@@ -13,27 +12,11 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
-### Copyright 2024 Google LLC.
+# Pretraining an LLM using JAX
 
-```{code-cell}
-:id: XviGOo7EgmJS
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/JAX_for_LLM_pretraining.ipynb)
 
-# @title Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-```
-
-+++ {"id": "rvP1eNN_pExM"}
-
-This notebook demonstrates how to use JAX/Flax for LLM pretraining via data and tensor parallelism.
+This tutorial demonstrates how to use JAX/Flax for LLM pretraining via data and tensor parallelism. It is originally inspired by this [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
 We will use Google TPUs and [SPMD](https://en.wikipedia.org/wiki/Single_program,_multiple_data) to train a language model `miniGPT`. Instead of using a GPU, you should use the free TPU on Colab or Kaggle for this tutorial.
 
@@ -41,18 +24,30 @@ We will use Google TPUs and [SPMD](https://en.wikipedia.org/wiki/Single_program,
 
 ## Setup
 
-Install JAX and Flax first. We will install Tiktoken for tokenization and Grain for data loading as well. Also confirm we have TPUs set up.
+Install JAX and Flax first. We will install Tiktoken for tokenization and Grain for data loading as well.
 
 ```{code-cell}
 ---
 colab:
   base_uri: https://localhost:8080/
 id: 6zMsOIc7ouCO
-outputId: b16b0781-d1bd-456a-9757-533562f581df
+outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 ---
-!pip install jax-ai-stack
-!pip install -U tiktoken grain matplotlib
+!pip install -q jax-ai-stack
+!pip install -Uq tiktoken grain matplotlib
+```
 
++++ {"id": "Rcji_799n4eA"}
+
+Confirm we have TPUs set up.
+
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: LS9sQEY3n0mB
+outputId: 9ffcf3a6-20ef-4f80-b006-f5d3c5644a15
+---
 import jax
 jax.devices()
 ```
@@ -66,7 +61,7 @@ Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/
 colab:
   base_uri: https://localhost:8080/
 id: wUjQsgQEmI1N
-outputId: 431fc1e1-8f7b-4062-ec02-fbbbde4a90c4
+outputId: e6eff24e-5578-4277-a0f9-24e27bd91ee0
 ---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
@@ -99,7 +94,7 @@ One of the biggest advantages of JAX is how easy it is to enable parallelism. To
 
 As a background, data parallel means splitting a batch of training data into multiple parts (this is called sharding); this way you can use bigger batch sizes to accelerate training, if you have multiple devices that can run in parallel. On the other hand, you can shard not just the training data. Sometimes your model is so big that the model parameters don't fit on a single accelerator. In this case, tensor parallel helps splitting the parameter tensors within a model onto multiple accelerators so that the model can actually run. Both approaches can take advantage of modern accelerators. For example, TPU v2 on the free Colab tier offers 4 chips, each of which has 2 TPU cores. So this architeture works well with 4-way data parallel and 2-way tensor parallel.
 
-To get a detailed understanding of how JAX automatic parallelism works, please refer to this [JAX tutorial](https://jax.readthedocs.io/en/latest/sharded-computation.html). In our case to leverage parallelism, we first need to define a `Mesh`, which declares the TPU resources with 2 axes: `batch` axis as 4 and `model` axis as 2, which maps to the TPU v2 cores. Here, the `model` axis enables the tensor parallel for us.
+To get a detailed understanding of how JAX automatic parallelism works, please refer to this [JAX tutorial](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html#way-batch-data-parallelism-and-2-way-model-tensor-parallelism). In our case to leverage parallelism, we first need to define a `Mesh`, which declares the TPU resources with 2 axes: `batch` axis as 4 and `model` axis as 2, which maps to the TPU v2 cores. Here, the `model` axis enables the tensor parallel for us.
 
 ```{code-cell}
 :id: xuMlCK3Q8WJD
@@ -364,7 +359,7 @@ We are also using the `jax.vmap` transformation to produce the target sequences 
 colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
-outputId: 52c31101-dfba-4d84-ff09-77063b14e1c9
+outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
 optimizer = nnx.Optimizer(model, optax.adam(1e-3))
@@ -429,7 +424,7 @@ colab:
   base_uri: https://localhost:8080/
   height: 472
 id: B6Eg1Cz2y_iP
-outputId: 6723dbea-4e62-4cc4-8885-a2bc56f44541
+outputId: 7cafe711-1ae4-4eb9-fd37-e1bde54cbfc5
 ---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
@@ -453,7 +448,7 @@ Save the model checkpoint.
 colab:
   base_uri: https://localhost:8080/
 id: EkoFGCgSZ1yz
-outputId: fc901577-e9f5-4424-b1ba-d8c1ef78d7de
+outputId: 3467b8ba-ce05-42f0-fb89-75922cc91e31
 ---
 import orbax.checkpoint as orbax
 
@@ -481,7 +476,7 @@ runtime.unassign()
 
 # One more thing
 
-Remember in cell #4, we use 4-way data parallel and 2-way tensor parallel. Of course there are different ways to partition your model/data. For example, 8-way data parallel is another popular way. To switch to 8-way data parallel, uncomment the last line in cell # 4 to replace the `Mesh` definition with:
+Remember in cell #5, we use 4-way data parallel and 2-way tensor parallel. Of course there are different ways to partition your model/data. For example, 8-way data parallel is another popular way. To switch to 8-way data parallel, uncomment the last line in cell # 4 to replace the `Mesh` definition with:
 
 `mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))`
 
