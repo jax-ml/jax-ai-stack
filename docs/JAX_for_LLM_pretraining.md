@@ -1,5 +1,6 @@
 ---
 jupytext:
+  formats: ipynb,md:myst
   text_representation:
     extension: .md
     format_name: myst
@@ -483,9 +484,3 @@ Remember in cell #5, we use 4-way data parallel and 2-way tensor parallel. Of co
 JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
 
 How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
-
-```{code-cell}
-:id: BdF8SJkHVMiw
-
-
-```
