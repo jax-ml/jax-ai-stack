@@ -549,7 +549,7 @@ optimizer = nnx.Optimizer(model, optax.chain(
 # Model initialization with dummy input
 dummy_input = jnp.ones((1, 8, 8, 1))
 dummy_t = jnp.zeros((1,), dtype=jnp.int32)
-_ = model(dummy_input, dummy_t)
+output = model(dummy_input, dummy_t)
 
 print("Input shape:", dummy_input.shape)
 print("Output shape:", output.shape)
