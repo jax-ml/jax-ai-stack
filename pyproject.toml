@@ -39,7 +39,7 @@ dev = [
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
     "tensorflow==2.18.0",
-    "tensorflow_datasets==4.9.6",
+    "tensorflow_datasets==4.9.7",
 ]
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
