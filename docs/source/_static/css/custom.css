@@ -222,12 +222,11 @@ body:has(.hero) .bd-article > section > h1 {
 @media (max-width: 800px) {
     .hero {
         grid: auto-flow / 1fr;
-        padding: 24px 24px 0 24px;
+        padding: 24px;
     }
 
     .hero img {
-        justify-self: flex-end;
-        margin-right: -16vw;
+        display: none;
     }
 
     .image-section,
