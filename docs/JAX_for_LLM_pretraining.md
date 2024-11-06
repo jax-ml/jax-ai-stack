@@ -441,7 +441,7 @@ As you can see, the model goes from generating completely random words at the be
 
 +++ {"id": "soPqiR1JNmjf"}
 
-# Saving
+## Saving
 Save the model checkpoint.
 
 ```{code-cell}
@@ -464,7 +464,7 @@ checkpointer.save('/content/save', state)
 
 +++ {"id": "jCApVd7671c1"}
 
-# Disconnect the Colab runtime
+## Disconnect the Colab runtime
 
 ```{code-cell}
 :id: NsqYdbrDVKSq
@@ -475,7 +475,7 @@ runtime.unassign()
 
 +++ {"id": "Yj0vj28bIPwI"}
 
-# One more thing
+## One more thing
 
 Remember in cell #5, we use 4-way data parallel and 2-way tensor parallel. Of course there are different ways to partition your model/data. For example, 8-way data parallel is another popular way. To switch to 8-way data parallel, uncomment the last line in cell # 4 to replace the `Mesh` definition with:
 
