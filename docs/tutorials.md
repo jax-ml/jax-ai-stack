@@ -11,6 +11,7 @@ getting_started_with_jax_for_AI
 digits_vae
 JAX_for_PyTorch_users
 JAX_porting_PyTorch_model
+JAX_for_LLM_pretraining
 ```
 
 Once you've gone through this content, you can refer to package-specific
