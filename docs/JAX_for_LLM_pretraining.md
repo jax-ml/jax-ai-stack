@@ -462,6 +462,95 @@ checkpointer.save('/content/save', state)
 !ls /content/save/
 ```
 
+# Profiling for Hyperparameter Tuning
+
+```{code-cell}
+!pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
+```
+
+Load the tensorboard colab extension.
+
+```{code-cell}
+%load_ext tensorboard
+```
+
+As we're going to be running this model a number of times, we need some scaffolding to more easily compare our work. For a baseline, we'll need to perform some warmup to guarantee that our code is JIT'd and that our TPUs are warm. For improved comparability, we'll only start tracing after we've finished warmup.
+
+```{code-cell}
+trace_dir = "/tmp/jax-trace/"
+
+def loop_step(batch, step):
+    input_batch = jnp.array(jnp.array(batch).T)
+    target_batch = prep_target_batch(input_batch)
+    train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
+
+def generate_trace():
+    tracing_steps = 30
+    warmup_steps = 5
+    for current_step in range(warmup_steps + tracing_steps):
+        if current_step == warmup_steps:
+            jax.profiler.start_trace(trace_dir)
+        with jax.profiler.StepTraceAnnotation("train", step_num=current_step):
+            batch = next(text_dl)
+            loop_step(batch, current_step)
+
+    jax.profiler.stop_trace()
+```
+
+Now we'll perform some traces to compare results of different batch sizes. This will take several minutes as we need to reprocess our input data to prepare new batches each time.
+
+```{code-cell}
+trace_dir = "/tmp/jax-trace-batch-comparison/"
+
+batch_size = 64
+text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
+generate_trace()
+
+batch_size = 256
+text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
+generate_trace()
+```
+
+Run Tensorboard with the Profiler Plugin to compare our runs. Runs are listed in order from newest to oldest, so the top run in the list will be have `batch_size = 256`.
+
+The key metrics to focus on here for this hyperparameter are FLOPS Utilization and Average Step Time.
+
+In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from 64 -> 256 achieves both of those. FLOPS increases from 16% to 27%. Average Step Time increase from 100ms to 260ms, however we increased our batch size by 300%. This means we move from 1.5ms per training example to 1.02ms per training example.
+
+```{code-cell}
+%tensorboard --logdir=$trace_dir
+```
+
+Next, we can explore alternative parallelism methods. In cell #4, we used 4-way data parallel and 2-way tensor parallel. 8-way data parallel is another popular way. Let's compare results between them. To switch to 8-way data parallel, we'll replace the `Mesh` definition with:
+
+`mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))`
+
+JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
+
+How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
+
+```{code-cell}
+trace_dir = "/tmp/jax-trace-parallelism-comparison/"
+
+mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+generate_trace()
+
+mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+generate_trace()
+```
+
+Once again we'll run tensorboard.
+
+Looking at the results, we see that the step times are nearly the same, however the FLOPS Utilization is at 13% for 8-way data parallelism compared to 27% or 4-way data parallelism.
+
+By looking at the Trace Viewer tool and looking under each TPU's ops, we can see that the TPUs spend a large amount of time idle while waiting for the host, as well as spending a good amount of time in `reduce_sum` operations.
+
+```{code-cell}
+%tensorboard --logdir=$trace_dir
+```
+
+By changing hyperparameters and comparing profiles, we're able to gain significant insights into our bottlenecks and limitations. These are just two examples of hyperparameters to tune, but plenty more of them will have significant effects on training speed and resource utilization.
+
 +++ {"id": "jCApVd7671c1"}
 
 ## Disconnect the Colab runtime
@@ -472,15 +561,3 @@ checkpointer.save('/content/save', state)
 from google.colab import runtime
 runtime.unassign()
 ```
-
-+++ {"id": "Yj0vj28bIPwI"}
-
-## One more thing
-
-Remember in cell #5, we use 4-way data parallel and 2-way tensor parallel. Of course there are different ways to partition your model/data. For example, 8-way data parallel is another popular way. To switch to 8-way data parallel, uncomment the last line in cell # 4 to replace the `Mesh` definition with:
-
-`mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))`
-
-JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
-
-How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
