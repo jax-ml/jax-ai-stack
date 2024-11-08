@@ -361,9 +361,12 @@ class StochasticDepth(nnx.Module):
         self.p = p
         self.mode = mode
         self.deterministic = False
+        self.rngs = rngs
 
     def __call__(self, x: jax.Array) -> jax.Array:
-        return stochastic_depth(x, self.p, self.mode, self.deterministic)
+        return stochastic_depth(
+            x, self.p, self.mode, self.deterministic, rngs=self.rngs
+        )
 ```
 
 ```{code-cell} ipython3
