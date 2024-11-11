@@ -68,10 +68,20 @@ body:has(.hero) .bd-article > section > h1 {
     padding-left: 5%;
 }
 
+.hero span {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.hero span img {
+    margin-right: 24px;
+}
+
 .hero h1 {
     font: 700 52px 'Google Sans';
     color: white;
-    margin-bottom: 20px;
+    margin: 0;
 }
 
 .hero-image {
@@ -225,7 +235,7 @@ body:has(.hero) .bd-article > section > h1 {
         padding: 24px;
     }
 
-    .hero img {
+    .hero > img {
         display: none;
     }
 
