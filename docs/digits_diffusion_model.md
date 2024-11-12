@@ -620,7 +620,7 @@ print("\nTraining completed.")
 
 +++ {"id": "s-iqch4HKlBV"}
 
-## Training loss visualization
+### Training loss visualization
 
 It uses a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
 
