@@ -331,7 +331,7 @@ class UNet(nnx.Module):
 
 ### Diffusion Model
 
-Now it is time to create the second part o your diffusion model. It wil rely on the UNet model and will include all the layers needed to perform the diffusion operations.
+Now it is time to create the second part of your diffusion model. It will rely on the UNet model and will include all the layers needed to perform the diffusion operations.
 
 This class implements the diffusion process with:
 - Forward diffusion (adding noise)
