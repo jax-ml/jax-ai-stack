@@ -120,10 +120,10 @@ Now you will start developing the parts of your [diffusion model](https://en.wik
 ### U-Net Architecture
 
 The U-Net architecture serves as the backbone of our diffusion model. It consists of:
-- Encoder path with downsampling
-- Bridge with attention mechanism
-- Decoder path with upsampling
-- Skip connections between encoder and decoder
+- An encoder path with downsampling;
+- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning);
+- A decoder path with upsampling;
+- Skip connections between encoder and decoder.
 
 ```{code-cell}
 :id: F4pxdITOuk79
