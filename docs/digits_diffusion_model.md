@@ -475,7 +475,7 @@ def train_step(model: UNet,
 
 +++ {"id": "4slhkQ6vI5tZ"}
 
-## Model Training Configuration
+### Model Training Configuration
 
 Sets up:
 - Model hyperparameters
