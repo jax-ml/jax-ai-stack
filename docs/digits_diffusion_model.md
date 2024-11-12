@@ -21,6 +21,7 @@ In [Debugging in JAX: a Variational autoencoder (VAE) model](digits_vae.ipynb) y
 - Developing the custom diffusion model
 - Creating the loss and training functions
 - Perform the model training using Colab TPU v2 as a hardware accelerator
+- Visualizing and tracking your model progress.
 
 +++ {"id": "gwaaMmjXt7n7"}
 
