@@ -477,10 +477,9 @@ def train_step(model: UNet,
 
 ### Model Training Configuration
 
-Sets up:
-- Model hyperparameters
-- Optimizer with learning rate schedule
-- Training loop
+Now, we set up:
+- Model hyperparameters;
+- An optimizer with learning rate schedule.
 
 ```{code-cell}
 :id: w4CwR-6ivIjS
