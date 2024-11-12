@@ -16,10 +16,10 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "jax==0.4.35",
-    "flax==0.10.0",
+    "flax==0.10.1",
     "ml_dtypes==0.4.0",
     "optax==0.2.3",
-    "orbax-checkpoint==0.7.0",
+    "orbax-checkpoint==0.8.0",
     "orbax-export==0.0.5",
 ]
 
@@ -39,7 +39,7 @@ dev = [
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
     "tensorflow==2.18.0",
-    "tensorflow_datasets==4.9.6",
+    "tensorflow_datasets==4.9.7",
 ]
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
