@@ -38,6 +38,7 @@ exclude_patterns = [
     'getting_started_with_jax_for_AI.md',
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
+    'digits_diffusion_model.md',
 ]
 
 suppress_warnings = [
