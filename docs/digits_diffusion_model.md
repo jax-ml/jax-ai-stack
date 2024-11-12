@@ -618,10 +618,6 @@ for epoch in range(num_epochs + 1):
 print("\nTraining completed.")
 ```
 
-+++ {"id": "SHX69WgxKUs7"}
-
-
-
 +++ {"id": "s-iqch4HKlBV"}
 
 ## Training loss visualization
