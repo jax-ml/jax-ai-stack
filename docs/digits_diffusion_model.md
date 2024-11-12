@@ -117,7 +117,7 @@ plt.show()
 
 Now you will start developing the parts of your [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model). It is composed of a (UNet architecture)[https://en.wikipedia.org/wiki/U-Net] backbone and the diffusion layers.
 
-## U-Net Architecture
+### U-Net Architecture
 
 The U-Net architecture serves as the backbone of our diffusion model. It consists of:
 - Encoder path with downsampling
