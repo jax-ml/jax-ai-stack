@@ -559,7 +559,7 @@ print("\nModel initialized successfully")
 
 +++ {"id": "LrzTfkDPJm2X"}
 
-## Training Loop Implementation
+### Training Loop Implementation
 
 Here you have the main training loop for the diffusion model with:
 - Progressive timestep sampling strategy
