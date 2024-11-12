@@ -408,10 +408,11 @@ class DiffusionModel:
 
 ## Training Components
 
-Includes:
+In this section, we will define the training components for our model, including:
 - A Loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty
-- Training step (`train_step()`) with [gradient clipping](https://arxiv.org/pdf/1905.11881)
-- Visualization utilities
+- The training step (`train_step()`) with [gradient clipping](https://arxiv.org/pdf/1905.11881)
+
+Next, we define our model configuration and the training loop implementation.
 
 ```{code-cell}
 :id: rq9Ic8WYCCJI
