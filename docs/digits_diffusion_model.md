@@ -40,7 +40,7 @@ colab:
 id: f3NCUma0t28r
 outputId: 25a9af50-164c-44e9-fce8-22ed28dba269
 ---
-!pip install jax-ai-stack -q
+%pip install jax-ai-stack -q
 ```
 
 +++ {"id": "Qb_di6i2t_ip"}
@@ -121,7 +121,7 @@ Now you will start developing the parts of your [diffusion model](https://en.wik
 
 The U-Net architecture serves as the backbone of our diffusion model. It consists of:
 - An encoder path with downsampling;
-- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning);
+- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning));
 - A decoder path with upsampling;
 - Skip connections between encoder and decoder.
 
@@ -408,11 +408,11 @@ class DiffusionModel:
 
 ## Training Components
 
-In this section, we will define the training components for our model, including:
+In this section, you will define the training components for our model, including:
 - A Loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty
 - The training step (`train_step()`) with [gradient clipping](https://arxiv.org/pdf/1905.11881)
 
-Next, we define our model configuration and the training loop implementation.
+Next, you will define your model configuration and the training loop implementation.
 
 ```{code-cell}
 :id: rq9Ic8WYCCJI
@@ -477,7 +477,7 @@ def train_step(model: UNet,
 
 ### Model Training Configuration
 
-Now, we set up:
+Now, you set up:
 - Model hyperparameters;
 - An optimizer with learning rate schedule.
 
@@ -624,6 +624,8 @@ print("\nTraining completed.")
 
 It uses a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
 
+You can see that your model performs well, due to the reducing training loss over the training time.
+
 ```{code-cell}
 ---
 colab:
@@ -647,7 +649,7 @@ plt.show()
 
 ## Visualization Functions
 
-Includes utilities for:
+In this section, you will include utilities for:
 - Sample generation
 - Forward/reverse process visualization
 - Training progress tracking

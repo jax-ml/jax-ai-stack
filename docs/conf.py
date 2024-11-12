@@ -63,4 +63,5 @@ nb_execution_timeout = 100
 nb_execution_excludepatterns = [
     'JAX_for_PyTorch_users.ipynb',
     'JAX_porting_PyTorch_model.ipynb',
+    'digits_diffusion_model.ipynb',
 ]
