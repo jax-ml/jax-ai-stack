@@ -39,6 +39,7 @@ exclude_patterns = [
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
     'JAX_for_LLM_pretraining.md',
+    'JAX_basic_text_classification.md',
 ]
 
 suppress_warnings = [
@@ -65,4 +66,5 @@ nb_execution_excludepatterns = [
     'JAX_for_PyTorch_users.ipynb',
     'JAX_porting_PyTorch_model.ipynb',
     'JAX_for_LLM_pretraining.ipynb',
+    'JAX_basic_text_classification.ipynb',
 ]
