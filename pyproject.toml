@@ -20,7 +20,7 @@ dependencies = [
     "ml_dtypes==0.4.0",
     "optax==0.2.3",
     "orbax-checkpoint==0.8.0",
-    "orbax-export==0.0.5",
+    "orbax-export==0.0.6",
 ]
 
 [project.urls]
