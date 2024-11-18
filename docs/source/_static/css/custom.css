@@ -79,7 +79,7 @@ body:has(.hero) .bd-article > section > h1 {
 }
 
 .hero h1 {
-    font: 700 52px 'Google Sans';
+    font: 700 52px 'Google Sans', 'Roboto', sans-serif;
     color: white;
     margin: 0;
 }
@@ -92,7 +92,7 @@ body:has(.hero) .bd-article > section > h1 {
     background: #1A73E8;
     border-radius: 4px;
     color: white;
-    font: 400 14px 'Google Sans';
+    font: 400 14px 'Google Sans', 'Roboto', sans-serif;
     text-decoration: none;
     padding: 9px 26px;
     transition: background-color .2s, border .2s, box-shadow .2s;
@@ -138,7 +138,7 @@ body:has(.hero) .bd-article > section > h1 {
 }
 
 .doc-body .image-section h3 {
-    font: 500 32px 'Google Sans';
+    font: 500 32px 'Google Sans', 'Roboto', sans-serif;
     margin-top: 0;
 }
 
@@ -148,7 +148,7 @@ body:has(.hero) .bd-article > section > h1 {
 
 .doc-body p,
 .doc-body ul {
-    font: 400 16px 'Roboto';
+    font: 400 16px 'Roboto', sans-serif;
     color: #5F6368;
     line-height: 24px;
 }
