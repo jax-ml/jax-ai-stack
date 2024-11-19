@@ -13,6 +13,7 @@ JAX_for_PyTorch_users
 JAX_porting_PyTorch_model
 digits_diffusion_model
 JAX_for_LLM_pretraining
+JAX_basic_text_classification
 ```
 
 Once you've gone through this content, you can refer to package-specific

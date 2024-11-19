@@ -53,6 +53,7 @@ exclude_patterns = [
     'JAX_porting_PyTorch_model.md',
     'digits_diffusion_model.md',
     'JAX_for_LLM_pretraining.md',
+    'JAX_basic_text_classification.md',
 ]
 
 suppress_warnings = [
@@ -80,4 +81,5 @@ nb_execution_excludepatterns = [
     'JAX_porting_PyTorch_model.ipynb',
     'digits_diffusion_model.ipynb',
     'JAX_for_LLM_pretraining.ipynb',
+    'JAX_basic_text_classification.ipynb',
 ]
