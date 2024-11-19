@@ -28,7 +28,7 @@ source_suffix = ['.rst', '.ipynb', '.md']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
-html_title = "JAX AI Stack"
+html_title = 'JAX AI Stack'
 html_static_path = ['']
 
 # Theme-specific options
