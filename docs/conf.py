@@ -29,7 +29,7 @@ source_suffix = ['.rst', '.ipynb', '.md']
 
 html_theme = 'sphinx_book_theme'
 html_title = 'JAX AI Stack'
-html_static_path = ['']
+html_static_path = ['_static']
 
 # Theme-specific options
 # https://sphinx-book-theme.readthedocs.io/en/stable/reference.html
@@ -54,6 +54,7 @@ exclude_patterns = [
     'digits_diffusion_model.md',
     'JAX_for_LLM_pretraining.md',
     'JAX_basic_text_classification.md',
+    'JAX_examples_image_segmentation.md',
 ]
 
 suppress_warnings = [
@@ -82,4 +83,5 @@ nb_execution_excludepatterns = [
     'digits_diffusion_model.ipynb',
     'JAX_for_LLM_pretraining.ipynb',
     'JAX_basic_text_classification.ipynb',
+    'JAX_examples_image_segmentation.ipynb',
 ]
