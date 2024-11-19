@@ -16,6 +16,7 @@ release = '0.0.0'
 
 extensions = [
     'myst_nb',
+    'sphinx_copybutton',
 ]
 
 templates_path = ['_templates']
@@ -26,8 +27,20 @@ source_suffix = ['.rst', '.ipynb', '.md']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = []
+html_theme = 'sphinx_book_theme'
+html_title = 'JAX AI Stack'
+html_static_path = ['']
+
+# Theme-specific options
+# https://sphinx-book-theme.readthedocs.io/en/stable/reference.html
+html_theme_options = {
+    'show_navbar_depth': 2,
+    'show_toc_level': 2,
+    'repository_url': 'https://github.com/jax-ml/jax-ai-stack',
+    'path_to_docs': 'docs/',
+    'use_repository_button': True,
+    'navigation_with_keys': True,
+}
 
 exclude_patterns = [
     # Sometimes sphinx reads its own outputs as inputs!
