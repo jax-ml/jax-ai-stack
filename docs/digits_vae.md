@@ -13,19 +13,19 @@ kernelspec:
 
 +++ {"id": "47OmRSTR1dJU"}
 
-# Debugging in JAX: a Variational autoencoder (VAE) model
+# Variational autoencoder (VAE) and debugging in JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/digits_vae.ipynb)
 
-In [Getting started with JAX](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html) we built a simple neural network for classification of handwritten digits, and covered some of the key features of JAX, including its NumPy-style interface in the `jax.numpy`, as well as its transformations for JIT compilation with `jax.jit`, automatic vectorization with `jax.vmap`, and automatic differentiation with `jax.grad`.
+This tutorial explores a simplified version of a generative model called [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) with [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset, and expands on what we learned in [Getting started with JAX](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html). Along the way, you'll learn more about how JAX's [JIT compilation](https://jax.readthedocs.io/en/latest/jit-compilation.html#jit-compilation) (`jax.jit`) actually works, and what this means for [debugging](https://jax.readthedocs.io/en/latest/debugging/index.html) [JAX programs](https://jax.readthedocs.io/en/latest/debugging.html), as we learn how to identify what can go wrong during model training.
 
-This tutorial will explore a slightly more involved model: a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the same simple digits data. Along the way, we'll learn a bit more about how JAX's JIT compilation actually works, and what this means for debugging JAX programs.
+If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which explains how to build a simple neural netwwork with Flax and Optax, and JAX's key features, including the NumPy-style interface with `jax.numpy`, JAX transformations for JIT compilation with `jax.jit`, automatic vectorization with `jax.vmap`, and automatic differentiation with `jax.grad`.
 
 +++ {"id": "k19povzxp7hS"}
 
-## Loading the digits
+## Loading the data
 
-As before, we'll use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation:
+As [before](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), this example uses the well-known, small and self-contained [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset:
 
 ```{code-cell}
 :id: aIwDAfS6PtFh
@@ -47,14 +47,13 @@ print(f"{images_test.shape=}")
 
 +++ {"id": "2_Q16JRyrW7V"}
 
-The dataset comprises 1800 images, each represented by an 8x8 pixel grid.
-To see a visualization of this data, refer to [loading the data](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#loading-the-data) in the previous tutorial.
+The dataset comprises 1800 images of hand-written digits, each represented by an `8x8` pixel grid, and their corresponding labels. For visualization of this data, refer to [loading the data](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#loading-the-data) in the previous tutorial.
 
 +++ {"id": "Z9TPYqipPyBp"}
 
-## Defining the Variational Autoencoder
+## Defining the VAE with Flax
 
-Previously we defined a simple feedforward network trained for classification with an architecture that looked roughly like this:
+[Previously](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), we learned how to use [Flax NNX](http://flax.readthedocs.io) to create a simple [feed-forward](https://en.wikipedia.org/wiki/Feedforward_neural_network) neural network trained for classification with an architecture that looked roughly like this:
 
 ```{code-cell}
 :id: HNlg-ydpr5yH
@@ -78,9 +77,13 @@ class SimpleNN(nnx.Module):
 
 +++ {"id": "3DwMBvoksOmG"}
 
-In this network we had one output per class, and the loss function was designed such that once trained, the output corresponding to the correct class would return the strongest signal, thus predicting the correct label in upwards of 95% of cases.
+This kind of network has one output per class, and the loss function is designed such that once the model is trained, the output corresponding to the correct class would return the strongest signal, thus predicting the correct label in upwards of 95% of cases.
 
-In this VAE example we use similar building blocks to instead output a small probabilistic model representing the data. While classic `VAE` is generally based on convolutional layers, we use linear layers for simplicity. The sub-network that produces this probabilistic encoding is our `Encoder`:
+To create a VAE with Flax NNX, we will use similar building blocks - subclassing [`flax.nnx.Module`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/module.html#flax.nnx.Module), stacking [`flax.nnx.Linear`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/linear.html#flax.nnx.Linear) layers, and adding a rectified linear unit activation function ([`flax.nnx.relu`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/activations.html#flax.nnx.relu)). A VAE maps the input data into the parameters of a probability distribution (`mean`, `std`), and the output is a small probabilistic model representing the data.
+
+Note that the classic VAE is generally based on convolutional layers, this example uses linear layers for simplicity.
+
+The sub-network that produces this probabilistic encoding is the `Encoder`:
 
 ```{code-cell}
 :id: Hj7mtR5vmcGr
@@ -109,7 +112,7 @@ class Encoder(nnx.Module):
 
 The idea here is that `mean` and `std` define a low-dimensional probability distribution over a latent space, and that `z` is a draw from this latent space that represents the training data.
 
-In order to ensure that this latent distribution faithfully represents the actual data, we define a `Decoder` that maps back to the input space:
+To ensure that this latent distribution faithfully represents the actual data, define a `Decoder` that maps back to the input space as follows:
 
 ```{code-cell}
 :id: FoAmZuVDnjgn
@@ -129,8 +132,9 @@ class Decoder(nnx.Module):
 
 +++ {"id": "0QaT-KY6npSc"}
 
-Now the full VAE model is a single network built from the encoder and decoder.
-It returns both the reconstructed image and the internal latent space model:
+Now, define the VAE model (again by subclassing [`flax.nnx.Module`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/module.html#flax.nnx.Module)) by combining `Encoder` and `Decoder` in a single network (`VAE`).
+
+The model returns both the reconstructed image and the internal latent space model:
 
 ```{code-cell}
 :id: Myo2MdxXnzlT
@@ -160,12 +164,12 @@ class VAE(nnx.Module):
 
 +++ {"id": "xIm9Yi5YoIxN"}
 
-Next is the loss function – there are two components to the model that we want to ensure:
+Next, we need to define the loss function. The are two components to the model that we want to ensure:
 
-1. the `logits` output faithfully reconstruct the input image.
-2. the model represented by `mean` and `std` faithfully represents the "true" latent distribution.
+1. The `logits` output faithfully reconstruct the input image.
+2. The model represented by `mean` and `std` faithfully represents the "true" latent distribution.
 
-VAE uses a loss function based on the [Evidence lower bound](https://en.wikipedia.org/wiki/Evidence_lower_bound) to quantify these two goals in a single loss value:
+Note that VAE uses a loss function based on the [Evidence lower bound](https://en.wikipedia.org/wiki/Evidence_lower_bound) to quantify these two goals in a single loss value:
 
 ```{code-cell}
 :id: bMpxj8-Wsvui
@@ -182,7 +186,13 @@ def vae_loss(model: VAE, x: jax.Array):
 
 +++ {"id": "RaT0ELpvqo2W"}
 
-Now all that's left is to define the model and optimizer, and run the training loop:
+Now all that's left:
+
+- Instantiate the `VAE` model.
+- Select [`optax.adam`](https://optax.readthedocs.io/en/latest/api/optimizers.html#optax.adam) (the Adam optimizer in our example), and instantiate the `optimizer` with [`flax.nnx.Optimizer`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/optimizer.html) for setting the train step.
+- Define the `train_step` using [`flax.nnx.value_and_grad`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/transforms.html#flax.nnx.value_and_grad) for computing the gradients and update the model’s parameters using the `optimizer`.
+- Use the [`flax.nnx.jit`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/transforms.html#flax.nnx.jit) transformation decorator to trace the `train_step` function for just-in-time compilation.
+- Run the training loop.
 
 ```{code-cell}
 :id: JPgoHL5rpKXd
@@ -213,14 +223,17 @@ for epoch in range(2001):
 
 +++ {"id": "f8m_uoL9q47M"}
 
-And here we see that something has gone wrong: our loss value has become NaN after some number of iterations.
+Notice in the output that something has gone wrong - the loss value has become NaN after some number of iterations.
 
 +++ {"id": "SBS1mmxwrS25"}
 
 ## Debugging NaNs in JAX
-Despite our best efforts, our model is producing NaNs. What can we do?
 
-JAX offers a number of debugging approaches for situations like this, outlined in the JAX docs at [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html). In this case we can use the [`debug_nans`](https://jax.readthedocs.io/en/latest/debugging/flags.html#jax-debug-nans-configuration-option-and-context-manager) configuration to see where the NaN value is arising:
+Despite our best efforts, the `VAE` model is producing NaNs. What can we do?
+
+JAX offers a number of debugging approaches for situations like this, outlined in JAX's [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html) guide. (There is also the [Introduction to debugging](https://jax.readthedocs.io/en/latest/debugging.html) tutorial you may find useful.)
+
+In this case, we can use the [`jax.debug_nans`](https://jax.readthedocs.io/en/latest/debugging/flags.html#jax-debug-nans-configuration-option-and-context-manager) configuration to check where the NaN value is arising.
 
 ```{code-cell}
 :id: JE7OYoZ4rRQ8
@@ -243,23 +256,28 @@ with jax.debug_nans(True):
 
 +++ {"id": "thw9URJmrROj"}
 
-The output here is complicated, because the function we're evaluating is complicated, but the key to deciphering this traceback is to look for the places where the traceback touches your implementation. In particular here, it indicates that NaN values arise during the gradient update:
+The output here is complicated, because the function we're evaluating is complicated. The key to "deciphering" this traceback is to look for the places where the traceback touches our implementation.
+
+In particular here, the output above indicates that NaN values arise during the gradient update:
 ```
 <ipython-input-9-b5b28eeeadf6> in train_step()
      14   loss, grads = nnx.value_and_grad(vae_loss)(model, x)
 ---> 15   optimizer.update(grads)
      16   return loss
 ```
+
 and further down from this, the details of the gradient update step where the NaN is arising:
+
 ```
 /usr/local/lib/python3.10/dist-packages/optax/tree_utils/_tree_math.py in <lambda>()
     280       lambda g, t: (
 --> 281           (1 - decay) * (g**order) + decay * t if g is not None else None
     282       ),
 ```
-This tells us that the gradient is returning values that lead to `NaN` during the model update: typically this would come about when the gradient itself is for some reason diverging.
 
-A diverging gradient means that something with our loss function may be amiss. We previously saw `loss=NaN` at iteration 500; let's print the progress up to this point:
+This suggests that the gradient is returning values that lead to `NaN` during the model update. Typically, this would come about when the gradient itself is for some reason diverging.
+
+A diverging gradient means that something with the loss function may be amiss. Previously, we had `loss=NaN` at iteration 500. Let's print the progress up to this point:
 
 ```{code-cell}
 :id: KJ1gAh8uurVX
@@ -282,10 +300,11 @@ for epoch in range(501):
 
 +++ {"id": "Jk_wdvqpurTG"}
 
-It looks like our loss value is decreasing toward negative infinity until the point where the values are no longer well-represented by floating point math.
+It looks like the loss value is decreasing toward negative infinity until the point where the values are no longer well-represented by floating point math.
 
 At this point, we may wish to inspect the values within the loss function itself to see where the diverging loss might be coming from.
-In typical Python programs you can do this by inserting either a `print` statement or a `breakpoint` in the loss function; it might look something like this:
+
+In typical Python programs we can do this by inserting either a `print` statement or a `breakpoint` in the loss function. This may look something like this:
 
 ```{code-cell}
 :id: 9Klkz7qHwWia
@@ -315,9 +334,9 @@ train_step(model, optimizer, images_train)
 
 +++ {"id": "mawnZtF8wxu9"}
 
-But here rather than printing the value, we're getting some kind of `Traced` object. You'll encounter this frequently when inspecting the progress of JAX programs: tracers are the mechanism that JAX uses to implement transformations like `jit` and `grad`, and you can read more about them in [JAX Key Concepts: Tracing](https://jax.readthedocs.io/en/latest/key-concepts.html#tracing).
+But here rather than printing the value, we're getting some kind of `Traced` object. You'll encounter this frequently when inspecting the progress of JAX programs: tracers are the mechanism that JAX uses to implement transformations like `jax.jit` and `jax.grad`, and you can read more about them in [JAX Key Concepts: Tracing](https://jax.readthedocs.io/en/latest/key-concepts.html#tracing).
 
-For our purposes, the workaround is to use another tool from the [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html#interactive-inspection-with-jax-debug) link above: namely `jax.debug.print`, which lets us print runtime values even when they're traced:
+In this example, the workaround is to use another tool from the [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html#interactive-inspection-with-jax-debug) guide: namely [`jax.debug.print`](https://jax.readthedocs.io/en/latest/_autosummary/jax.debug.print.html#jax.debug.print), which allows us to print runtime values even when they're traced:
 
 ```{code-cell}
 :id: wziDzgdTuloK
@@ -369,13 +388,15 @@ loss = train_step(model, optimizer, images_train)
 
 +++ {"id": "FXHfa0942apE"}
 
-We see that the large negative value is coming from the `reconstruction_loss` term. Let's return to this and look at what it's actually doing:
+The output above suggests that the large negative value is coming from the `reconstruction_loss` term. Let's return to this and inspect what it's actually doing:
+
 ```python
 reconstruction_loss = jnp.mean(
   optax.sigmoid_binary_cross_entropy(logits, x)
 )
 ```
-This is a binary cross entropy described at [`optax.sigmoid_binary_cross_entropy`](https://optax.readthedocs.io/en/latest/api/losses.html#optax.losses.sigmoid_binary_cross_entropy). From the documentation, the first input should be a logit, and the second input is assumed to be a binary label (i.e. a ``0`` or ``1``) – but in our case `x` is associated with `images_train`, which is not a binary label!
+
+This is a binary cross entropy described at [`optax.sigmoid_binary_cross_entropy`](https://optax.readthedocs.io/en/latest/api/losses.html#optax.losses.sigmoid_binary_cross_entropy). Based on the Optax documentation, the first input should be a logit, and the second input is assumed to be a binary label (i.e. a `0` or `1`) – but in the current implementation `x` is associated with `images_train`, which is not a binary label!
 
 ```{code-cell}
 :id: seLRa2qE3wd3
@@ -386,11 +407,11 @@ print(images_train[0])
 
 +++ {"id": "KjF0ys3c30w8"}
 
-This is likely the source of our issue: we forgot to normalize the input images to the range ``(0, 1)``!
+This is likely the source of the issue: we forgot to normalize the input images to the range ``(0, 1)``!
 
 +++ {"id": "jkFIqZaTXRc5"}
 
-Let's fix this by binarizing our inputs, and then run the training loop again (redefining our loss function to remove the debug statements):
+Let's fix this by binarizing the inputs, and then run the training loop again (redefining the loss function to remove the debug statements):
 
 ```{code-cell}
 :id: 9Og1-tIw4BNu
@@ -427,14 +448,19 @@ for epoch in range(2001):
 
 +++ {"id": "4HD91gWfyJuJ"}
 
-The loss values are now behaving, and it looks like we've successfully debugged the initial NaN problem, which was not in our model but rather in our input data.
+The loss values are now "behaving" without showing NaNs.
+
+We have successfully debugged the initial NaN problem, which was not in the `VAE` model but rather in the input data.
 
 +++ {"id": "vA6wSi1k5GuZ"}
 
 ## Exploring the VAE model results
 
-Now that we have a trained model, let's explore what it can be used for.
-First, let's pass our test data through the model to output the result of the associated latent space representation for each input. We pass the `logits` through a `sigmoid` function to recover predicted images in the input space:
+Now that we have a trained `VAE` model, let's explore what it can be used for.
+
+First, let's pass the test data through the model to output the result of the associated latent space representation for each input.
+
+Pass the `logits` through a `sigmoid` function to recover predicted images in the input space:
 
 ```{code-cell}
 :id: fBzJyliAPCGc
@@ -488,8 +514,8 @@ for i in range(36):
 
 +++ {"id": "4oCtm6V3TsQJ"}
 
-Another possibility here is to use our latent model to interpolate between two entries in the training set through the latent model space.
-Here's an interpolation between a digit 9 and a digit 3:
+Another possibility here is to use the latent model to interpolate between two entries in the training set through the latent model space.
+Here's an interpolation between a digit `9` and a digit `3`:
 
 ```{code-cell}
 :id: 8iJ9f60VUBwY
@@ -512,5 +538,6 @@ for i in range(10):
 
 ## Summary
 
-This tutorial offered a first example defining and training a generative model, in this case a simplified Variational Autoencoder (VAE).
-Along the way we explored some approaches to debugging JAX programs, in particular the `jax.debug_nans` setting and the `jax.debug.print` function. Both of these are explained further in JAX's [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html) doc.
+This tutorial offered an example of defining and training a generative model - a simplified VAE - and approaches to debugging JAX programs using the [`jax.debug_nans`](https://jax.readthedocs.io/en/latest/debugging/flags.html#jax-debug-nans-configuration-option-and-context-manager) configuration and the [`jax.debug.print`](https://jax.readthedocs.io/en/latest/_autosummary/jax.debug.print.html#jax.debug.print) function.
+
+You can learn more about debugging on the JAX documentation site in [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html) and [Introduction to debugging](https://jax.readthedocs.io/en/latest/debugging.html).
