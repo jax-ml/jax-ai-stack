@@ -15,6 +15,7 @@ digits_diffusion_model
 JAX_for_LLM_pretraining
 JAX_basic_text_classification
 JAX_examples_image_segmentation
+JAX_Vision_transformer
 ```
 
 Once you've gone through this content, you can refer to package-specific

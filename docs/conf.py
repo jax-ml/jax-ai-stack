@@ -55,6 +55,7 @@ exclude_patterns = [
     'JAX_for_LLM_pretraining.md',
     'JAX_basic_text_classification.md',
     'JAX_examples_image_segmentation.md',
+    'JAX_Vision_transformer.md',
 ]
 
 suppress_warnings = [
@@ -84,4 +85,5 @@ nb_execution_excludepatterns = [
     'JAX_for_LLM_pretraining.ipynb',
     'JAX_basic_text_classification.ipynb',
     'JAX_examples_image_segmentation.ipynb',
+    'JAX_Vision_transformer.ipynb',
 ]
