@@ -36,6 +36,8 @@ import optax
 from flax import nnx
 
 import tiktoken
+import grain.python as grain
+import tqdm
 ```
 
 ## Pull down data to temp and extract into memory
@@ -260,6 +262,8 @@ class TransformerDecoder(nnx.Module):
         return mask
 ```
 
+Here we finally use our earlier encoder, decoder, and positional embed classes to construct the Model that we'll train and later use for inference.
+
 ```{code-cell} ipython3
 class TransformerModel(nnx.Module):
     def __init__(self, sequence_length: int, vocab_size: int, embed_dim: int, latent_dim: int, num_heads: int, dropout_rate: float, rngs: nnx.Rngs):
@@ -293,24 +297,57 @@ class TransformerModel(nnx.Module):
 It can be more computationally efficient to use pygrain for the data load stage, but this way it's abundandtly clear what's happening: data pairs go in and sets of jnp arrays come out, in step with our original dictionaries. 'Encoder_inputs', 'decoder_inputs' and 'target_output'.
 
 ```{code-cell} ipython3
-class DataLoader:
-    def __init__(self, data, batch_size):
-        self.data = data
-        self.batch_size = batch_size
-        self.num_batches = len(data) // batch_size
+batch_size = 512 #set here for the loader and model train later on
 
-    def __iter__(self):
-        for i in range(self.num_batches):
-            batch = self.data[i * self.batch_size: (i + 1) * self.batch_size]
-            encoder_inputs = [item["encoder_inputs"] for item in batch]
-            decoder_inputs = [item["decoder_inputs"] for item in batch]
-            target_output = [item["target_output"] for item in batch]
-            yield (jnp.array(encoder_inputs), jnp.array(decoder_inputs), jnp.array(target_output))
+class CustomPreprocessing(grain.MapTransform):
+    def __init__(self):
+        pass
+
+    def map(self, data):
+        return {
+            "encoder_inputs": np.array(data["encoder_inputs"]),
+            "decoder_inputs": np.array(data["decoder_inputs"]),
+            "target_output": np.array(data["target_output"]),
+        }
+
+train_sampler = grain.IndexSampler(
+    len(train_data),
+    shuffle=True,
+    seed=12,                        # Seed for reproducibility
+    shard_options=grain.NoSharding(), # No sharding since it's a single-device setup
+    num_epochs=1,                    # Iterate over the dataset for one epoch
+)
+
+val_sampler = grain.IndexSampler(
+    len(val_data),
+    shuffle=False,
+    seed=12,
+    shard_options=grain.NoSharding(),
+    num_epochs=1,
+)
+
+train_loader = grain.DataLoader(
+    data_source=train_data,
+    sampler=train_sampler,                 # Sampler to determine how to access the data
+    worker_count=4,                        # Number of child processes launched to parallelize the transformations
+    worker_buffer_size=2,                  # Count of output batches to produce in advance per worker
+    operations=[
+        CustomPreprocessing(),
+        grain.Batch(batch_size=batch_size, drop_remainder=True),
+    ]
+)
+
+val_loader = grain.DataLoader(
+    data_source=val_data,
+    sampler=val_sampler,
+    worker_count=4,
+    worker_buffer_size=2,
+    operations=[
+        CustomPreprocessing(),
+        grain.Batch(batch_size=batch_size),
+    ]
+)
 ```
-
-Here we finally use our earlier encoder, decoder, and positional embed classes to construct the Model that we'll train and later use for inference.
-
-+++
 
 Optax doesn't have the identical loss function that the source tutorial uses, but this softmax cross entropy works well here - you can one_hot_encode if you don't use the `_with_integer_labels` version of the loss.
 
@@ -331,15 +368,15 @@ def train_step(model, optimizer, batch):
         return loss
 
     grad_fn = nnx.value_and_grad(loss_fn)
-    loss, grads = grad_fn(model, batch[0], batch[1], batch[2])
+    loss, grads = grad_fn(model, jnp.array(batch["encoder_inputs"]), jnp.array(batch["decoder_inputs"]), jnp.array(batch["target_output"]))
     optimizer.update(grads)
     return loss
 
 @nnx.jit
 def eval_step(model, batch, eval_metrics):
-    logits = model(batch[0], batch[1])
-    loss = compute_loss(logits, batch[2])
-    labels = batch[2]
+    logits = model(jnp.array(batch["encoder_inputs"]), jnp.array(batch["decoder_inputs"]))
+    loss = compute_loss(logits, jnp.array(batch["target_output"]))
+    labels = jnp.array(batch["target_output"])
 
     eval_metrics.update(
         loss=loss,
@@ -375,18 +412,13 @@ num_heads = 8
 dropout_rate = 0.5
 vocab_size = tokenizer.n_vocab
 sequence_length = 20
-batch_size = 256
-learning_rate = 1e-3
-momentum = 0.9
-num_epochs = 30
+learning_rate = 1.5e-3
+num_epochs = 10
 ```
 
 ```{code-cell} ipython3
-import tqdm
-
 bar_format = "{desc}[{n_fmt}/{total_fmt}]{postfix} [{elapsed}<{remaining}]"
 train_total_steps = len(train_data) // batch_size
-
 
 def train_one_epoch(epoch):
     model.train()  # Set model to the training mode: e.g. update batch statistics
@@ -421,15 +453,11 @@ def evaluate_model(epoch):
 
 ```{code-cell} ipython3
 model = TransformerModel(sequence_length, vocab_size, embed_dim, latent_dim, num_heads, dropout_rate, rngs=rng)
-optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
-
-train_loader = DataLoader(train_data, batch_size)
-val_loader = DataLoader(val_data, batch_size)
-test_loader = DataLoader(test_data, batch_size)
+optimizer = nnx.Optimizer(model, optax.adamw(learning_rate))
 ```
 
 ## Start the Training!
-With our data loaders set and the model, optimizer, and epoch train/eval functions set up - time to finally press go - on a 3090, this is roughly 19GB VRAM and each epoch is roughly 25 seconds with batch_size set to 256.
+With our data loaders set and the model, optimizer, and epoch train/eval functions set up - time to finally press go - on a 3090, this is roughly 19GB VRAM and each epoch is roughly 18 seconds with batch_size set to 512.
 
 ```{code-cell} ipython3
 for epoch in range(num_epochs):
@@ -447,7 +475,7 @@ plt.yscale('log')
 plt.legend()
 ```
 
-And eval set Loss and Accuracy - Accuracy does continue to rise, though it's hard-earned progress. Based on the training statistics, it's fair to say the process is laregly overfitting after roughly the 5th epoch.
+And eval set Loss and Accuracy - Accuracy does continue to rise, though it's hard-earned progress after about the 5th epoch. Based on the training statistics, it's fair to say the process starts overfitting after roughly that 5th epoch.
 
 ```{code-cell} ipython3
 fig, axs = plt.subplots(1, 2, figsize=(10, 10))
