@@ -12,6 +12,8 @@ kernelspec:
   name: python3
 ---
 
+# NLP: JAX Machine Translation
+
 ```{code-cell} ipython3
 ## adapted from https://keras.io/examples/nlp/neural_machine_translation_with_transformer/, which is itself an adaptation from https://www.manning.com/books/deep-learning-with-python-second-edition
 ```
