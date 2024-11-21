@@ -14,9 +14,11 @@ kernelspec:
 
 # NLP: JAX Machine Translation
 
-```{code-cell} ipython3
-## adapted from https://keras.io/examples/nlp/neural_machine_translation_with_transformer/, which is itself an adaptation from https://www.manning.com/books/deep-learning-with-python-second-edition
-```
++++
+
+Adapted from https://keras.io/examples/nlp/neural_machine_translation_with_transformer/, which is itself an adaptation from https://www.manning.com/books/deep-learning-with-python-second-edition
+
+We step through an encoder-decoder transformer in JAX and train a model for English->Spanish translation.
 
 ```{code-cell} ipython3
 import os
@@ -89,7 +91,7 @@ print(f"{len(test_pairs)} test pairs")
 tokenizer = tiktoken.get_encoding("cl100k_base")
 ```
 
-We strip out puctuation to keep things simple and in line with the original tutorial - the `[` `]` are kept in so that our `[start]` and `[end]` formatting is preserved.
+We strip out punctuation to keep things simple and in line with the original tutorial - the `[` `]` are kept in so that our `[start]` and `[end]` formatting is preserved.
 
 ```{code-cell} ipython3
 strip_chars = string.punctuation + "¿"
@@ -139,9 +141,15 @@ At this point we've extracted the data, applied formatting, and tokenized the ph
 print(train_data[135])
 ```
 
+The output should look something like
+
+{'encoder_inputs': [9514, 265, 3339, 264, 2466, 16930, 1618, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'decoder_inputs': [29563, 60, 1826, 7206, 71086, 37116, 653, 16109, 1493, 54189, 510, 408, 60, 0, 0, 0, 0, 0, 0], 'target_output': [60, 1826, 7206, 71086, 37116, 653, 16109, 1493, 54189, 510, 408, 60, 0, 0, 0, 0, 0, 0, 0]}
+
++++
+
 ## Define Transformer components: Encoder, Decoder, Positional Embed
 
-In many ways this is very similar to the original source, with `ops` changing to `jnp` and `keras` or `layers` becoming `nnx`. Certain module-specific arguments come and go, like the rngs attached to most things in the updated version, and decode=False in the MHA call.
+In many ways this is very similar to the original source, with `ops` changing to `jnp` and `keras` or `layers` becoming `nnx`. Certain module-specific arguments come and go, like the rngs attached to most things in the updated version, and decode=False in the MultiHeadAttention call.
 
 ```{code-cell} ipython3
 class TransformerEncoder(nnx.Module):
@@ -155,11 +163,9 @@ class TransformerEncoder(nnx.Module):
                                           decode=False,
                                           rngs=rngs) 
         self.dense_proj = nnx.Sequential(
-            *[
                 nnx.Linear(embed_dim, dense_dim, rngs=rngs),
                 nnx.relu,
                 nnx.Linear(dense_dim, embed_dim, rngs=rngs),
-            ]
         )
         
         self.layernorm_1 = nnx.LayerNorm(embed_dim, rngs=rngs)
@@ -215,13 +221,11 @@ class TransformerDecoder(nnx.Module):
                                   rngs=rngs)
 
         self.dense_proj = nnx.Sequential(
-            *[
                 nnx.Linear(embed_dim, latent_dim, rngs=rngs),
                 nnx.relu,
                 nnx.Linear(latent_dim, embed_dim, rngs=rngs),
-            ]
         )
-        self.layernorm_1 = nnx.LayerNorm(embed_dim, rngs=rngs) ## check inputs
+        self.layernorm_1 = nnx.LayerNorm(embed_dim, rngs=rngs)
         self.layernorm_2 = nnx.LayerNorm(embed_dim, rngs=rngs)
         self.layernorm_3 = nnx.LayerNorm(embed_dim, rngs=rngs)
 
@@ -233,7 +237,7 @@ class TransformerDecoder(nnx.Module):
         else:
             padding_mask = None
         attention_output_1 = self.attention_1(
-            inputs_q=inputs, inputs_v=inputs, inputs_k=inputs,  mask=causal_mask  ## check kwargs, specifically qkv
+            inputs_q=inputs, inputs_v=inputs, inputs_k=inputs,  mask=causal_mask
         )
         out_1 = self.layernorm_1(inputs + attention_output_1)
 
@@ -255,27 +259,6 @@ class TransformerDecoder(nnx.Module):
         mask = jnp.reshape(mask, (1, 1, sequence_length, sequence_length))
         return mask
 ```
-
-## Build out Data Loader, Model and Training Definitions
-It can be more computationally efficient to use pygrain for the data load stage, but this way it's abundandtly clear what's happening: data pairs go in and sets of jnp arrays come out, in step with our original dictionaries. 'Encoder_inputs', 'decoder_inputs' and 'target_output'.
-
-```{code-cell} ipython3
-class DataLoader:
-    def __init__(self, data, batch_size):
-        self.data = data
-        self.batch_size = batch_size
-        self.num_batches = len(data) // batch_size
-
-    def __iter__(self):
-        for i in range(self.num_batches):
-            batch = self.data[i * self.batch_size: (i + 1) * self.batch_size]
-            encoder_inputs = [item["encoder_inputs"] for item in batch]
-            decoder_inputs = [item["decoder_inputs"] for item in batch]
-            target_output = [item["target_output"] for item in batch]
-            yield (jnp.array(encoder_inputs), jnp.array(decoder_inputs), jnp.array(target_output))
-```
-
-Here we finally use our earlier encoder, decoder, and positional embed classes to construct the Model that we'll train and later use for inference.
 
 ```{code-cell} ipython3
 class TransformerModel(nnx.Module):
@@ -306,6 +289,29 @@ class TransformerModel(nnx.Module):
         return logits
 ```
 
+## Build out Data Loader and Training Definitions
+It can be more computationally efficient to use pygrain for the data load stage, but this way it's abundandtly clear what's happening: data pairs go in and sets of jnp arrays come out, in step with our original dictionaries. 'Encoder_inputs', 'decoder_inputs' and 'target_output'.
+
+```{code-cell} ipython3
+class DataLoader:
+    def __init__(self, data, batch_size):
+        self.data = data
+        self.batch_size = batch_size
+        self.num_batches = len(data) // batch_size
+
+    def __iter__(self):
+        for i in range(self.num_batches):
+            batch = self.data[i * self.batch_size: (i + 1) * self.batch_size]
+            encoder_inputs = [item["encoder_inputs"] for item in batch]
+            decoder_inputs = [item["decoder_inputs"] for item in batch]
+            target_output = [item["target_output"] for item in batch]
+            yield (jnp.array(encoder_inputs), jnp.array(decoder_inputs), jnp.array(target_output))
+```
+
+Here we finally use our earlier encoder, decoder, and positional embed classes to construct the Model that we'll train and later use for inference.
+
++++
+
 Optax doesn't have the identical loss function that the source tutorial uses, but this softmax cross entropy works well here - you can one_hot_encode if you don't use the `_with_integer_labels` version of the loss.
 
 ```{code-cell} ipython3
@@ -314,7 +320,7 @@ def compute_loss(logits, labels):
     return jnp.mean(loss)
 ```
 
-While in the original tutorial most of the model and training details happen inside keras, me make them explicit here in our step functions, which are later used in `train_one_epoch` and `eval_model`.
+While in the original tutorial most of the model and training details happen inside keras, we make them explicit here in our step functions, which are later used in `train_one_epoch` and `eval_model`.
 
 ```{code-cell} ipython3
 @nnx.jit
@@ -342,7 +348,7 @@ def eval_step(model, batch, eval_metrics):
     )    
 ```
 
-Here, nnx.MultiMetric helps us keep track of general training statistics, while we make our own dictionaries to hold historical values
+Here, `nnx.MultiMetric` helps us keep track of general training statistics, while we make our own dictionaries to hold historical values
 
 ```{code-cell} ipython3
 eval_metrics = nnx.MultiMetric(
@@ -441,7 +447,7 @@ plt.yscale('log')
 plt.legend()
 ```
 
-And eval set Loss and Accuracy - Accuracy does continue to rise, though it's hard-earned progress.
+And eval set Loss and Accuracy - Accuracy does continue to rise, though it's hard-earned progress. Based on the training statistics, it's fair to say the process is laregly overfitting after roughly the 5th epoch.
 
 ```{code-cell} ipython3
 fig, axs = plt.subplots(1, 2, figsize=(10, 10))
@@ -497,6 +503,15 @@ for i in test_result_pairs:
     print(i)
 ```
 
-```{code-cell} ipython3
+Example output from the above cell:
 
-```
+      [Input]: We're going to have a baby. [Translation]: [start] nosotros vamos a tener un bebé [end]
+      [Input]: You drive too fast. [Translation]: [start] conducís demasiado rápido [end]
+      [Input]: Let me know if there's anything I can do. [Translation]: [start] déjame saber si hay cualquier cosa que yo pueda hacer [end]
+      [Input]: Let's go to the kitchen. [Translation]: [start] vayamos a la cocina [end]
+      [Input]: Tom gasped. [Translation]: [start] tom se quedó sin aliento [end]
+      [Input]: I was just hanging out with some of my friends. [Translation]: [start] estaba escquieto con algunos de mi amigos [end]
+      [Input]: Tom is in the bathroom. [Translation]: [start] tom está en el cuarto de baño [end]
+      [Input]: I feel safe here. [Translation]: [start] me siento segura [end]
+      [Input]: I'm going to need you later. [Translation]: [start] me voy a necesitar después [end]
+      [Input]: A party is a good place to make friends with other people. [Translation]: [start] una fiesta es un buen lugar de comer amigos con otras personas [end]
