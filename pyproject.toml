@@ -1,6 +1,6 @@
 [project]
 name = "jax-ai-stack"
-version = "2024.10.1"  # keep in sync with jax_ai_stack/__init__.py
+version = "2024.11.1"  # keep in sync with jax_ai_stack/__init__.py
 description = ""
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -15,12 +15,12 @@ keywords = []
 
 # pip dependencies of the project
 dependencies = [
-    "jax==0.4.34",
-    "flax==0.10.0",
+    "jax==0.4.35",
+    "flax==0.10.1",
     "ml_dtypes==0.4.0",
-    "optax==0.2.3",
-    "orbax-checkpoint==0.7.0",
-    "orbax-export==0.0.5",
+    "optax==0.2.4",
+    "orbax-checkpoint==0.9.1",
+    "orbax-export==0.0.6",
 ]
 
 [project.urls]
@@ -38,8 +38,8 @@ dev = [
 
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
-    "tensorflow==2.17.0",
-    "tensorflow_datasets==4.9.6",
+    "tensorflow==2.18.0",
+    "tensorflow_datasets==4.9.7",
 ]
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.

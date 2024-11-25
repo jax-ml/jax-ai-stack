@@ -16,7 +16,7 @@ release = '0.0.0'
 
 extensions = [
     'myst_nb',
-    'sphinx.ext.intersphinx',
+    'sphinx_copybutton',
 ]
 
 templates_path = ['_templates']
@@ -28,15 +28,20 @@ source_suffix = ['.rst', '.ipynb', '.md']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
-html_static_path = ["_static"]
+html_title = 'JAX AI Stack'
+html_static_path = ['_static']
 html_css_files = ["css/custom.css"]
 html_favicon = '_static/images/favicon.png'
 
+# Theme-specific options
+# https://sphinx-book-theme.readthedocs.io/en/stable/reference.html
 html_theme_options = {
+    'show_navbar_depth': 2,
     'show_toc_level': 2,
-    'repository_url': 'https://github.com/google/jax',
-    'use_repository_button': True,     # add a "link to repository" button
-    'navigation_with_keys': False,
+    'repository_url': 'https://github.com/jax-ml/jax-ai-stack',
+    'path_to_docs': 'docs/',
+    'use_repository_button': True,
+    'navigation_with_keys': True,
 }
 
 exclude_patterns = [
@@ -48,6 +53,11 @@ exclude_patterns = [
     'getting_started_with_jax_for_AI.md',
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
+    'digits_diffusion_model.md',
+    'JAX_for_LLM_pretraining.md',
+    'JAX_basic_text_classification.md',
+    'JAX_examples_image_segmentation.md',
+    'JAX_Vision_transformer.md',
 ]
 
 suppress_warnings = [
@@ -73,4 +83,9 @@ nb_execution_timeout = 100
 nb_execution_excludepatterns = [
     'JAX_for_PyTorch_users.ipynb',
     'JAX_porting_PyTorch_model.ipynb',
+    'digits_diffusion_model.ipynb',
+    'JAX_for_LLM_pretraining.ipynb',
+    'JAX_basic_text_classification.ipynb',
+    'JAX_examples_image_segmentation.ipynb',
+    'JAX_Vision_transformer.ipynb',
 ]
