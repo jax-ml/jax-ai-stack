@@ -9,3 +9,4 @@ Jax AI Stack
    :maxdepth: 2
 
    tutorials
+   contributing

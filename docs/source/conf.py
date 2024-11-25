@@ -39,7 +39,7 @@ html_theme_options = {
     'show_navbar_depth': 2,
     'show_toc_level': 2,
     'repository_url': 'https://github.com/jax-ml/jax-ai-stack',
-    'path_to_docs': 'docs/',
+    'path_to_docs': 'docs/source/',
     'use_repository_button': True,
     'navigation_with_keys': True,
 }

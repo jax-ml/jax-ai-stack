@@ -76,6 +76,7 @@ body:has(.hero) .bd-article > section > h1 {
 
 .hero span img {
     margin-right: 24px;
+    background: transparent !important;
 }
 
 .hero h1 {
