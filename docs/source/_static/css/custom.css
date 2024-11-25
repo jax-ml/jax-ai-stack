@@ -278,3 +278,7 @@ html[data-theme="dark"] .button-primary:active {
     background-color: #aecbfa;
     color: #121212;
 }
+
+html[data-theme="dark"] .button-primary:visited:hover {
+    color: #121212 !important;
+}
