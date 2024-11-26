@@ -69,6 +69,7 @@ exclude_patterns = [
     'data_loaders_on_gpu_with_jax.md',
     'data_loaders_for_multi_device_setups_with_jax.md',
     'data_loaders_on_gpu_with_jax.md',
+    'data_loaders_for_multi_device_setups_with_jax.md',
 ]
 
 suppress_warnings = [
@@ -109,4 +110,5 @@ nb_execution_excludepatterns = [
     'data_loaders_on_gpu_with_jax.ipynb',
     'data_loaders_for_multi_device_setups_with_jax.ipynb',
     'data_loaders_on_gpu_with_jax.ipynb',
+    'data_loaders_for_multi_device_setups_with_jax.ipynb',
 ]
