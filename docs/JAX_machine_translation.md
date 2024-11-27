@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.4
+    jupytext_version: 1.15.2
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
@@ -21,15 +21,12 @@ Adapted from https://keras.io/examples/nlp/neural_machine_translation_with_trans
 We step through an encoder-decoder transformer in JAX and train a model for English->Spanish translation.
 
 ```{code-cell} ipython3
-import os
-
 import pathlib
 import random
 import string
 import re
 import numpy as np
 
-import jax
 import jax.numpy as jnp
 import optax
 
@@ -163,13 +160,13 @@ class TransformerEncoder(nnx.Module):
         self.attention = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
                                           decode=False,
-                                          rngs=rngs) 
+                                          rngs=rngs)
         self.dense_proj = nnx.Sequential(
                 nnx.Linear(embed_dim, dense_dim, rngs=rngs),
                 nnx.relu,
                 nnx.Linear(dense_dim, embed_dim, rngs=rngs),
         )
-        
+
         self.layernorm_1 = nnx.LayerNorm(embed_dim, rngs=rngs)
         self.layernorm_2 = nnx.LayerNorm(embed_dim, rngs=rngs)
 
@@ -283,7 +280,7 @@ class TransformerModel(nnx.Module):
     def __call__(self, encoder_inputs: jnp.array, decoder_inputs: jnp.array, mask: jnp.array = None, deterministic: bool = False):
         x = self.positional_embedding(encoder_inputs)
         encoder_outputs = self.encoder(x, mask=mask)
-        
+
         x = self.positional_embedding(decoder_inputs)
         decoder_outputs = self.decoder(x, encoder_outputs, mask=mask)
         # per nnx.Dropout - disable (deterministic=True) for eval, keep (False) for training
@@ -382,7 +379,7 @@ def eval_step(model, batch, eval_metrics):
         loss=loss,
         logits=logits,
         labels=labels,
-    )    
+    )
 ```
 
 Here, `nnx.MultiMetric` helps us keep track of general training statistics, while we make our own dictionaries to hold historical values
@@ -495,7 +492,7 @@ def decode_sequence(input_sentence):
 
     input_sentence = custom_standardization(input_sentence)
     tokenized_input_sentence = tokenize_and_pad(input_sentence, tokenizer, sequence_length)
-    
+
     decoded_sentence = "[start"
     for i in range(sequence_length):
         tokenized_target_sentence = tokenize_and_pad(decoded_sentence, tokenizer, sequence_length)[:-1]
@@ -519,8 +516,8 @@ test_result_pairs = []
 for _ in range(10):
     input_sentence = random.choice(test_eng_texts)
     translated = decode_sequence(input_sentence)
-    
-    test_result_pairs.append(f"[Input]: {input_sentence} [Translation]: {translated}") 
+
+    test_result_pairs.append(f"[Input]: {input_sentence} [Translation]: {translated}")
 ```
 
 ## Test Results
