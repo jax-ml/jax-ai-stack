@@ -10,6 +10,7 @@ The following tutorials are meant as an intro to the full stack:
 getting_started_with_jax_for_AI
 digits_vae
 JAX_for_PyTorch_users
+JAX_portting_HF_model
 JAX_porting_PyTorch_model
 digits_diffusion_model
 JAX_for_LLM_pretraining
