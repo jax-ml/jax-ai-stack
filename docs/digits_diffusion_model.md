@@ -116,7 +116,7 @@ plt.show()
 
 ## Building your diffusion model
 
-Now you will start developing the parts of your [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model). It is composed of a (UNet architecture)[https://en.wikipedia.org/wiki/U-Net] backbone and the diffusion layers.
+Now you will start developing the parts of your [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model). It is composed of a [UNet architecture](https://en.wikipedia.org/wiki/U-Net) backbone and the diffusion layers.
 
 ### U-Net Architecture
 
