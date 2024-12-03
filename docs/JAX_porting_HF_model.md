@@ -17,13 +17,11 @@ kernelspec:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/JAX_porting_HF_model.ipynb)
 
-[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/jax-ml/jax-ai-stack/blob/main/docs/JAX_porting_HF_model.ipynb)
-
 This tutorial demonstrates to convert Meta's [Llama 3 8B Instruct model](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) from Hugging Face to a JAX model and run it on a CPU.
 
 You need some familiarity with [Flax](https://flax.readthedocs.io/en/latest/index.html), a library for building Neural Networks in JAX, to follow along. If you are getting started, check out the tutorials on [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#example-a-simple-neural-network-with-flax) and [Flax's MNIST tutorial](https://flax.readthedocs.io/en/latest/mnist_tutorial.html).
 
-Since the model is fairly large, you are going to need a **high RAM** machine, for example, a Colab's high RAM instance (which requires [Pro subscription](https://colab.research.google.com/signup)), a Kaggle VM or your own computer with lots of RAM.
+Since the model is fairly large, you are going to need a **high RAM** machine, for example, a Colab's high RAM instance (which requires [Pro subscription](https://colab.research.google.com/signup)), or your own computer with lots of RAM.
 
 +++ {"id": "Iuq-_y1qyXLF"}
 
@@ -443,7 +441,7 @@ outputId: 03e0d5f1-e11d-4d54-bb43-a9af481d5a10
 import torch
 import os
 
-path_to_model_weights = os.path.join("/content", "Meta-Llama-3-8B-Instruct-weights/original")
+path_to_model_weights = os.path.join("./weights", "meta-llama/Meta-Llama-3-8B/original")
 model_weights = torch.load(os.path.join(path_to_model_weights, "consolidated.00.pth"))
 ```
 
