@@ -19,7 +19,9 @@ kernelspec:
 
 [![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://github.com/jax-ml/jax-ai-stack/blob/main/docs/JAX_for_LLM_pretraining.ipynb)
 
-This tutorial demonstrates how to you could convert Meta's [Llama 3 8B Instruct model](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) from Hugging Face to a JAX model and run it on CPU.
+This tutorial demonstrates to convert Meta's [Llama 3 8B Instruct model](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) from Hugging Face to a JAX model and run it on a CPU.
+
+You need some familiarity with [Flax](https://flax.readthedocs.io/en/latest/index.html), a library for building Neural Networks in JAX, to follow along. If you are getting started, check out the tutorials on [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#example-a-simple-neural-network-with-flax) and [Flax's MNIST tutorial](https://flax.readthedocs.io/en/latest/mnist_tutorial.html).
 
 Since the model is fairly large, you are going to need either **a Colab's high RAM VM** (which requires Pro subscription) or **a Kaggle VM**.
 
