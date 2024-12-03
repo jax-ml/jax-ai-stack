@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.4
+    jupytext_version: 1.15.2
 kernelspec:
   display_name: Python 3
   name: python3
@@ -50,8 +50,9 @@ import jax.numpy as jnp
 from flax import nnx
 from safetensors import safe_open
 from pathlib import Path
-import json, os
+import os
 from huggingface_hub import snapshot_download
+from transformers import AutoTokenizer
 ```
 
 +++ {"id": "7oUeDSNozsF0"}
@@ -161,11 +162,11 @@ We will start by defining the RMS normalization layer. Note how we load the para
 class LlamaRMSNorm(nnx.Module):
 
     def __init__(self, name=None, layer_idx=None, rngs=None):
-        if name == None and layer_idx == None:
+        if name is None and layer_idx is None:
             # Final normalization layer
-            self.norm_weights = nnx.Param(weights[f'model.norm.weight'], rngs=rngs)
+            self.norm_weights = nnx.Param(weights["model.norm.weight"], rngs=rngs)
         else:
-            self.norm_weights = nnx.Param(weights[f'model.layers.{layer_idx}.{name}.weight'], rngs=rngs)
+            self.norm_weights = nnx.Param(weights[f"model.layers.{layer_idx}.{name}.weight"], rngs=rngs)
 
     def __call__(self, hidden_states):
         input_dtype = hidden_states.dtype
@@ -352,7 +353,6 @@ outputId: 92378d10-3065-4047-d137-d1160725b04b
 ---
 model = LlamaForCausalLM(rngs=nnx.Rngs(0))
 
-from transformers import AutoTokenizer
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 input_text = "The capital of Japan is"
 
@@ -396,9 +396,7 @@ Keras Hub supports Llama 3 models. We can use Keras Hub to load the model and ex
 
 !pip install -Uq keras-hub
 
-import keras
 import keras_hub
-import numpy as np
 
 llama_lm = keras_hub.models.Llama3CausalLM.from_preset("llama3_8b_en", dtype="bfloat16")
 
@@ -436,7 +434,8 @@ colab:
 id: r5qUM0O-8J4C
 outputId: 03e0d5f1-e11d-4d54-bb43-a9af481d5a10
 ---
-import torch, os
+import torch
+import os
 
 path_to_model_weights = os.path.join("/content", "Meta-Llama-3-8B-Instruct-weights/original")
 model_weights = torch.load(os.path.join(path_to_model_weights, "consolidated.00.pth"))
