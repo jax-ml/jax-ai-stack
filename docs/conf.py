@@ -58,6 +58,7 @@ exclude_patterns = [
     'JAX_examples_image_segmentation.md',
     'JAX_Vision_transformer.md',
     'JAX_machine_translation.md',
+    'JAX_time_series_classification.md',
 ]
 
 suppress_warnings = [
@@ -90,4 +91,5 @@ nb_execution_excludepatterns = [
     'JAX_examples_image_segmentation.ipynb',
     'JAX_Vision_transformer.ipynb',
     'JAX_machine_translation.ipynb',
+    'JAX_time_series_classification.ipynb',
 ]
