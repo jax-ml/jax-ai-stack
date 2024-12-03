@@ -1,6 +1,8 @@
 # Tutorials
 
-*Note: this is a work in progress; visit again soon for updated content!*
+```{note}
+This is a work in progress; visit again soon for updated content!
+```
 
 The following tutorials are meant as an intro to the full stack:
 
