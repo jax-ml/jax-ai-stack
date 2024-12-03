@@ -335,7 +335,7 @@ class LlamaForCausalLM(nnx.Module):
 
 +++ {"id": "gBfFRlNx1b8Z"}
 
-## Run it
+## Run the Flax model
 
 +++ {"id": "ZWcxgcsI4ESh"}
 
