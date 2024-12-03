@@ -146,7 +146,7 @@ weights = load_safetensors()
 
 +++ {"id": "6ToKOCWIPJl1"}
 
-Note that the weights are stored in bfloat16.
+Note that the weights are stored as `bfloat16`.
 
 +++ {"id": "vQ7Bmvj70jjA"}
 
