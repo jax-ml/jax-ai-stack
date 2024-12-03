@@ -154,7 +154,9 @@ Note that the weights are stored as `bfloat16`.
 
 +++ {"id": "HdHQwfSO1xfY"}
 
-Now we can define the model. This [diagram](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/_images/transformer_vs_llama.svg) from NVidia visualizes the model architecture pretty nicely.
+Now we can define the model in Flax.
+
+[This Transformer vs Llama diagram](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/_images/transformer_vs_llama.svg) from Nvidia visualizes the model architecture pretty nicely. We will define each layer using [Flax's NNX.Module](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/module.html#flax.nnx.Module).
 
 We will start by defining the RMS normalization layer. Note how we load the parameters from the `weights` dict.
 
