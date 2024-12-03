@@ -51,6 +51,7 @@ exclude_patterns = [
     'getting_started_with_jax_for_AI.md',
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
+    'JAX_portting_HF_model.md',
     'digits_diffusion_model.md',
     'JAX_for_LLM_pretraining.md',
     'JAX_basic_text_classification.md',
@@ -86,6 +87,7 @@ nb_execution_timeout = 100
 nb_execution_excludepatterns = [
     'JAX_for_PyTorch_users.ipynb',
     'JAX_porting_PyTorch_model.ipynb',
+    'JAX_portting_HF_model.ipynb',
     'digits_diffusion_model.ipynb',
     'JAX_for_LLM_pretraining.ipynb',
     'JAX_basic_text_classification.ipynb',
