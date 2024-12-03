@@ -17,7 +17,7 @@ kernelspec:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/convert_from_HF.ipynb)
 
-[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://github.com/jax-ml/jax-ai-stack/blob/main/docs/JAX_for_LLM_pretraining.ipynb)
+[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/jax-ml/jax-ai-stack/blob/main/docs/JAX_porting_HF_model.ipynb)
 
 This tutorial demonstrates to convert Meta's [Llama 3 8B Instruct model](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) from Hugging Face to a JAX model and run it on a CPU.
 
