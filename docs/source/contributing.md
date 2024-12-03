@@ -81,6 +81,7 @@ git commit -m "update new tutorial"  # commit to the branch
 To build the documentation locally, you can run the following command:
 
 ```bash
+# from the root of the repository
 sphinx-build -b html docs/source docs/_build/html
 ```
 
