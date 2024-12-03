@@ -120,8 +120,10 @@ id: oVAJOEEOzEA9
 outputId: 5df4bc65-6031-44a8-9233-6b9e1ea1d069
 ---
 model_id = "meta-llama/Meta-Llama-3-8B"
-path_to_model_weights = os.path.join("/content", model_id)
-snapshot_download(repo_id=model_id, local_dir=path_to_model_weights)
+path_to_model_weights = os.path.join("./content", model_id)
+access_token = "hf_..." # Add your access token here
+
+snapshot_download(repo_id=model_id, local_dir=path_to_model_weights, token=access_token)
 ```
 
 +++ {"id": "4Xo6QyVR0UkF"}
