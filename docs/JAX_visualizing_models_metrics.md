@@ -16,9 +16,7 @@ kernelspec:
 
 +++
 
-To keep things straightforward and familiar, we reuse the model and data from the 'getting_started_with_jax_for_AI' notebook - if you haven't read that yet and want the primer, start there before returning.
-
-That original content can be found in either [notebook](https://github.com/jax-ml/jax-ai-stack/blob/main/docs/getting_started_with_jax_for_AI.ipynb) or [markdown](https://github.com/jax-ml/jax-ai-stack/blob/main/docs/getting_started_with_jax_for_AI.md) form.
+To keep things straightforward and familiar, we reuse the model and data from '[Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html)' - if you haven't read that yet and want the primer, start there before returning.
 
 All of the modeling and training code is the same here. What we have added are the tensorboard connections and the discussion around them.
 
@@ -246,7 +244,3 @@ The above cell output will give you an interactive plot that looks like this ima
 For further information about `TensorBoard` see [https://www.tensorflow.org/tensorboard/get_started](https://www.tensorflow.org/tensorboard/get_started)
 
 For more about `nnx.display()`, which calls Treescope under the hood, see [https://treescope.readthedocs.io/en/stable/](https://treescope.readthedocs.io/en/stable/)
-
-```{code-cell} ipython3
-
-```
