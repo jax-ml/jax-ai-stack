@@ -29,7 +29,7 @@ Since the model is fairly large, you are going to need either **a Colab's high R
 
 ## Setup
 
-Install JAX and Flax first. We will install huggingface_hub for download model weights and transformers for tokenization.
+Let's install the `jax-ai-stack`, we'll use the `jax` and `flax` libraries from the stack in this tutorial. We will also need `huggingface_hub` for downloading model weights and `transformers` for tokenization.
 
 ```{code-cell}
 :id: q5ueiKcIw8Sl
