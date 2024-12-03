@@ -61,7 +61,9 @@ from transformers import AutoTokenizer
 
 +++ {"id": "ZlmwhxkcyD9V"}
 
-Llama's modeling code in the transformers library lives [here](https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py). But before we create the model in JAX, we need to define some parameters.
+The Hugging Face Transformers library has [some tips for using the Llama3 model](https://huggingface.co/docs/transformers/main/en/model_doc/llama3). For further reference, the modeling code in the transformers library lives in [the `models/llama/modeling_llama.py` file](https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py).
+
+Before we create the model in JAX, we need to define some parameters. You can refer to the [Llama2 documentation for the configuration options](https://huggingface.co/docs/transformers/main/en/model_doc/llama2#transformers.LlamaConfig).
 
 ```{code-cell}
 :id: 9WErwCTtzv7x
