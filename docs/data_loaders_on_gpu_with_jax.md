@@ -27,11 +27,16 @@ This tutorial explores different data loading strategies for using **JAX** on a 
 
 You'll see how to use each of these libraries to efficiently load data for a simple image classification task using the MNIST dataset.
 
-Compared to the [Data Loaders on CPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html), working with GPUs introduces opportunities for further optimization, such as transferring data to the GPU using `device_put`, leveraging larger batch sizes for faster processing, and addressing considerations like memory management.
+Compared to [CPU-based loading](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html), working with a GPU introduces specific considerations like transferring data to the GPU using `device_put`, managing larger batch sizes for faster processing, and efficiently utilizing GPU memory. Unlike multi-device setups, this guide focuses on optimizing data handling for a single GPU.
+
+
+If you're looking for CPU-specific data loading advice, see [Data Loaders on CPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html).
+
+If you're looking for a multi-device data loading strategy, see [Data Loaders on Multi-Device Setups](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_for_multi_device_setups_with_jax.html).
 
 +++ {"id": "-rsMgVtO6asW"}
 
-### Import JAX API
+## Import JAX API
 
 ```{code-cell}
 :id: tDJNQ6V-Dg5g
@@ -43,7 +48,7 @@ from jax import grad, jit, vmap, random, device_put
 
 +++ {"id": "TsFdlkSZKp9S"}
 
-### Checking GPU Availability for JAX
+## Checking GPU Availability for JAX
 
 ```{code-cell}
 ---
@@ -57,7 +62,7 @@ jax.devices()
 
 +++ {"id": "qyJ_WTghDnIc"}
 
-### Setting Hyperparameters and Initializing Parameters
+## Setting Hyperparameters and Initializing Parameters
 
 You'll define hyperparameters for your model and data loading, including layer sizes, learning rate, batch size, and the data directory. You'll also initialize the weights and biases for a fully-connected neural network.
 
@@ -89,7 +94,7 @@ params = init_network_params(layer_sizes, random.PRNGKey(0))
 
 +++ {"id": "rHLdqeI7D2WZ"}
 
-### Model Prediction with Auto-Batching
+## Model Prediction with Auto-Batching
 
 In this section, you'll define the `predict` function for your neural network. This function computes the output of the network for a single input image.
 
@@ -120,7 +125,7 @@ batched_predict = vmap(predict, in_axes=(None, 0))
 
 +++ {"id": "rLqfeORsERek"}
 
-### Utility and Loss Functions
+## Utility and Loss Functions
 
 You'll now define utility functions for:
 - One-hot encoding: Converts class indices to binary vectors.
@@ -642,4 +647,4 @@ train_model(num_epochs, params, hf_training_generator)
 
 ## Summary
 
-This notebook explored efficient methods for loading data on a GPU with JAX, using libraries like PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets. You also learned GPU-specific optimizations, such as `device_put` for data transfer and memory management, to enhance training efficiency. Each methods offers unique benefits, helping you choose the best fit for your project needs.
+This notebook explored efficient methods for loading data on a GPU with JAX, using libraries such as PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets. You also learned GPU-specific optimizations, including using `device_put` for data transfer and managing GPU memory, to enhance training efficiency. Each method offers unique benefits, allowing you to choose the best approach based on your project requirements.
