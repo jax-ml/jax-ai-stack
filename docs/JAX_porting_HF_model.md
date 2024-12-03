@@ -371,7 +371,7 @@ print(tokenizer.decode(input_ids[0]))
 
 +++ {"id": "QLAM95pf5RMu"}
 
-There you have it. We have successfully converted the Hugging Face model weights from the safetensors file, load them up in our JAX model and run the model.
+There you have it. We have successfully converted the Hugging Face model weights from the safetensors file, loaded them up in our JAX model, and run the model.
 
 For simplicity, we have left out many optimizations (JIT, batch inference, KV cache, leveraging accelerators, SPMD and etc.) to speed things up. Feel free to implement them as an exercise.
 
