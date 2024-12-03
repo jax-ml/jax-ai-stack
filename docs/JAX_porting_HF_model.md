@@ -85,7 +85,9 @@ config = LlamaConfig()
 
 ## Load the model weights
 
-We'll use the transformers library to download the model weights. Note that Meta requires acceptance of the [license](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) before you can access the files. You will also need a Hugging Face access token. Please refer to Hugging Face documentation to set it up.
+We'll use the transformers library to download the model weights.
+
+Meta requires [acceptance of the license](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/discussions/130) before you can access the files. You will also need a Hugging Face access token, please refer to [Hugging Face documentation](https://huggingface.co/docs/hub/en/security-tokens) to set it up.
 
 ```{code-cell}
 ---
