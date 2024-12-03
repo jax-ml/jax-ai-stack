@@ -18,6 +18,9 @@ JAX_examples_image_segmentation
 JAX_Vision_transformer
 JAX_machine_translation
 JAX_visualizing_models_metrics
+JAX_image_captioning
+JAX_time_series_classification
+JAX_transformer_text_classification
 ```
 
 Once you've gone through this content, you can refer to package-specific
