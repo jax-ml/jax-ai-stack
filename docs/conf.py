@@ -62,6 +62,7 @@ exclude_patterns = [
     'JAX_image_captioning.md',
     'JAX_time_series_classification.md',
     'JAX_transformer_text_classification.md',
+    'data_loaders_on_cpu_with_jax.md',
 ]
 
 suppress_warnings = [
@@ -98,4 +99,5 @@ nb_execution_excludepatterns = [
     'JAX_image_captioning.ipynb',
     'JAX_time_series_classification.ipynb',
     'JAX_transformer_text_classification.ipynb',
+    'data_loaders_on_cpu_with_jax.ipynb',
 ]
