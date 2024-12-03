@@ -1,5 +1,6 @@
 # Sphinx-related requirements.
 sphinx
+sphinx-book-theme>=1.0.1
 myst-nb
 myst-parser[linkify]
 sphinx-book-theme

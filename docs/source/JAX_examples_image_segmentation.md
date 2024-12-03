@@ -367,7 +367,7 @@ for img, mask in zip(images[:3], masks[:3]):
 In this section we will implement the [UNETR](https://arxiv.org/abs/2103.10504) model from scratch using Flax NNX. The reference PyTorch implementation of this model can be found on the [MONAI Library GitHub repository](https://github.com/Project-MONAI/MONAI/blob/dev/monai/networks/nets/unetr.py).
 
 The UNETR model utilizes a transformer as the encoder to learn sequence representations of the input and to capture the global multi-scale information, while also following the “U-shaped” network design like [UNet](https://arxiv.org/abs/1505.04597) model:
-![image.png](./_static/unetr_architecture.png)
+![image.png](./_static/images/unetr_architecture.png)
 
 The UNETR architecture on the image above is processing 3D inputs, but it can be easily adapted to 2D input.
 
