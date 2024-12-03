@@ -145,7 +145,7 @@ Note that the weights are stored in bfloat16.
 
 +++ {"id": "vQ7Bmvj70jjA"}
 
-## Define the model
+## Define the Flax model
 
 +++ {"id": "HdHQwfSO1xfY"}
 
