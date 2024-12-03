@@ -23,7 +23,7 @@ This tutorial demonstrates to convert Meta's [Llama 3 8B Instruct model](https:/
 
 You need some familiarity with [Flax](https://flax.readthedocs.io/en/latest/index.html), a library for building Neural Networks in JAX, to follow along. If you are getting started, check out the tutorials on [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#example-a-simple-neural-network-with-flax) and [Flax's MNIST tutorial](https://flax.readthedocs.io/en/latest/mnist_tutorial.html).
 
-Since the model is fairly large, you are going to need either **a Colab's high RAM VM** (which requires Pro subscription) or **a Kaggle VM**.
+Since the model is fairly large, you are going to need a **high RAM** machine, for example, a Colab's high RAM instance (which requires [Pro subscription](https://colab.research.google.com/signup)), a Kaggle VM or your own computer with lots of RAM.
 
 +++ {"id": "Iuq-_y1qyXLF"}
 
@@ -36,6 +36,7 @@ Let's install the `jax-ai-stack`, we'll use the `jax` and `flax` libraries from 
 
 !pip install -q jax-ai-stack
 !pip install -Uq transformers huggingface_hub
+!huggingface-cli login
 ```
 
 +++ {"id": "dLCAc5Wbyl4N"}
@@ -121,9 +122,8 @@ outputId: 5df4bc65-6031-44a8-9233-6b9e1ea1d069
 ---
 model_id = "meta-llama/Meta-Llama-3-8B"
 path_to_model_weights = os.path.join("./content", model_id)
-access_token = "hf_..." # Add your access token here
 
-snapshot_download(repo_id=model_id, local_dir=path_to_model_weights, token=access_token)
+snapshot_download(repo_id=model_id, local_dir=path_to_model_weights)
 ```
 
 +++ {"id": "4Xo6QyVR0UkF"}
