@@ -25,6 +25,7 @@ JAX_image_captioning
 JAX_time_series_classification
 JAX_transformer_text_classification
 data_loaders_on_cpu_with_jax
+data_loaders_on_gpu_with_jax
 ```
 
 Once you've gone through this content, you can refer to package-specific
