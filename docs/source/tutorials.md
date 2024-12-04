@@ -19,7 +19,6 @@ JAX_basic_text_classification
 JAX_examples_image_segmentation
 JAX_Vision_transformer
 JAX_machine_translation
-<<<<<<< HEAD
 JAX_visualizing_models_metrics
 JAX_image_captioning
 JAX_time_series_classification
