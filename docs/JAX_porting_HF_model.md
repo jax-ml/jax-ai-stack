@@ -17,11 +17,13 @@ kernelspec:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/JAX_porting_HF_model.ipynb)
 
+[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/jax-ml/jax-ai-stack/blob/main/docs/JAX_porting_HF_model.ipynb)
+
 This tutorial demonstrates to convert Meta's [Llama 3 8B Instruct model](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) from Hugging Face to a JAX model and run it on a CPU.
 
 You need some familiarity with [Flax](https://flax.readthedocs.io/en/latest/index.html), a library for building Neural Networks in JAX, to follow along. If you are getting started, check out the tutorials on [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#example-a-simple-neural-network-with-flax) and [Flax's MNIST tutorial](https://flax.readthedocs.io/en/latest/mnist_tutorial.html).
 
-Since the model is fairly large, you are going to need a **high RAM** machine, for example, a Colab's high RAM instance (which requires [Pro subscription](https://colab.research.google.com/signup)), or your own computer with lots of RAM.
+Since the model is fairly large, you are going to need a **high RAM** machine, for example, a Colab's high RAM instance (which requires [Pro subscription](https://colab.research.google.com/signup)), a Kaggle VM, or your own computer with lots of RAM.
 
 +++ {"id": "Iuq-_y1qyXLF"}
 
@@ -30,8 +32,12 @@ Since the model is fairly large, you are going to need a **high RAM** machine, f
 Let's install the `jax-ai-stack`, we'll use the `jax` and `flax` libraries from the stack in this tutorial. We will also need `huggingface_hub` for downloading model weights and `transformers` for tokenization.
 
 ```{code-cell}
-:id: q5ueiKcIw8Sl
-
+---
+colab:
+  base_uri: https://localhost:8080/
+id: q5ueiKcIw8Sl
+outputId: cfafaf60-954e-46ee-9d76-cf54b1cc3d2d
+---
 !pip install -q jax-ai-stack
 !pip install -Uq transformers huggingface_hub
 !huggingface-cli login
@@ -95,31 +101,25 @@ Meta requires [acceptance of the license](https://huggingface.co/meta-llama/Meta
 ---
 colab:
   base_uri: https://localhost:8080/
-  height: 195
-  referenced_widgets: [7012c81e0d274411ada7525419c894e6, faf305cd582f4a83ad2582299922452d,
-    6e9676ad4cd5480b9740100f32010749, 88fa63ac6467415785537153434eec6a, e259a5ef25e44a7dad49afedb3e25ad9,
-    8e2a389dd7064d8381eded838501edf7, 862c4ada4adf422285d0f4184402b417, 9c39b737455647b7a90d069a2d5d1174,
-    84abf9c99e0a4ad18669c931ea9f1225, 3aad07fed4a64c1fbce16f65168c5942, a2e56693c27247ab8b19b75af5568aec,
-    a9d25d395b7240c699ba1a001e97bc01, 115307c0e18f4e7c9cb03b40dc045fea, 0075cf237eb1492091f3b622441acaec,
-    362c8f5b725647f1baf87a177625e914, 55c6ab804ced4da988f530c8f84a3aa4, 897a5b9a5c8a40d1b90058bb1ffea1fa,
-    0c5b0c8624b64e899bfd9dcc73ba1345, 1f8be54d549b4b6684081dcb5deded73, 6776f54ea4b24332ae9650bf651052ac,
-    b1aba6f7ab6f4d57bf678d113df239bf, e6aa29e3e18845efaf5b1c66511d6504, 3b4cc5d3389e4cfc88b3e26ee8ba8e50,
-    8723f6a787664da1ab849d04949cd764, 19b48ca524ec43359e3e68cf1ab965b6, d1c3feea5cbc48b69d15b3cd3195f6c1,
-    bb6cee0552994adfaefeab4ffafc59bc, cbe3094b322140ee9bbf1bac829ab963, 84998fc5b9014df3b43bc42c729152a0,
-    5fd802b91c28472693ead7723cdedd5f, 265d35cf0dae4d63a7b4f2a7b160098b, d2c13617a5e84498b01ca97370e9a825,
-    cc30646ad6e443318977e939cb43be25, e749c6a737bc4168a0e280335a4639cb, 5f440b28cae6429f8614a2a930867230,
-    ad00a584a1484b1aa6295a4395f4c488, 2b018b81a8a14ff8a103f7395ce65147, 7501a49606b346e997647375b1660377,
-    a6ee1a55467b4027ab526683ce1debe9, e6e24411eac94287aa7bb1ffb6e15d0d, 3edfed06e8f24ccea0ffa6386244c05a,
-    23b0ae2153764e39a737abd5c80d3d21, 6d4aa5dfa939462b9f53a56c41803c0e, 2d81309748f34ad28e0c2f7fc2734c8f,
-    3a75b8e419004b36a06e556fa5a4e535, 48d5fa17a0c3444795708ac8cb5e7f45, b21b452dbdbe4db1a6a8c7ad75553b1b,
-    11e528bfe36341adbc264a6ca05d09d9, ddc376976d7f41b6a5dab76c32f62d57, ed4dc67131144c228f088202197e7015,
-    33ae1220d30d46c19893ed23c230995b, 2dd3319a37fe426daed81f7f3ebba034, ac443b375fe448c3bf028755064e0cc6,
-    98454d975f5842eeb4a4e11173e272fd, 990cb01cfa0c44b4966c45358e516076]
+  height: 67
+  referenced_widgets: [f92401a14f734ee4a12f1914677176a5, 06ae04d84d1c42368325378f0ea78a3c,
+    60c1e76587ce44988a14ff0d64ff23a3, 5075c5c1a9d04e2e958d3f1bf609fcd7, 30b461fa084b49c39b512f0d1dee1a58,
+    572d284c16a448c3876d7070b436556e, aaae7410f2bf4ee989c2954c0cb30979, ddc40e128f9b433e8ce3cb66df8ecabb,
+    f55de353cf8541ca8deb98eba743392e, d3a8ccf2b66e43a28c9b47e7fb92ec8f, 88388fce5ed048c8b0e9af55ad27bb19]
 id: oVAJOEEOzEA9
-outputId: 5df4bc65-6031-44a8-9233-6b9e1ea1d069
+outputId: e9514113-4eb0-476e-84fa-9c7fe80c717e
 ---
 model_id = "meta-llama/Meta-Llama-3-8B"
-path_to_model_weights = os.path.join("./content", model_id)
+if os.path.exists('/kaggle'):
+    weights_base_dir = '/kaggle/tmp'
+elif os.path.exists('/content'):
+    # Colab
+    weights_base_dir = '/content'
+else:
+    # Local machine
+    weights_base_dir = '.'
+
+path_to_model_weights = os.path.join(weights_base_dir, model_id)
 
 snapshot_download(repo_id=model_id, local_dir=path_to_model_weights)
 ```
@@ -353,9 +353,12 @@ Let's take it for a spin! We are still going to use the tokenizer from Hugging F
 colab:
   base_uri: https://localhost:8080/
 id: HsQAmr-h1ZYa
-outputId: 92378d10-3065-4047-d137-d1160725b04b
+outputId: 8026a7dc-4485-4107-c428-ecf624c75fea
 ---
 model = LlamaForCausalLM(rngs=nnx.Rngs(0))
+
+# We no longer need `weights`
+del weights
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 input_text = "The capital of Japan is"
@@ -379,6 +382,13 @@ There you have it. We have successfully converted the Hugging Face model weights
 
 For simplicity, we have left out many optimizations (JIT, batch inference, KV cache, leveraging accelerators, SPMD and etc.) to speed things up. Feel free to implement them as an exercise.
 
+```{code-cell}
+:id: sj8FQAMAiyC3
+
+del model
+del tokenizer
+```
+
 +++ {"id": "IJfrKpEa7DLb"}
 
 ## Convert weights from other frameworks
@@ -396,8 +406,12 @@ You can also convert weights from other frameworks. Afer all, those are just num
 Keras Hub supports Llama 3 models. We can use Keras Hub to load the model and extract the weights. Note that the model files are hosted on [Kaggle](https://www.kaggle.com/models/keras/llama3), so you need to accept the license first and provide a Kaggle API key to access the files below.
 
 ```{code-cell}
-:id: AoMY1AbX69-Z
-
+---
+colab:
+  base_uri: https://localhost:8080/
+id: AoMY1AbX69-Z
+outputId: 0ea99f63-e58b-466f-8615-d387b9e51b4a
+---
 !pip install -Uq keras-hub
 
 import keras_hub
@@ -420,9 +434,16 @@ For example, here are the embeddings. You then need to extract every weight tens
 colab:
   base_uri: https://localhost:8080/
 id: jDt2YqTtSyiO
-outputId: bc3cc9a8-56c0-4c4f-cfa6-206282a6f27f
+outputId: d7d88eb9-e1c4-429b-ccfa-16e5d40f9371
 ---
 weights_dict["token_embedding"]
+```
+
+```{code-cell}
+:id: ixOo05DQiqpS
+
+del llama_lm
+del weights_dict
 ```
 
 +++ {"id": "KE-hPLhG8Hrs"}
@@ -436,12 +457,20 @@ When you download the Hugging Face model, the original PyTorch model weights rel
 colab:
   base_uri: https://localhost:8080/
 id: r5qUM0O-8J4C
-outputId: 03e0d5f1-e11d-4d54-bb43-a9af481d5a10
+outputId: 3f444b2a-998c-4ab7-ae2d-f38d5d54638e
 ---
 import torch
 import os
 
-path_to_model_weights = os.path.join("./weights", "meta-llama/Meta-Llama-3-8B/original")
+if os.path.exists('/kaggle'):
+    weights_base_dir = '/kaggle/tmp'
+elif os.path.exists('/content'):
+    # Colab
+    weights_base_dir = '/content'
+else:
+    # Local machine
+    weights_base_dir = '.'
+path_to_model_weights = os.path.join(weights_base_dir, "meta-llama/Meta-Llama-3-8B/original")
 model_weights = torch.load(os.path.join(path_to_model_weights, "consolidated.00.pth"))
 ```
 
@@ -454,7 +483,13 @@ For example, here are the embeddings. You then need to extract every weight tens
 colab:
   base_uri: https://localhost:8080/
 id: CC5DiPvTOWU1
-outputId: 7bdd2fb3-fb9c-44e0-bfbf-8fdb0f6a0197
+outputId: d2f82cf8-ecca-4f2f-cd7d-34fcefde6e41
 ---
 model_weights["tok_embeddings.weight"]
+```
+
+```{code-cell}
+:id: BnV5PtjG1_By
+
+
 ```
