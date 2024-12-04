@@ -30,6 +30,9 @@ source_suffix = ['.rst', '.ipynb', '.md']
 html_theme = 'sphinx_book_theme'
 html_title = 'JAX AI Stack'
 html_static_path = ['_static']
+html_css_files = ['css/custom.css']
+html_logo = '_static/ai-stack-logo.svg'
+html_favicon = '_static/favicon.png'
 
 # Theme-specific options
 # https://sphinx-book-theme.readthedocs.io/en/stable/reference.html
@@ -37,9 +40,10 @@ html_theme_options = {
     'show_navbar_depth': 2,
     'show_toc_level': 2,
     'repository_url': 'https://github.com/jax-ml/jax-ai-stack',
-    'path_to_docs': 'docs/',
+    'path_to_docs': 'docs/source/',
     'use_repository_button': True,
     'navigation_with_keys': True,
+    'home_page_in_toc': True,
 }
 
 exclude_patterns = [

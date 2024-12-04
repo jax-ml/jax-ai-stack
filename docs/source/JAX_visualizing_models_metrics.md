@@ -83,7 +83,7 @@ with test_summary_writer.as_default():
 
 After running all above and launching `tensorboard --logdir runs/test` from the same folder, you should see the following in the supplied URL:
 
-![image.png](./_static/training_data_example.png)
+![image.png](./_static/images/training_data_example.png)
 
 ```{code-cell} ipython3
 :id: 6jrYisoPh6TL
@@ -131,7 +131,7 @@ nnx.display(model)  # Interactive display if penzai is installed.
 
 We've now created the basic model - the above cell will render an interactive view of the model. Which, when fully expanded, should look something like this:
 
-![image.png](./_static/nnx_display_example.png)
+![image.png](./_static/images/nnx_display_example.png)
 
 +++
 
@@ -211,7 +211,7 @@ During the training has run, and after, the added `Loss` and `Accuracy` scalars 
 
 The output there should look something like the following:
 
-![image.png](./_static/loss_acc_example.png)
+![image.png](./_static/images/loss_acc_example.png)
 
 +++
 
@@ -219,11 +219,11 @@ Since we've stored the example test sheet every 500 epochs, it's easy to go back
 
 At step 1, we see poor accuracy, as you would expect
 
-![image.png](./_static/testsheet_start_example.png)
+![image.png](./_static/images/testsheet_start_example.png)
 
 By 500, the model is essentially done, but we see the bottom row `7` get lost and recovered at higher epochs as we go far into an overfitting regime. This kind of stored data can be very useful when the training routines become automated and a human is potentially only looking when something has gone wrong.
 
-![image.png](./_static/testsheets_500_3000.png)
+![image.png](./_static/images/testsheets_500_3000.png)
 
 +++
 
@@ -235,7 +235,7 @@ nnx.display(model(images_test[:35])), nnx.display(model(images_test[:35]).argmax
 
 The above cell output will give you an interactive plot that looks like this image below, where here we've 'clicked' in the bottom plot for entry `7` and hover over the corresponding value in the top plot.
 
-![image.png](./_static/model_display_example.png)
+![image.png](./_static/images/model_display_example.png)
 
 +++
 
