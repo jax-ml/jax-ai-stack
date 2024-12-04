@@ -54,6 +54,7 @@ exclude_patterns = [
     'digits_vae.md',
     'getting_started_with_jax_for_AI.md',
     'JAX_for_PyTorch_users.md',
+    'JAX_porting_HF_model.md',
     'JAX_porting_PyTorch_model.md',
     'digits_diffusion_model.md',
     'JAX_for_LLM_pretraining.md',
