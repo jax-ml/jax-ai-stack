@@ -25,9 +25,13 @@ This tutorial explores various data loading strategies for **JAX** in **multi-de
 *   [**Grain**](https://github.com/google/grain)
 *   [**Hugging Face**](https://huggingface.co/docs/datasets/en/use_with_jax#data-loading)
 
-You'll see how to use each of these libraries to efficiently load data for a simple image classification task using the MNIST dataset.
+You'll learn how to use each of these libraries to efficiently load data for an image classification task using the MNIST dataset.
 
-Building on the [Data Loaders on GPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_gpu_with_jax.html) tutorial, this guide introduces optimizations for distributed training across multiple GPUs or TPUs. It focuses on data sharding with `Mesh` and `NamedSharding` to efficiently partition and synchronize data across devices. By leveraging multi-device setups, you'll maximize resource utilization for large datasets in distributed environments.
+Building on the [Data Loaders on GPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_gpu_with_jax.html) tutorial,  this guide covers advanced strategies for multi-device setups, such as data sharding with `Mesh` and `NamedSharding` to partition and synchronize data across devices. These techniques allow you to partition and synchronize data across multiple devices, balancing the complexities of distributed systems while optimizing resource usage for large-scale datasets.
+
+If you're looking for CPU-specific data loading advice, see [Data Loaders on CPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html).
+
+If you're looking for GPU-specific data loading advice, see [Data Loaders on GPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_gpu_with_jax.html).
 
 +++ {"id": "-rsMgVtO6asW"}
 
@@ -44,7 +48,7 @@ from jax.sharding import Mesh, PartitionSpec, NamedSharding
 
 +++ {"id": "TsFdlkSZKp9S"}
 
-### Checking TPU Availability for JAX
+## Checking TPU Availability for JAX
 
 ```{code-cell}
 ---
@@ -58,7 +62,7 @@ jax.devices()
 
 +++ {"id": "qyJ_WTghDnIc"}
 
-### Setting Hyperparameters and Initializing Parameters
+## Setting Hyperparameters and Initializing Parameters
 
 You'll define hyperparameters for your model and data loading, including layer sizes, learning rate, batch size, and the data directory. You'll also initialize the weights and biases for a fully-connected neural network.
 
@@ -90,7 +94,7 @@ params = init_network_params(layer_sizes, random.PRNGKey(0))
 
 +++ {"id": "rHLdqeI7D2WZ"}
 
-### Model Prediction with Auto-Batching
+## Model Prediction with Auto-Batching
 
 In this section, you'll define the `predict` function for your neural network. This function computes the output of the network for a single input image.
 
@@ -121,7 +125,7 @@ batched_predict = vmap(predict, in_axes=(None, 0))
 
 +++ {"id": "AMWmxjVEpH2D"}
 
-Multi-device setup using a Mesh of devices
+## Multi-device setup using a Mesh of devices
 
 ```{code-cell}
 :id: 4Jc5YLFnpE-_
@@ -139,7 +143,7 @@ sharding_spec = PartitionSpec('device')
 
 +++ {"id": "rLqfeORsERek"}
 
-### Utility and Loss Functions
+## Utility and Loss Functions
 
 You'll now define utility functions for:
 - One-hot encoding: Converts class indices to binary vectors.
@@ -714,6 +718,6 @@ train_model(num_epochs, params, hf_training_generator)
 
 ## Summary
 
-This notebook has introduced efficient methods for multi-device distributed data loading on TPUs with JAX. You explored how to leverage popular libraries like PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets to streamline the data loading process for machine learning tasks. Each library offers distinct advantages, allowing you to select the best approach for your specific project needs.
+This notebook introduced efficient methods for multi-device distributed data loading on TPUs with JAX. You explored how to leverage popular libraries like PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets to optimize the data loading process for machine learning tasks. Each library offers unique advantages, enabling you to choose the best approach based on your project’s requirements.
 
-For more detailed strategies on distributed data loading with JAX, including global data pipelines and per-device processing, refer to the [Distributed Data Loading Guide](https://jax.readthedocs.io/en/latest/distributed_data_loading.html).
+For more in-depth strategies on distributed data loading with JAX, including global data pipelines and per-device processing, refer to the [Distributed Data Loading Guide](https://jax.readthedocs.io/en/latest/distributed_data_loading.html).
