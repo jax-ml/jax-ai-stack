@@ -13,62 +13,49 @@ kernelspec:
 
 +++ {"id": "PUFGZggH49zp"}
 
-# Introduction to Data Loaders on CPU with JAX
+# Introduction to Data Loaders on GPU with JAX
 
 +++ {"id": "3ia4PKEV5Dr8"}
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/data_loaders_on_cpu_with_jax.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/data_loaders_on_gpu_with_jax.ipynb)
 
-This tutorial explores different data loading strategies for using **JAX** on a single [**CPU**](https://jax.readthedocs.io/en/latest/glossary.html#term-CPU). While JAX doesn't include a built-in data loader, it seamlessly integrates with popular data loading libraries, including:
+This tutorial explores different data loading strategies for using **JAX** on a single [**GPU**](https://jax.readthedocs.io/en/latest/glossary.html#term-GPU). While JAX doesn't include a built-in data loader, it seamlessly integrates with popular data loading libraries, including:
+*   [**PyTorch DataLoader**](https://github.com/pytorch/data)
+*   [**TensorFlow Datasets (TFDS)**](https://github.com/tensorflow/datasets)
+*   [**Grain**](https://github.com/google/grain)
+*   [**Hugging Face**](https://huggingface.co/docs/datasets/en/use_with_jax#data-loading)
 
-- [**PyTorch DataLoader**](https://github.com/pytorch/data)
-- [**TensorFlow Datasets (TFDS)**](https://github.com/tensorflow/datasets)
-- [**Grain**](https://github.com/google/grain)
-- [**Hugging Face**](https://huggingface.co/docs/datasets/en/use_with_jax#data-loading)
+You'll see how to use each of these libraries to efficiently load data for a simple image classification task using the MNIST dataset.
 
-In this tutorial, you'll learn how to efficiently load data using these libraries for a simple image classification task based on the MNIST dataset.
+Compared to [CPU-based loading](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html), working with a GPU introduces specific considerations like transferring data to the GPU using `device_put`, managing larger batch sizes for faster processing, and efficiently utilizing GPU memory. Unlike multi-device setups, this guide focuses on optimizing data handling for a single GPU.
 
-Compared to GPU or multi-device setups, CPU-based data loading is straightforward as it avoids challenges like GPU memory management and data synchronization across devices. This makes it ideal for smaller-scale tasks or scenarios where data resides exclusively on the CPU.
 
-If you're looking for GPU-specific data loading advice, see [Data Loaders on GPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_gpu_with_jax.html).
+If you're looking for CPU-specific data loading advice, see [Data Loaders on CPU](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_on_cpu_with_jax.html).
 
 If you're looking for a multi-device data loading strategy, see [Data Loaders on Multi-Device Setups](https://jax-ai-stack.readthedocs.io/en/latest/data_loaders_for_multi_device_setups_with_jax.html).
 
-+++ {"id": "pEsb135zE-Jo"}
-
-## Setting JAX to Use CPU Only
-
-First, you'll restrict JAX to use only the CPU, even if a GPU is available. This ensures consistency and allows you to focus on CPU-based data loading.
-
-```{code-cell}
-:id: vqP6xyObC0_9
-
-import os
-os.environ['JAX_PLATFORM_NAME'] = 'cpu'
-```
-
 +++ {"id": "-rsMgVtO6asW"}
 
-Import JAX API
+## Import JAX API
 
 ```{code-cell}
 :id: tDJNQ6V-Dg5g
 
 import jax
 import jax.numpy as jnp
-from jax import random, grad, jit, vmap
+from jax import grad, jit, vmap, random, device_put
 ```
 
 +++ {"id": "TsFdlkSZKp9S"}
 
-### CPU Setup Verification
+## Checking GPU Availability for JAX
 
 ```{code-cell}
 ---
 colab:
   base_uri: https://localhost:8080/
 id: N3sqvaF3KJw1
-outputId: 449c83d9-d050-4b15-9a8d-f71e340501f2
+outputId: ab40f542-b8c0-422c-ca68-4ce292817889
 ---
 jax.devices()
 ```
@@ -94,18 +81,18 @@ def init_network_params(sizes, key):
   return [random_layer_params(m, n, k) for m, n, k in zip(sizes[:-1], sizes[1:], keys)]
 
 layer_sizes = [784, 512, 512, 10]  # Layers of the network
-step_size = 0.01                   # Learning rate for optimization
+step_size = 0.01                   # Learning rate
 num_epochs = 8                     # Number of training epochs
 batch_size = 128                   # Batch size for training
 n_targets = 10                     # Number of classes (digits 0-9)
-num_pixels = 28 * 28               # Input size (MNIST images are 28x28 pixels)
+num_pixels = 28 * 28               # Each MNIST image is 28x28 pixels
 data_dir = '/tmp/mnist_dataset'    # Directory for storing the dataset
 
 # Initialize network parameters using the defined layer sizes and a random seed
 params = init_network_params(layer_sizes, random.PRNGKey(0))
 ```
 
-+++ {"id": "6Ci_CqW7q6XM"}
++++ {"id": "rHLdqeI7D2WZ"}
 
 ## Model Prediction with Auto-Batching
 
@@ -122,7 +109,7 @@ def relu(x):
   return jnp.maximum(0, x)
 
 def predict(params, image):
-  # per-example prediction
+  # per-example predictions
   activations = image
   for w, b in params[:-1]:
     outputs = jnp.dot(w, activations) + b
@@ -136,20 +123,20 @@ def predict(params, image):
 batched_predict = vmap(predict, in_axes=(None, 0))
 ```
 
-+++ {"id": "niTSr34_sDZi"}
++++ {"id": "rLqfeORsERek"}
 
 ## Utility and Loss Functions
 
 You'll now define utility functions for:
-
 - One-hot encoding: Converts class indices to binary vectors.
 - Accuracy calculation: Measures the performance of the model on the dataset.
 - Loss computation: Calculates the difference between predictions and targets.
 
 To optimize performance:
-
 - [`grad`](https://jax.readthedocs.io/en/latest/_autosummary/jax.grad.html#jax.grad) is used to compute gradients of the loss function with respect to network parameters.
 - [`jit`](https://jax.readthedocs.io/en/latest/_autosummary/jax.jit.html#jax.jit) compiles the update function, enabling faster execution by leveraging JAX's [XLA](https://openxla.org/xla) compilation.
+
+- [`device_put`](https://jax.readthedocs.io/en/latest/_autosummary/jax.device_put.html) to transfer the dataset to the GPU.
 
 ```{code-cell}
 :id: sA0a06raEQfS
@@ -185,11 +172,12 @@ def reshape_and_one_hot(x, y):
     return x, y
 
 def train_model(num_epochs, params, training_generator, data_loader_type='streamed'):
-    """Train the model for a given number of epochs."""
+    """Train the model for a given number of epochs and device_put for GPU transfer."""
     for epoch in range(num_epochs):
         start_time = time.time()
         for x, y in training_generator() if data_loader_type == 'streamed' else training_generator:
             x, y = reshape_and_one_hot(x, y)
+            x, y = device_put(x), device_put(y)
             params = update(params, x, y)
 
         print(f"Epoch {epoch + 1} in {time.time() - start_time:.2f} sec: "
@@ -207,8 +195,8 @@ This section shows how to load the MNIST dataset using PyTorch's DataLoader, con
 ---
 colab:
   base_uri: https://localhost:8080/
-id: jmsfrWrHxIhC
-outputId: 33dfeada-a763-4d26-f778-a27966e34d55
+id: uA7XY0OezHse
+outputId: 4c86f455-ff1d-474e-f8e3-7111d9b56996
 ---
 !pip install torch torchvision
 ```
@@ -226,14 +214,27 @@ from torchvision.datasets import MNIST
 :id: 6f6qU8PCc143
 
 def numpy_collate(batch):
-  """Convert a batch of PyTorch data to NumPy arrays."""
+  """Collate function to convert a batch of PyTorch data into NumPy arrays."""
   return tree_map(np.asarray, data.default_collate(batch))
 
 class NumpyLoader(data.DataLoader):
     """Custom DataLoader to return NumPy arrays from a PyTorch Dataset."""
-    def __init__(self, dataset, batch_size=1, shuffle=False, **kwargs):
-        super().__init__(dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=numpy_collate, **kwargs)
-
+    def __init__(self, dataset, batch_size=1,
+                  shuffle=False, sampler=None,
+                  batch_sampler=None, num_workers=0,
+                  pin_memory=False, drop_last=False,
+                  timeout=0, worker_init_fn=None):
+      super(self.__class__, self).__init__(dataset,
+          batch_size=batch_size,
+          shuffle=shuffle,
+          sampler=sampler,
+          batch_sampler=batch_sampler,
+          num_workers=num_workers,
+          collate_fn=numpy_collate,
+          pin_memory=pin_memory,
+          drop_last=drop_last,
+          timeout=timeout,
+          worker_init_fn=worker_init_fn)
 class FlattenAndCast(object):
   """Transform class to flatten and cast images to float32."""
   def __call__(self, pic):
@@ -247,12 +248,8 @@ class FlattenAndCast(object):
 Standardize the data by flattening the images, casting them to `float32`, and ensuring consistent data types.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: Kxbl6bcx6crv
-outputId: 372bbf4c-3ad5-4fd8-cc5d-27b50f5e4f38
----
+:id: Kxbl6bcx6crv
+
 mnist_dataset = MNIST(data_dir, download=True, transform=FlattenAndCast())
 ```
 
@@ -265,7 +262,7 @@ Convert the entire training dataset to JAX arrays.
 ```{code-cell}
 :id: c9ZCJq_rzPck
 
-train_images = jnp.array(mnist_dataset.data.numpy().reshape(len(mnist_dataset.data), -1), dtype=jnp.float32)
+train_images = np.array(mnist_dataset.data).reshape(len(mnist_dataset.data), -1)
 train_labels = one_hot(np.array(mnist_dataset.targets), n_targets)
 ```
 
@@ -288,22 +285,24 @@ test_labels = one_hot(np.array(mnist_dataset_test.targets), n_targets)
 colab:
   base_uri: https://localhost:8080/
 id: Oz-UVnCxG5E8
-outputId: abbaa26d-491a-4e63-e8c9-d3c571f53a28
+outputId: 53f3fb32-5096-4862-e022-3c3a1d82137a
 ---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
 ```
 
-+++ {"id": "m3zfxqnMiCbm"}
++++ {"id": "mNjn9dMPitKL"}
 
 ### Training Data Generator
 
-Define a generator function using PyTorch's DataLoader for batch training. Setting `num_workers > 0` enables multi-process data loading, which can accelerate data loading for larger datasets or intensive preprocessing tasks. Experiment with different values to find the optimal setting for your hardware and workload.
+Define a generator function using PyTorch's DataLoader for batch training.
+Setting `num_workers > 0` enables multi-process data loading, which can accelerate data loading for larger datasets or intensive preprocessing tasks. Experiment with different values to find the optimal setting for your hardware and workload.
 
-Note: When setting `num_workers > 0`, you may see the following `RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.` This warning can be safely ignored since data loaders do not use JAX within the forked processes.
+Note: When setting `num_workers > 0`, you may see the following `RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code, and JAX is multithreaded, so this will likely lead to a deadlock.`
+This warning can be safely ignored since data loaders do not use JAX within the forked processes.
 
 ```{code-cell}
-:id: B-fES82EiL6Z
+:id: 0LdT8P8aisWF
 
 def pytorch_training_generator(mnist_dataset):
     return NumpyLoader(mnist_dataset, batch_size=batch_size, num_workers=0)
@@ -319,8 +318,8 @@ The training loop uses the PyTorch DataLoader to iterate through batches and upd
 ---
 colab:
   base_uri: https://localhost:8080/
-id: vtUjHsh-rJs8
-outputId: 4766333e-4366-493b-995a-102778d1345a
+id: SqweRz_98sN8
+outputId: bdd45256-3f5a-48f7-e45c-378078ac4279
 ---
 train_model(num_epochs, params, pytorch_training_generator(mnist_dataset), data_loader_type='iterable')
 ```
@@ -335,30 +334,17 @@ This section demonstrates how to load the MNIST dataset using TFDS, fetch the fu
 :id: sGaQAk1DHMUx
 
 import tensorflow_datasets as tfds
-import tensorflow as tf
-
-# Ensuring CPU-Only Execution, disable any GPU usage(if applicable) for TF
-tf.config.set_visible_devices([], device_type='GPU')
 ```
 
-+++ {"id": "3xdQY7H6wr3n"}
++++ {"id": "ZSc5K0Eiwm4L"}
 
 ### Fetch Full Dataset for Evaluation
 
 Load the dataset with `tfds.load`, convert it to NumPy arrays, and process it for evaluation.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 104
-  referenced_widgets: [b8cdabf5c05848f38f03850cab08b56f, a8b76d5f93004c089676e5a2a9b3336c,
-    119ac8428f9441e7a25eb0afef2fbb2a, 76a9815e5c2b4764a13409cebaf66821, 45ce8dd5c4b949afa957ec8ffb926060,
-    05b7145fd62d4581b2123c7680f11cdd, b96267f014814ec5b96ad7e6165104b1, bce34bdbfbd64f1f8353a4e8515cee0b,
-    93b8206f8c5841a692cdce985ae301d8, c95f592620c64da595cc787567b2c4db, 8a97071f862c4ec3b4b4140d2e34eda2]
-id: 1hOamw_7C8Pb
-outputId: ca166490-22db-4732-b29f-866b7593e489
----
+:id: 1hOamw_7C8Pb
+
 # tfds.load returns tf.Tensors (or tf.data.Datasets if batch_size != -1)
 mnist_data, info = tfds.load(name="mnist", batch_size=-1, data_dir=data_dir, with_info=True)
 mnist_data = tfds.as_numpy(mnist_data)
@@ -380,13 +366,13 @@ test_labels = one_hot(test_labels, n_targets)
 colab:
   base_uri: https://localhost:8080/
 id: Td3PiLdmEf7z
-outputId: 96403b0f-6079-43ce-df16-d4583f09906b
+outputId: b8c9a32a-9cf0-4dc3-cb51-db21d32c6545
 ---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
 ```
 
-+++ {"id": "UWRSaalfdyDX"}
++++ {"id": "dXMvgk6sdq4j"}
 
 ### Define the Training Generator
 
@@ -415,7 +401,7 @@ Use the training generator in a custom training loop.
 colab:
   base_uri: https://localhost:8080/
 id: h2sO13XDGvq1
-outputId: a150246e-ceb5-46ac-db71-2a8177a9d04d
+outputId: f30805bb-e725-46ee-e053-6e97f2af81c5
 ---
 train_model(num_epochs, params, training_generator)
 ```
@@ -435,7 +421,7 @@ Install Grain
 colab:
   base_uri: https://localhost:8080/
 id: L78o7eeyGvn5
-outputId: 76d16565-0d9e-4f5f-c6b1-4cf4a683d0e7
+outputId: cb0ce6cf-243b-4183-8f63-646e00232caa
 ---
 !pip install grain
 ```
@@ -510,27 +496,24 @@ test_labels = one_hot(np.array([mnist_dataset_test[i][1] for i in range(len(mnis
 colab:
   base_uri: https://localhost:8080/
 id: a2NHlp9klrQL
-outputId: 14be58c0-851e-4a44-dfcc-d02f0718dab5
+outputId: c9422190-55e9-400b-bd4e-0e7bf23dc6a1
 ---
 print("Train:", train_images.shape, train_labels.shape)
 print("Test:", test_images.shape, test_labels.shape)
 ```
 
-+++ {"id": "fETnWRo2crhf"}
++++ {"id": "1QPbXt7O0JN-"}
 
 ### Initialize PyGrain DataLoader
 
-Set up a PyGrain DataLoader for sequential batch sampling.
-
 ```{code-cell}
-:id: 9RuFTcsCs2Ac
+:id: 2jqd1jJt25Bj
 
 sampler = pygrain.SequentialSampler(
     num_records=len(mnist_dataset),
     shard_options=pygrain.NoSharding()) # Single-device, no sharding
 
 def pygrain_training_generator():
-    """Grain DataLoader generator for training."""
     return pygrain.DataLoader(
         data_source=mnist_dataset,
         sampler=sampler,
@@ -538,7 +521,7 @@ def pygrain_training_generator():
     )
 ```
 
-+++ {"id": "GvpJPHAbeuHW"}
++++ {"id": "mV5z4GLCGKlx"}
 
 ### Training Loop (Grain)
 
@@ -548,19 +531,19 @@ Run the training loop using the Grain DataLoader.
 ---
 colab:
   base_uri: https://localhost:8080/
-id: cjxJRtiTadEI
-outputId: 3f624366-b683-4d20-9d0a-777d345b0e21
+id: 9-iANQ-9CcW_
+outputId: b0e19da2-9e34-4183-c5d8-af66de5efa5c
 ---
 train_model(num_epochs, params, pygrain_training_generator)
 ```
 
-+++ {"id": "oixvOI816qUn"}
++++ {"id": "o51P6lr86wz-"}
 
 ## Loading Data with Hugging Face
 
 This section demonstrates loading MNIST data using the Hugging Face `datasets` library. You'll format the dataset for JAX compatibility, prepare flattened images and one-hot-encoded labels, and define a training generator.
 
-+++ {"id": "o51P6lr86wz-"}
++++ {"id": "69vrihaOi4Oz"}
 
 Install the Hugging Face `datasets` library.
 
@@ -569,14 +552,10 @@ Install the Hugging Face `datasets` library.
 colab:
   base_uri: https://localhost:8080/
 id: 19ipxPhI6oSN
-outputId: 684e445f-d23e-4924-9e76-2c2c9359f0be
+outputId: b80b80cd-fc14-4a43-f8a8-2802de4faade
 ---
 !pip install datasets
 ```
-
-+++ {"id": "be0h_dZv0593"}
-
-Import Library
 
 ```{code-cell}
 :id: 8v1N59p76zn0
@@ -586,68 +565,48 @@ from datasets import load_dataset
 
 +++ {"id": "8Gaj11tO7C86"}
 
-### Load and Format MNIST Dataset
-
 Load the MNIST dataset from Hugging Face and format it as `numpy` arrays for quick access or `jax` to get JAX arrays.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 301
-  referenced_widgets: [32f6132a31aa4c508d3c3c5ef70348bb, d7c2ffa6b143463c91cbf8befca6ca01,
-    fd964ecd3926419d92927c67f955d5d0, 60feca3fde7c4447ad8393b0542eb999, 3354a0baeca94d18bc6b2a8b8b465b58,
-    a0d0d052772b46deac7657ad052991a4, fb34783b9cba462e9b690e0979c4b07a, 8d8170c1ed99490589969cd753c40748,
-    f1ecb6db00a54e088f1e09164222d637, 3cf5dd8d29aa4619b39dc2542df7e42e, 2e5d42ca710441b389895f2d3b611d0a,
-    5d8202da24244dc896e9a8cba6a4ed4f, a6d64c953631412b8bd8f0ba53ae4d32, 69240c5cbfbb4e91961f5b49812a26f0,
-    865f38532b784a7c971f5d33b87b443e, ceb1c004191947cdaa10af9b9c03c80d, 64c6041037914779b5e8e9cf5a80ad04,
-    562fa6a0e7b846a180ac4b423c5511c5, b3b922288f9c4df2a4088279ff6d1531, 75a1a8ffda554318890cf74c345ed9a9,
-    3bae06cacf394a5998c2326199da94f5, ff6428a3daa5496c81d5e664aba01f97, 1ba3f86870724f55b94a35cb6b4173af,
-    b3e163fd8b8a4f289d5a25611cb66d23, abd2daba215e4f7c9ddabde04d6eb382, e22ee019049144d5aba573cdf4dbe4fc,
-    6ac765dac67841a69218140785f024c6, 7b057411a54e434fb74804b90daa8d44, 563f71b3c67d47c3ab1100f5dc1b98f3,
-    d81a657361ab4bba8bcc0cf309d2ff64, 20316312ab88471ba90cbb954be3e964, 698fda742f834473a23fb7e5e4cf239c,
-    289b52c5a38146b8b467a5f4678f6271, d07c2f37cf914894b1551a8104e6cb70, 5b55c73d551d483baaa6a1411c2597b1,
-    2308f77723f54ac898588f48d1853b65, 54d2589714d04b2e928b816258cb0df4, f84b795348c04c7a950165301a643671,
-    bc853a4a8d3c4dbda23d183f0a3b4f27, 1012ddc0343842d8b913a7d85df8ab8f, 771a73a8f5084a57afc5654d72e022f0,
-    311a43449f074841b6df4130b0871ac9, cd4d29cb01134469b52d6936c35eb943, 013cf89ee6174d29bb3f4fdff7b36049,
-    9237d877d84e4b3ab69698ecf56915bb, 337ef4d37e6b4ff6bf6e8bd4ca93383f, b4096d3837b84ccdb8f1186435c87281,
-    7259d3b7e11b4736b4d2aa8e9c55e994, 1ad1f8e99a864fc4a2bc532d9a4ff110, b2b50451eabd40978ef46db5e7dd08c4,
-    2dad5c5541e243128e23c3dd3e420ac2, a3de458b61e5493081d6bb9cf7e923db, 37760f8a7b164e6f9c1a23d621e9fe6b,
-    745a2aedcfab491fb9cffba19958b0c5, 2f6c670640d048d2af453638cfde3a1e]
-id: a22kTvgk6_fJ
-outputId: 35fc38b9-a6ab-4b02-ffa4-ab27fac69df4
----
-mnist_dataset = load_dataset("mnist").with_format("numpy")
+:id: a22kTvgk6_fJ
+
+mnist_dataset = load_dataset("mnist", cache_dir=data_dir).with_format("numpy")
 ```
 
-+++ {"id": "IFjTyGxY19b0"}
++++ {"id": "tgI7dIaX7JzM"}
 
 ### Extract images and labels
 
-Get image shape and flatten for model input
+Get image shape and flatten for model input.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: NHrKatD_7HbH
-outputId: deec1739-2fc0-4e71-8567-f2e0c9db198b
----
+:id: NHrKatD_7HbH
+
 train_images = mnist_dataset["train"]["image"]
 train_labels = mnist_dataset["train"]["label"]
 test_images = mnist_dataset["test"]["image"]
 test_labels = mnist_dataset["test"]["label"]
 
-# Flatten images and one-hot encode labels
+# Extract image shape
 image_shape = train_images.shape[1:]
 num_features = image_shape[0] * image_shape[1]
 
+# Flatten the images
 train_images = train_images.reshape(-1, num_features)
 test_images = test_images.reshape(-1, num_features)
 
+# One-hot encode the labels
 train_labels = one_hot(train_labels, n_targets)
 test_labels = one_hot(test_labels, n_targets)
+```
 
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+id: dITh435Z7Nwb
+outputId: cc89c1ec-6987-4f1c-90a4-c3b355ea7225
+---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
 ```
@@ -678,14 +637,14 @@ Run the training loop using the Hugging Face training generator.
 ---
 colab:
   base_uri: https://localhost:8080/
-id: RhloYGsw6nPf
-outputId: d49c1cd2-a546-46a6-84fb-d9507c38f4ca
+id: Ui6aLiZP7aLe
+outputId: c51529e0-563f-4af0-9793-76b5e6f323db
 ---
 train_model(num_epochs, params, hf_training_generator)
 ```
 
-+++ {"id": "qXylIOwidWI3"}
++++ {"id": "rCJq2rvKlKWX"}
 
 ## Summary
 
-This notebook has introduced efficient strategies for data loading on a CPU with JAX, demonstrating how to integrate popular libraries like PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets. Each library offers distinct advantages, enabling you to streamline the data loading process for machine learning tasks. By understanding the strengths of these methods, you can select the approach that best suits your project's specific requirements.
+This notebook explored efficient methods for loading data on a GPU with JAX, using libraries such as PyTorch DataLoader, TensorFlow Datasets, Grain, and Hugging Face Datasets. You also learned GPU-specific optimizations, including using `device_put` for data transfer and managing GPU memory, to enhance training efficiency. Each method offers unique benefits, allowing you to choose the best approach based on your project requirements.
