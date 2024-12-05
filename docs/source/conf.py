@@ -67,10 +67,12 @@ exclude_patterns = [
     'JAX_transformer_text_classification.md',
     'data_loaders_on_cpu_with_jax.md',
     'data_loaders_on_gpu_with_jax.md',
+    'data_loaders_for_multi_device_setups_with_jax.md',
 ]
 
 suppress_warnings = [
     'misc.highlighting_failure',  # Suppress warning in exception in digits_vae
+    'mystnb.unknown_mime_type',   # Suppress warning for unknown mime type (e.g. colab-display-data+json)
 ]
 
 # -- Options for myst ----------------------------------------------
@@ -104,4 +106,5 @@ nb_execution_excludepatterns = [
     'JAX_transformer_text_classification.ipynb',
     'data_loaders_on_cpu_with_jax.ipynb',
     'data_loaders_on_gpu_with_jax.ipynb',
+    'data_loaders_for_multi_device_setups_with_jax.ipynb',
 ]
