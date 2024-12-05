@@ -24,7 +24,7 @@ using many of the same open source packages that Google developers are using
 in their everyday work.
 
 To get started with the JAX AI stack, you can check out [Getting started with JAX](
-https://github.com/jax-ml/jax-ai-stack/blob/main/docs/getting_started_with_jax_for_AI.ipynb).
+https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/getting_started_with_jax_for_AI.ipynb).
 This is still a work-in-progress, please check back for more documentation and tutorials
 in the coming weeks!
 

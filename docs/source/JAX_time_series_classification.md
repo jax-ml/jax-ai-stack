@@ -14,6 +14,8 @@ kernelspec:
 
 # Time series classification with JAX
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_time_series_classification.ipynb)
+
 In this tutorial, we're going to perform time series classification with a Convolutional Neural Network.
 We will use the FordA dataset from the [UCR archive](https://www.cs.ucr.edu/%7Eeamonn/time_series_data_2018/),
 which contains measurements of engine noise captured by a motor sensor.
@@ -108,7 +110,7 @@ Flax models.
 
 Grain follows the source-sampler-loader paradigm. Grain supports custom setups where data sources
 might come in different forms, but they all need to implement the `grain.RandomAccessDataSource`
-interface. See [PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/data_sources.md)
+interface. See [PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/source/data_sources.md)
 for more details.
 
 Our dataset is comprised of relatively small NumPy arrays so our `DataSource` is uncomplicated:
@@ -132,7 +134,7 @@ test_source = DataSource(x_test, y_test)
 ```
 
 Samplers determine the order in which records are processed, and we'll use the
-[`IndexSmapler`](https://github.com/google/grain/blob/main/docs/data_loader/samplers.md#index-sampler)
+[`IndexSmapler`](https://github.com/google/grain/blob/main/docs/source/data_loader/samplers.md#index-sampler)
 recommended by Grain.
 
 Finally, we'll create `DataLoader`s that handle orchestration of loading.
