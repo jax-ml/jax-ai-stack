@@ -462,7 +462,7 @@ checkpointer.save('/content/save', state)
 !ls /content/save/
 ```
 
-# Profiling for Hyperparameter Tuning
+## Profiling for Hyperparameter Tuning
 
 ```{code-cell}
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
