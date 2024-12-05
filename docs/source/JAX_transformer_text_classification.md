@@ -14,6 +14,8 @@ kernelspec:
 
 # Text classification with transformer model
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_transformer_text_classification.ipynb)
+
 In this short tutorial, we will perform sentiment analysis on movie reviews. We would like
 to know if a review is overall positive or negative, so we're facing a classification task.
 
@@ -126,7 +128,7 @@ x_test = pad_sequences(x_test, max_len=maxlen)
 For handling input data we're going to use Grain, a pure Python package developed for JAX and
 Flax models. Grain supports custom setups where data sources might come in different forms, but
 they all need to implement the `grain.RandomAccessDataSource` interface. See
-[PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/data_sources.md)
+[PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/source/data_sources.md)
 for more details.
 
 Our dataset is comprised of relatively small NumPy arrays so our `DataSource` is uncomplicated:

@@ -16,6 +16,8 @@ kernelspec:
 
 # JAX for PyTorch users
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_PyTorch_users.ipynb)
+
 This is a quick overview of JAX and the JAX AI stack written for those who are famiilar with PyTorch.
 
 First, we cover how to manipulate JAX Arrays following the [well-known PyTorch's tensors tutorial](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html). Next, we explore automatic differentiation with JAX, followed by how to build a model and optimize its parameters.

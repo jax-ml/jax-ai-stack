@@ -14,6 +14,8 @@ kernelspec:
 
 # Image Captioning with JAX & FLAX
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_image_captioning.ipynb)
+
 In this tutorial we implement from scratch and train a transformer-based model on the image captioning task. This task consists of generating a caption text for the input image. We train the model on [Flickr8k](http://hockenmaier.cs.illinois.edu/Framing_Image_Description/KCCA.html) dataset and briefly test trained model on few test images. This tutorial is inspired by ["Image Captioning with Keras"](https://keras.io/examples/vision/image_captioning/).
 
 +++
