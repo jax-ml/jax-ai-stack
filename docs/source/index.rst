@@ -8,5 +8,6 @@ Jax AI Stack
    :hidden:
    :maxdepth: 2
 
+   install
    tutorials
    contributing
