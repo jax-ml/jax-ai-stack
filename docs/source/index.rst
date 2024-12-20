@@ -10,4 +10,5 @@ Jax AI Stack
 
    install
    tutorials
+   examples
    contributing

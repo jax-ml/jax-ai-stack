@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# UNETR for image segmentation
+# Image segmentation with UNETR model
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_examples_image_segmentation.ipynb)
 

@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# Vision Transformer with JAX & FLAX
+# Implement Vision Transformer (ViT) model from scratch
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_Vision_transformer.ipynb)
 

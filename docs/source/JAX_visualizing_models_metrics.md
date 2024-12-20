@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# JAX and Tensorboard / NNX Display
+# Visualize JAX model metrics with TensorBoard
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_visualizing_models_metrics.ipynb)
 
