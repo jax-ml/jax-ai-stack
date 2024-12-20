@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.16.4
 kernelspec:
   display_name: Python 3
   name: python3
@@ -13,12 +13,12 @@ kernelspec:
 
 +++ {"id": "Kzqlx7fpXRnJ"}
 
-# Image generation in JAX: a simple diffusion model
+# Simple diffusion model for image generation in JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_diffusion_model.ipynb)
 
-In [Debugging in JAX: a Variational autoencoder (VAE) model](digits_vae.ipynb) you explored a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the simple digits data. In this tutorial you will find the steps to develop, train and perform inferences with a simple diffusion model developed with JAX, Flax, NNX and Optax. It includes:
-- preparing the dataset
+In [Variational autoencoder (VAE) and debugging in JAX](digits_vae.ipynb) you explored a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the simple digits data. In this tutorial, you will find the steps to develop, train and perform inferences with a simple diffusion model developed with JAX, Flax, NNX and Optax. It includes:
+- Preparing the dataset
 - Developing the custom diffusion model
 - Creating the loss and training functions
 - Perform the model training using Colab TPU v2 as a hardware accelerator
