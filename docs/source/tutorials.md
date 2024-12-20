@@ -10,8 +10,7 @@ digits_vae
 digits_diffusion_model
 JAX_visualizing_models_metrics
 data_loaders
-JAX_for_PyTorch_users
-JAX_porting_PyTorch_model
+pytorch_users
 ```
 
 ## Further references
