@@ -1,6 +1,4 @@
-# Developer docs
-
-## Contributing to the JAX AI Stack Documentation
+# Contribute to documentation
 
 The documentation in the `jax-ai-stack` repository is meant to build on documentation
 of individual packages, and specifically cover topics that touch on multiple packages
@@ -38,24 +36,25 @@ To add a new notebook to the repository, first move the notebook into the approp
 location in the `docs` directory:
 
 ```bash
-mv ~/new-tutorial.ipynb docs/new_tutorial.ipynb
+mv ~/new-tutorial.ipynb docs/source/new_tutorial.ipynb
 ```
 
 Next, we use `jupytext` to mark the notebook for syncing with Markdown:
 
 ```bash
-jupytext --set-formats ipynb,md:myst docs/new_tutorial.ipynb
+jupytext --set-formats ipynb,md:myst docs/source/new_tutorial.ipynb
 ```
 
 Finally, we can sync the notebook and markdown source:
 
 ```bash
-jupytext --sync docs/new_tutorial.ipynb
+jupytext --sync docs/source/new_tutorial.ipynb
 ```
 
 To ensure that the new notebook is rendered as part of the site, be sure to add
 references to a `toctree` declaration somewhere in the source tree, for example
-in `docs/tutorials.md`. You will also need to add references in `docs/conf.py`
+in `docs/source/tutorials.md` or `docs/source/examples.md`.
+You will also need to add references in `docs/conf.py`
 to specify whether the notebook should be executed, and to specify which file
 sphinx should use when generating the site.
 
@@ -70,9 +69,9 @@ you can do the following:
 
 ```bash
 pip install pre-commit
-git add docs/new_tutorial.*          # stage the new changes
+git add docs/source/new_tutorial.*          # stage the new changes
 pre-commit run                       # run pre-commit checks on added files
-git add docs/new_tutorial.*          # stage the files updated by pre-commit
+git add docs/source/new_tutorial.*          # stage the files updated by pre-commit
 git commit -m "update new tutorial"  # commit to the branch
 ```
 
