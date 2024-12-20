@@ -16,6 +16,8 @@ kernelspec:
 
 # JAX for PyTorch users
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_PyTorch_users.ipynb)
+
 This tutorial provides a quick overview of JAX and JAX-based libraries (the JAX AI stack) for PyTorch users. You will how to:
 
 - Manipulate [`jax.Array`s](https://jax.readthedocs.io/en/latest/key-concepts.html#jax-arrays-jax-array), following PyTorch's [Tensors](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html) tutorial.
