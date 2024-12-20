@@ -853,4 +853,4 @@ jit_matmul_relu(x, y)
 
 ### Further reading
 
-- https://jax.readthedocs.io/en/latest/jit-compilation.html
+- [JAX documentation on Just-in-time compilation](https://jax.readthedocs.io/en/latest/jit-compilation.html)
