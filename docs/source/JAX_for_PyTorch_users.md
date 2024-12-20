@@ -16,17 +16,18 @@ kernelspec:
 
 # JAX for PyTorch users
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_PyTorch_users.ipynb)
+This tutorial provides a quick overview of JAX and JAX-based libraries (the JAX AI stack) for PyTorch users. You will how to:
 
-This is a quick overview of JAX and the JAX AI stack written for those who are famiilar with PyTorch.
-
-First, we cover how to manipulate JAX Arrays following the [well-known PyTorch's tensors tutorial](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html). Next, we explore automatic differentiation with JAX, followed by how to build a model and optimize its parameters.
-Finally, we will introduce `jax.jit` and compare it to its PyTorch counterpart `torchscript`.
+- Manipulate [`jax.Array`s](https://jax.readthedocs.io/en/latest/key-concepts.html#jax-arrays-jax-array), following PyTorch's [Tensors](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html) tutorial.
+- Explore automatic differentiation with JAX with [`jax.grad`](https://jax.readthedocs.io/en/latest/automatic-differentiation.html), following the [autodiff PyTorch tutorial](https://pytorch.org/tutorials/beginner/basics/autogradqs_tutorial.html).
+- Build a neural network and optimize its parameters with [Flax](https://flax.readthedocs.io/en/latest/) and [Optax](https://optax.readthedocs.io/en/latest/).
+- Use [`jax.jit`](https://jax.readthedocs.io/en/latest/jit-compilation.html) for just-in-time compilation, comparing it PyTorch's `torchscript`.
 
 ## Setup
 
-Let's get started by importing JAX and checking the installed version.
-For details on how to install JAX check [installation guide](https://jax.readthedocs.io/en/latest/installation.html).
+JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site.
+
+Import JAX and JAX NumPy, and check the installed version.
 
 ```{code-cell} ipython3
 ---
@@ -42,17 +43,17 @@ print(jax.__version__)
 
 +++ {"id": "LNBvB_hRDteB"}
 
-## JAX Arrays manipulation
+## `jax.Array` manipulation vs `torch.Tensor`s
 
-In this section, we will learn about JAX Arrays and how to manipulate them compared to PyTorch tensors.
+This section covers [`jax.Array`s](https://jax.readthedocs.io/en/latest/_autosummary/jax.Array.html) - JAX's primary array object - and how to manipulate them. `jax.Array` is the JAX counterpart of [PyTorch's `torch.Tensor`](https://pytorch.org/tutorials/beginner/basics/tensorqs_tutorial.html).
 
-### Initializing a JAX Array
+### Initializing a `jax.Array`
 
-The primary array object in JAX is the `jax.Array`, which is the JAX counterpart of `torch.Tensor`.
-As with `torch.Tensor`, `jax.Array` objects are never constructed directly, but rather constructed via array creation APIs that populate the new array with constant numbers, random numbers, or data drawn from lists, numpy arrays, torch tensors, and more.
-Let's see some examples of this.
+Similar to `torch.Tensor`s, [`jax.Array`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Array.html) objects are never constructed directly. Instead, they are constructed via array creation APIs that populate the new array with constant numbers, random numbers, or data drawn from Python lists, NumPy arrays, `torch.Tensor`s, and so on.
 
-To initialize an array from a Python data:
+Let's go through some examples.
+
+To initialize an array from Python data:
 
 ```{code-cell} ipython3
 ---
@@ -68,7 +69,7 @@ assert isinstance(x_array, jax.Array)
 print(x_array, x_array.shape, x_array.dtype)
 ```
 
-Or from an existing NumPy array:
+To initialize from an existing NumPy array:
 
 ```{code-cell} ipython3
 ---
@@ -86,7 +87,7 @@ print(x_np, x_np.shape, x_np.dtype)
 # x_np is a copy of np_array
 ```
 
-You can create arrays with the same shape and `dtype` as existing JAX Arrays:
+We can create arrays with the same shape and `dtype` as existing `jax.Array`s:
 
 ```{code-cell} ipython3
 ---
@@ -102,7 +103,7 @@ x_zeros = jnp.zeros_like(x_array)
 print(x_zeros, x_zeros.shape, x_zeros.dtype)
 ```
 
-You can even initialize arrays with constants or random values. For example:
+We can also initialize arrays with constants or random values. For example:
 
 ```{code-cell} ipython3
 ---
@@ -124,8 +125,8 @@ print(f"Ones Tensor: \n {ones_tensor} \n")
 print(f"Zeros Tensor: \n {zeros_tensor}")
 ```
 
-JAX avoids implicit global random state and instead tracks state explicitly via a random `key`.
-If we create two random arrays using the same `key` we will obtain two identical random arrays.
+JAX avoids implicit global random state and instead [tracks state explicitly via a random `key`](https://jax.readthedocs.io/en/latest/random-numbers.html#explicit-random-state).
+If we create two random arrays using the same `key`, we will obtain two identical random arrays.
 We can also split the random `key` into multiple keys to create two different random arrays.
 
 ```{code-cell} ipython3
@@ -141,11 +142,11 @@ rand_tensor2 = jax.random.uniform(k2, (2, 3))
 assert (rand_tensor1 != rand_tensor2).all()
 ```
 
-For further discussion on random numbers in NumPy and JAX check [this tutorial](https://jax.readthedocs.io/en/latest/random-numbers.html).
+**Note:** Learn more about [`jax.random`](https://jax.readthedocs.io/en/latest/jax.random.html#module-jax.random) and pseudorandom number generation (PRNG) in JAX in [this tutorial](https://jax.readthedocs.io/en/latest/random-numbers.html) on the JAX documentation site.
 
 +++
 
-Finally, if you have a PyTorch tensor, you can use it to initialize a JAX Array:
+And if you have a PyTorch `tensor`, you can also use it to initialize a `jax.Array`:
 
 ```{code-cell} ipython3
 ---
@@ -158,22 +159,23 @@ import torch
 
 x_torch = torch.rand(3, 4)
 
-# Create JAX Array as a copy of x_torch tensor
+# Create a `jax.Array` as a copy of the `x_torch` tensor
+# using `jax.numpy.asarray()`.
 x_jax = jnp.asarray(x_torch)
 assert isinstance(x_jax, jax.Array)
 print(x_jax, x_jax.shape, x_jax.dtype)
 
-# Use dlpack to create JAX Array without copying
+# Use `jax.dlpack.from_dlpack()` to create a `jax.Array` without copying.
 x_jax = jax.dlpack.from_dlpack(x_torch.to(device="cuda"), copy=False)
 print(x_jax, x_jax.shape, x_jax.dtype)
 ```
 
 +++ {"id": "oTXSGITNNnuY"}
 
-### Attributes of a JAX Array
+### Attributes of a `jax.Array`
 
 
-Similarly to PyTorch tensors, JAX Array attributes describe the array's shape, dtype and device:
+Similar to `torch.Tensor`s, `jax.Array` attributes describe the array's shape, dtype and device:
 
 ```{code-cell} ipython3
 ---
