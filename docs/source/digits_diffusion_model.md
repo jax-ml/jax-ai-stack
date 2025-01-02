@@ -13,26 +13,27 @@ kernelspec:
 
 +++ {"id": "Kzqlx7fpXRnJ"}
 
-# Simple diffusion model for image generation in JAX
+# Train a diffusion model for image generation with JAX for AI
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_diffusion_model.ipynb)
 
-In [Variational autoencoder (VAE) and debugging in JAX](digits_vae.ipynb) you explored a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the simple digits data. In this tutorial, you will find the steps to develop, train and perform inferences with a simple diffusion model developed with JAX, Flax, NNX and Optax. It includes:
+In [Variational autoencoder (VAE) and debugging in JAX](https://jax-ai-stack.readthedocs.io/en/latest/digits_vae.html), we learned how to train a generative model called VAE on a simple digits dataset. In this tutorial, we will explore how to develop and train a simple diffusion model for image generation and perform inference using JAX, Flax, NNX and Optax, which includes:
+
 - Preparing the dataset
 - Developing the custom diffusion model
 - Creating the loss and training functions
-- Perform the model training using Colab TPU v2 as a hardware accelerator
-- Visualizing and tracking your model progress.
+- Training the model with Google Colab’s Cloud TPU v2
+- Visualizing and tracking the model’s progress.
+
+If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with Flax, Optax and JAX.
 
 +++ {"id": "gwaaMmjXt7n7"}
 
-## Setting your environment up
+## Setup
 
-First you will prepare your development environment. You will need to install the required python packages:
+First, let’s install the required Python packages:
 
 +++ {"id": "_nmgM2aSYAqc"}
-
-### Installing required modules
 
 ```{code-cell}
 ---
@@ -46,7 +47,7 @@ outputId: 25a9af50-164c-44e9-fce8-22ed28dba269
 
 +++ {"id": "Qb_di6i2t_ip"}
 
-Then import the required modules:
+Import the required modules:
 
 ```{code-cell}
 :id: dVVACvmDuDCM
@@ -64,9 +65,7 @@ from sklearn.model_selection import train_test_split
 
 +++ {"id": "tQ5KGMyrYG2H"}
 
-### Checking if the Colab TPU devices are available at the Colab instance
-
-If you are running this code on [Google Colab](https://colab.research.google.com/), you must select the runtime with a Google TPU v2 as hardware accelerator - The output of the cell below will be a list of 8 (eight) TPU devices:
+**Note:** If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v2 as the hardware accelerator. The output of the cell below will be a list of 8 (eight) devices:
 
 ```{code-cell}
 ---
@@ -79,9 +78,9 @@ outputId: d21720a2-65cd-4a5c-ef86-3a0912e36c34
 jax.devices()
 ```
 
-## Loading the digits
+## Loading the data
 
-As before, you will use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation and also will get only the digits '1' (one) from the dataset:
+As before, we will use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation and also will get only the digits '1' (one) from the dataset:
 
 ```{code-cell}
 ---
