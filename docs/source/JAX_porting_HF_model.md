@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.5
+    jupytext_version: 1.15.2
 kernelspec:
   display_name: Python 3
   name: python3
@@ -271,7 +271,8 @@ class LlamaAttention(nnx.Module):
         key = self.repeat_kv(key, config.n_heads // config.n_kv_heads)
         value = self.repeat_kv(value, config.n_heads // config.n_kv_heads)
 
-        attn_weights = jnp.matmul(query, jnp.transpose(key, (0, 1, 3, 2))) / jnp.sqrt(config.head_dim)
+        attn_weights = jnp.matmul(query, jnp.transpose(key, (0, 1, 3, 2)))
+        attn_weights = (attn_weights.astype(jnp.float32) / jnp.sqrt(config.head_dim)).astype(jnp.bfloat16)
         attn_weights = jax.nn.softmax(attn_weights.astype(jnp.float32), axis=-1).astype(jnp.bfloat16)
         attn_output = jnp.matmul(attn_weights, value).transpose((0, 2, 1, 3)).reshape(batch_size, seq_len, -1)
         output = self.o_proj(attn_output)
