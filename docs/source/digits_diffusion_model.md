@@ -19,8 +19,8 @@ kernelspec:
 
 In [Variational autoencoder (VAE) and debugging in JAX](https://jax-ai-stack.readthedocs.io/en/latest/digits_vae.html), we learned how to train a generative model called VAE on a simple digits dataset. In this tutorial, we will explore how to develop and train a simple diffusion model for image generation and perform inference using JAX, Flax, NNX and Optax, which includes:
 
-- Preparing the dataset
-- Developing the custom diffusion model
+- Loading and preprocessing the dataset
+- Defining the diffusion model
 - Creating the loss and training functions
 - Training the model with Google Colab’s Cloud TPU v2
 - Visualizing and tracking the model’s progress.
@@ -78,7 +78,7 @@ outputId: d21720a2-65cd-4a5c-ef86-3a0912e36c34
 jax.devices()
 ```
 
-## Loading the data
+## Loading and preprocessing the data
 
 As before, we will use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation and also will get only the digits '1' (one) from the dataset:
 
@@ -113,17 +113,20 @@ plt.show()
 
 +++ {"id": "exKxj9OcG0yk"}
 
-## Building your diffusion model
+## Defining the diffusion model
 
-Now you will start developing the parts of your [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model). It is composed of a [UNet architecture](https://en.wikipedia.org/wiki/U-Net) backbone and the diffusion layers.
+In this section, we’ll develop various parts of the [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model) and then put it all together.
 
-### U-Net Architecture
+### U-Net architecture
 
-The U-Net architecture serves as the backbone of our diffusion model. It consists of:
-- An encoder path with downsampling;
-- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning));
-- A decoder path with upsampling;
-- Skip connections between encoder and decoder.
+For this example, we’ll use the [U-Net architecture](https://en.wikipedia.org/wiki/U-Net) as the backbone of the diffusion model. The U-Net consists of the following:
+
+- An encoder path with downsampling
+- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning)
+- A decoder path with upsampling
+- Skip connections between encoder and decoder
+
+Define a class called `UNet` that subclasses from `flax.nnx.Module`:
 
 ```{code-cell}
 :id: F4pxdITOuk79
@@ -326,11 +329,9 @@ class UNet(nnx.Module):
 
 +++ {"id": "XJaqiL07HD9D"}
 
-### Diffusion Model
+### Creating the final diffusion model
 
-Now it is time to create the second part of your diffusion model. It will rely on the UNet model and will include all the layers needed to perform the diffusion operations.
-
-This class implements the diffusion process with:
+The final diffusion model will rely on the `UNet` class, and will include all the layers needed to perform the diffusion operations. The `DiffusionModel` class implements the diffusion process with:
 - Forward diffusion (adding noise)
 - Reverse diffusion (denoising)
 - Custom noise scheduling
@@ -403,13 +404,11 @@ class DiffusionModel:
 
 +++ {"id": "wKnYRqMAI06f"}
 
-## Training Components
+## Defining the loss function and the training step
 
-In this section, you will define the training components for our model, including:
-- A Loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty
+In this section, we’ll define the training components for our model, including:
+- A loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty; and
 - The training step (`train_step()`) with [gradient clipping](https://arxiv.org/pdf/1905.11881)
-
-Next, you will define your model configuration and the training loop implementation.
 
 ```{code-cell}
 :id: rq9Ic8WYCCJI
@@ -470,11 +469,13 @@ def train_step(model: UNet,
 
 +++ {"id": "4slhkQ6vI5tZ"}
 
-### Model Training Configuration
+### Model training configuration
 
-Now, you set up:
+Next, we’ll define the model configuration and the training loop implementation.
+
+We need to set up:
 - Model hyperparameters;
-- An optimizer with learning rate schedule.
+- An optimizer with the learning rate schedule.
 
 ```{code-cell}
 :id: w4CwR-6ivIjS
@@ -554,11 +555,11 @@ print("\nModel initialized successfully")
 
 +++ {"id": "LrzTfkDPJm2X"}
 
-### Training Loop Implementation
+### Implementing the training loop
 
-Here you have the main training loop for the diffusion model with:
-- Progressive timestep sampling strategy
-- [Exponential Moving Average (EMA)](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) loss tracking
+Finally, we need to implement the main training loop for the diffusion model with:
+- The progressive timestep sampling strategy
+- [Exponential moving average (EMA)](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) loss tracking
 - Adaptive noise generation
 
 ```{code-cell}
@@ -617,9 +618,9 @@ print("\nTraining completed.")
 
 ### Training loss visualization
 
-It uses a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
+To visualize the training loss, we can use a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
 
-You can see that your model performs well, due to the reducing training loss over the training time.
+Based on the results, the model appears to be performing well as the training loss is falling over time during training.
 
 ```{code-cell}
 ---
@@ -642,9 +643,10 @@ plt.show()
 
 +++ {"id": "M2ql0KwYJLqn"}
 
-## Visualization Functions
+## Visualization functions
 
-In this section, you will include utilities for:
+Here, we can create several utilities for:
+
 - Sample generation
 - Forward/reverse process visualization
 - Training progress tracking
@@ -806,6 +808,6 @@ plot_forward_and_reverse(model, diffusion, images_test[0], subkey)
 +++ {"id": "o43bRWpiM6Mt"}
 
 ## Summary
-This tutorial demonstrated the implementation of a diffusion model using JAX and Flax libraries. You explored the U-Net architecture with attention mechanisms, efficient training strategies using JIT compilation, and comprehensive visualization techniques for the diffusion process. The implementation showcases JAX's powerful features for high-performance machine learning, including automatic differentiation, vectorization, and just-in-time compilation.
 
-Check the [JAX documentation](https://jax.readthedocs.io/en/latest/) for more tutorials and experiments with the JAX stack.
+In this tutorial, we implemented a simple diffusion model using JAX and Flax, and trained it with Optax and Flax. The model consisted of the U-Net model architecture with attention mechanisms, the training used Flax’s NNX JIT compilation, and we also learned how to visualize the diffusion process.
+
