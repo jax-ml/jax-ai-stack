@@ -13,7 +13,7 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
-# Pretraining an LLM using JAX
+# Pre-training an LLM (miniGPT)
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb)
 

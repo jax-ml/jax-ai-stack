@@ -15,11 +15,11 @@ keywords = []
 
 # pip dependencies of the project
 dependencies = [
-    "jax==0.4.37",
+    "jax==0.4.38",
     "flax==0.10.2",
     "ml_dtypes==0.4.0",
     "optax==0.2.4",
-    "orbax-checkpoint==0.10.2",
+    "orbax-checkpoint==0.11.0",
     "orbax-export==0.0.6",
 ]
 
@@ -44,7 +44,7 @@ tfds = [
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
 grain = [
-    "grain==0.2.2",
+    "grain==0.2.3",
 ]
 
 [tool.pyink]

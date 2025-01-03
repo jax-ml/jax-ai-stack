@@ -1615,5 +1615,5 @@ cosine_dist
 
 ## Further reading
 
-- https://flax.readthedocs.io/en/latest/examples/core_examples.html
-- https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html
+- [Flax documentation: Core Exampels](https://flax.readthedocs.io/en/latest/examples/core_examples.html)
+- [JAX AI Stack tutorials](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html)

@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# Image Captioning with JAX & FLAX
+# Image Captioning with Vision Transformer (ViT) model
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_image_captioning.ipynb)
 
