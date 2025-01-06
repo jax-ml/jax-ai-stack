@@ -17,7 +17,7 @@ kernelspec:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_diffusion_model.ipynb)
 
-In [Variational autoencoder (VAE) and debugging in JAX](https://jax-ai-stack.readthedocs.io/en/latest/digits_vae.html), we learned how to train a generative model called VAE on a simple digits dataset. In this tutorial, we will explore how to develop and train a simple diffusion model for image generation and perform inference using JAX, Flax, NNX and Optax, which includes:
+In [Variational autoencoder (VAE) and debugging in JAX](https://jax-ai-stack.readthedocs.io/en/latest/digits_vae.html), we learned how to train a generative model called VAE on a simple digits dataset. In this tutorial, we will explore how to develop and train a simple diffusion model for image generation and perform inference using JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io). You will learn how to:
 
 - Loading and preprocessing the dataset
 - Defining the diffusion model
@@ -31,23 +31,9 @@ If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stac
 
 ## Setup
 
-First, let’s install the required Python packages:
+JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site.
 
-+++ {"id": "_nmgM2aSYAqc"}
-
-```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: f3NCUma0t28r
-outputId: 25a9af50-164c-44e9-fce8-22ed28dba269
----
-%pip install jax-ai-stack -q
-```
-
-+++ {"id": "Qb_di6i2t_ip"}
-
-Import the required modules:
+Import JAX, JAX NumPy, Flax NNX, Optax, matplotlib and scikit-learn:
 
 ```{code-cell}
 :id: dVVACvmDuDCM
@@ -67,6 +53,8 @@ from sklearn.model_selection import train_test_split
 
 **Note:** If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v2 as the hardware accelerator. The output of the cell below will be a list of 8 (eight) devices:
 
+Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html):
+
 ```{code-cell}
 ---
 colab:
@@ -74,13 +62,12 @@ colab:
 id: ldmtemzPBO5z
 outputId: d21720a2-65cd-4a5c-ef86-3a0912e36c34
 ---
-# Check available JAX devices
 jax.devices()
 ```
 
 ## Loading and preprocessing the data
 
-As before, we will use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation and also will get only the digits '1' (one) from the dataset:
+As before, we will use the small, self-contained [scikit-learn `digits` dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation. In addition, we will only use the '1' (one) digits from the dataset:
 
 ```{code-cell}
 ---
@@ -90,19 +77,19 @@ colab:
 id: jNizSH6uuXY4
 outputId: 112723a1-fd36-46b2-946d-6d789f5a33ed
 ---
-# Data preprocessing
+# Data preprocessing:
 digits = load_digits()
-images = digits.images[digits.target == 1] # Filter images of digit '1'
-images = images / 16.0 # Normalize pixel values to [0, 1]
-images = jnp.asarray(images) # Convert to JAX array
-images = images.reshape(-1, 8, 8, 1) # Reshape to (num_images, height, width, channels)
+images = digits.images[digits.target == 1] # Filter images for only digits '1' (one).
+images = images / 16.0 # Normalize pixel values into floating-point arrays in the `[0, 1]` interval.
+images = jnp.asarray(images) # Convert to `jax.Array`s.
+images = images.reshape(-1, 8, 8, 1) # Reshape to `(num_images, height, width, channels)`.
 
-# Split the dataset
+# Split the dataset:
 images_train, images_test = train_test_split(images, test_size=0.05, random_state=42)
 print(f"Training set size: {images_train.shape[0]}")
 print(f"Test set size: {images_test.shape[0]}")
 
-# Visualize sample images
+# Visualize sample images:
 fig, axes = plt.subplots(3, 3, figsize=(3, 3))
 for i, ax in enumerate(axes.flat):
     if i < len(images_train):
@@ -113,20 +100,20 @@ plt.show()
 
 +++ {"id": "exKxj9OcG0yk"}
 
-## Defining the diffusion model
+## Defining the diffusion model with Flax
 
-In this section, we’ll develop various parts of the [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model) and then put it all together.
+In this section, we’ll develop various parts of the [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model) and then put them all together.
 
-### U-Net architecture
+### The U-Net architecture
 
 For this example, we’ll use the [U-Net architecture](https://en.wikipedia.org/wiki/U-Net) as the backbone of the diffusion model. The U-Net consists of the following:
 
-- An encoder path with downsampling
-- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning)
-- A decoder path with upsampling
-- Skip connections between encoder and decoder
+- An [encoder](https://en.wikipedia.org/wiki/Autoencoder) path with [downsampling](https://en.wikipedia.org/wiki/Downsampling_(signal_processing))
+- A bridge with a (self-)[attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning)
+- A [decoder](https://en.wikipedia.org/wiki/Autoencoder) path with [upsampling](https://en.wikipedia.org/wiki/Upsampling)
+- [Skip connections](https://en.wikipedia.org/wiki/Residual_neural_network#Residual_connection) between the encoder and the decoder
 
-Define a class called `UNet` that subclasses from `flax.nnx.Module`:
+Let's define a class called `UNet` by subclassing [`flax.nnx.Module`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/module.html#flax.nnx.Module) and using, among other things, [`flax.nnx.Linear`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/linear.html#flax.nnx.Linear) (linear or dense layers for time embedding and time projection layers, as well as the self-attention layers), [`flax.nnx.LayerNorm`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/normalization.html#flax.nnx.LayerNorm) (layer normalization), and [`flax.nnx.Conv`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/linear.html#flax.nnx.Conv) (convolution layers for the output layer).
 
 ```{code-cell}
 :id: F4pxdITOuk79
@@ -144,38 +131,38 @@ class UNet(nnx.Module):
         """
         self.features = features
 
-        # Time embedding layers for diffusion timestep conditioning
+        # Time embedding layers for diffusion timestep conditioning:
         self.time_mlp_1 = nnx.Linear(in_features=time_emb_dim, out_features=time_emb_dim, rngs=rngs)
         self.time_mlp_2 = nnx.Linear(in_features=time_emb_dim, out_features=time_emb_dim, rngs=rngs)
 
-        # Time projection layers for different scales
+        # Time projection layers for different scales:
         self.time_proj1 = nnx.Linear(in_features=time_emb_dim, out_features=features, rngs=rngs)
         self.time_proj2 = nnx.Linear(in_features=time_emb_dim, out_features=features * 2, rngs=rngs)
         self.time_proj3 = nnx.Linear(in_features=time_emb_dim, out_features=features * 4, rngs=rngs)
         self.time_proj4 = nnx.Linear(in_features=time_emb_dim, out_features=features * 8, rngs=rngs)
 
-        # Encoder path
+        # The encoder path:
         self.down_conv1 = self._create_residual_block(in_channels, features, rngs)
         self.down_conv2 = self._create_residual_block(features, features * 2, rngs)
         self.down_conv3 = self._create_residual_block(features * 2, features * 4, rngs)
         self.down_conv4 = self._create_residual_block(features * 4, features * 8, rngs)
 
-        # Multi-head self-attention blocks
+        # Multi-head self-attention blocks:
         self.attention1 = self._create_attention_block(features * 4, rngs)
         self.attention2 = self._create_attention_block(features * 8, rngs)
 
-        # Bridge connecting encoder and decoder
+        # The bridge connecting the encoder and the decoder:
         self.bridge_down = self._create_residual_block(features * 8, features * 16, rngs)
         self.bridge_attention = self._create_attention_block(features * 16, rngs)
         self.bridge_up = self._create_residual_block(features * 16, features * 16, rngs)
 
-        # Decoder path with skip connections
+        # Decoder path with skip connections:
         self.up_conv4 = self._create_residual_block(features * 24, features * 8, rngs)
         self.up_conv3 = self._create_residual_block(features * 12, features * 4, rngs)
         self.up_conv2 = self._create_residual_block(features * 6, features * 2, rngs)
         self.up_conv1 = self._create_residual_block(features * 3, features, rngs)
 
-        # Output layers
+        # Output layers:
         self.final_norm = nnx.LayerNorm(features, rngs=rngs)
         self.final_conv = nnx.Conv(in_features=features,
                                  out_features=out_channels,
