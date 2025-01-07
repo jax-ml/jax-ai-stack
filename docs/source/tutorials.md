@@ -13,7 +13,6 @@ getting_started_with_jax_for_AI
 digits_vae
 JAX_for_PyTorch_users
 JAX_porting_PyTorch_model
-JAX_porting_HF_model
 digits_diffusion_model
 JAX_for_LLM_pretraining
 JAX_basic_text_classification
