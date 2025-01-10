@@ -14,7 +14,7 @@
   - `tensorflow==2.18.0`
   - `tensorflow_datasets==4.9.7`
 - `jax-ai-stack[grain]` packages:
-  - `grain==0.2.2` ↗️
+  - `grain==0.2.3` ↗️
 
 ## v2024.12.10
 - `jax-ai-stack` packages:
