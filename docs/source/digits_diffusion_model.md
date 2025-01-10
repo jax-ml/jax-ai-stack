@@ -13,40 +13,27 @@ kernelspec:
 
 +++ {"id": "Kzqlx7fpXRnJ"}
 
-# Simple diffusion model for image generation in JAX
+# Train a diffusion model for image generation with JAX for AI
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_diffusion_model.ipynb)
 
-In [Variational autoencoder (VAE) and debugging in JAX](digits_vae.ipynb) you explored a simplified version of a [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) trained on the simple digits data. In this tutorial, you will find the steps to develop, train and perform inferences with a simple diffusion model developed with JAX, Flax, NNX and Optax. It includes:
-- Preparing the dataset
-- Developing the custom diffusion model
+In [Variational autoencoder (VAE) and debugging in JAX](https://jax-ai-stack.readthedocs.io/en/latest/digits_vae.html), we learned how to train a generative model called VAE on a simple digits dataset. In this tutorial, we will explore how to develop and train a simple diffusion model for image generation and perform inference using JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io). You will learn how to:
+
+- Loading and preprocessing the dataset
+- Defining the diffusion model
 - Creating the loss and training functions
-- Perform the model training using Colab TPU v2 as a hardware accelerator
-- Visualizing and tracking your model progress.
+- Training the model with Google Colab’s Cloud TPU v2
+- Visualizing and tracking the model’s progress.
+
+If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with Flax, Optax and JAX.
 
 +++ {"id": "gwaaMmjXt7n7"}
 
-## Setting your environment up
+## Setup
 
-First you will prepare your development environment. You will need to install the required python packages:
+JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site.
 
-+++ {"id": "_nmgM2aSYAqc"}
-
-### Installing required modules
-
-```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: f3NCUma0t28r
-outputId: 25a9af50-164c-44e9-fce8-22ed28dba269
----
-%pip install jax-ai-stack -q
-```
-
-+++ {"id": "Qb_di6i2t_ip"}
-
-Then import the required modules:
+Import JAX, JAX NumPy, Flax NNX, Optax, matplotlib and scikit-learn:
 
 ```{code-cell}
 :id: dVVACvmDuDCM
@@ -64,9 +51,9 @@ from sklearn.model_selection import train_test_split
 
 +++ {"id": "tQ5KGMyrYG2H"}
 
-### Checking if the Colab TPU devices are available at the Colab instance
+**Note:** If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v2 as the hardware accelerator. The output of the cell below will be a list of 8 (eight) devices:
 
-If you are running this code on [Google Colab](https://colab.research.google.com/), you must select the runtime with a Google TPU v2 as hardware accelerator - The output of the cell below will be a list of 8 (eight) TPU devices:
+Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html):
 
 ```{code-cell}
 ---
@@ -75,13 +62,12 @@ colab:
 id: ldmtemzPBO5z
 outputId: d21720a2-65cd-4a5c-ef86-3a0912e36c34
 ---
-# Check available JAX devices
 jax.devices()
 ```
 
-## Loading the digits
+## Loading and preprocessing the data
 
-As before, you will use the small, self-contained [scikit-learn digits dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation and also will get only the digits '1' (one) from the dataset:
+As before, we will use the small, self-contained [scikit-learn `digits` dataset](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) for ease of experimentation. In addition, we will only use the '1' (one) digits from the dataset:
 
 ```{code-cell}
 ---
@@ -91,19 +77,19 @@ colab:
 id: jNizSH6uuXY4
 outputId: 112723a1-fd36-46b2-946d-6d789f5a33ed
 ---
-# Data preprocessing
+# Data preprocessing:
 digits = load_digits()
-images = digits.images[digits.target == 1] # Filter images of digit '1'
-images = images / 16.0 # Normalize pixel values to [0, 1]
-images = jnp.asarray(images) # Convert to JAX array
-images = images.reshape(-1, 8, 8, 1) # Reshape to (num_images, height, width, channels)
+images = digits.images[digits.target == 1] # Filter images for only digits '1' (one).
+images = images / 16.0 # Normalize pixel values into floating-point arrays in the `[0, 1]` interval.
+images = jnp.asarray(images) # Convert to `jax.Array`s.
+images = images.reshape(-1, 8, 8, 1) # Reshape to `(num_images, height, width, channels)`.
 
-# Split the dataset
+# Split the dataset:
 images_train, images_test = train_test_split(images, test_size=0.05, random_state=42)
 print(f"Training set size: {images_train.shape[0]}")
 print(f"Test set size: {images_test.shape[0]}")
 
-# Visualize sample images
+# Visualize sample images:
 fig, axes = plt.subplots(3, 3, figsize=(3, 3))
 for i, ax in enumerate(axes.flat):
     if i < len(images_train):
@@ -114,17 +100,20 @@ plt.show()
 
 +++ {"id": "exKxj9OcG0yk"}
 
-## Building your diffusion model
+## Defining the diffusion model with Flax
 
-Now you will start developing the parts of your [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model). It is composed of a [UNet architecture](https://en.wikipedia.org/wiki/U-Net) backbone and the diffusion layers.
+In this section, we’ll develop various parts of the [diffusion model](https://en.wikipedia.org/wiki/Diffusion_model) and then put them all together.
 
-### U-Net Architecture
+### The U-Net architecture
 
-The U-Net architecture serves as the backbone of our diffusion model. It consists of:
-- An encoder path with downsampling;
-- A bridge with an [attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning));
-- A decoder path with upsampling;
-- Skip connections between encoder and decoder.
+For this example, we’ll use the [U-Net architecture](https://en.wikipedia.org/wiki/U-Net) as the backbone of the diffusion model. The U-Net consists of the following:
+
+- An [encoder](https://en.wikipedia.org/wiki/Autoencoder) path with [downsampling](https://en.wikipedia.org/wiki/Downsampling_(signal_processing))
+- A bridge with a (self-)[attention mechanism](https://en.wikipedia.org/wiki/Attention_(machine_learning)
+- A [decoder](https://en.wikipedia.org/wiki/Autoencoder) path with [upsampling](https://en.wikipedia.org/wiki/Upsampling)
+- [Skip connections](https://en.wikipedia.org/wiki/Residual_neural_network#Residual_connection) between the encoder and the decoder
+
+Let's define a class called `UNet` by subclassing [`flax.nnx.Module`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/module.html#flax.nnx.Module) and using, among other things, [`flax.nnx.Linear`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/linear.html#flax.nnx.Linear) (linear or dense layers for time embedding and time projection layers, as well as the self-attention layers), [`flax.nnx.LayerNorm`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/normalization.html#flax.nnx.LayerNorm) (layer normalization), and [`flax.nnx.Conv`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/linear.html#flax.nnx.Conv) (convolution layers for the output layer).
 
 ```{code-cell}
 :id: F4pxdITOuk79
@@ -142,38 +131,38 @@ class UNet(nnx.Module):
         """
         self.features = features
 
-        # Time embedding layers for diffusion timestep conditioning
+        # Time embedding layers for diffusion timestep conditioning:
         self.time_mlp_1 = nnx.Linear(in_features=time_emb_dim, out_features=time_emb_dim, rngs=rngs)
         self.time_mlp_2 = nnx.Linear(in_features=time_emb_dim, out_features=time_emb_dim, rngs=rngs)
 
-        # Time projection layers for different scales
+        # Time projection layers for different scales:
         self.time_proj1 = nnx.Linear(in_features=time_emb_dim, out_features=features, rngs=rngs)
         self.time_proj2 = nnx.Linear(in_features=time_emb_dim, out_features=features * 2, rngs=rngs)
         self.time_proj3 = nnx.Linear(in_features=time_emb_dim, out_features=features * 4, rngs=rngs)
         self.time_proj4 = nnx.Linear(in_features=time_emb_dim, out_features=features * 8, rngs=rngs)
 
-        # Encoder path
+        # The encoder path:
         self.down_conv1 = self._create_residual_block(in_channels, features, rngs)
         self.down_conv2 = self._create_residual_block(features, features * 2, rngs)
         self.down_conv3 = self._create_residual_block(features * 2, features * 4, rngs)
         self.down_conv4 = self._create_residual_block(features * 4, features * 8, rngs)
 
-        # Multi-head self-attention blocks
+        # Multi-head self-attention blocks:
         self.attention1 = self._create_attention_block(features * 4, rngs)
         self.attention2 = self._create_attention_block(features * 8, rngs)
 
-        # Bridge connecting encoder and decoder
+        # The bridge connecting the encoder and the decoder:
         self.bridge_down = self._create_residual_block(features * 8, features * 16, rngs)
         self.bridge_attention = self._create_attention_block(features * 16, rngs)
         self.bridge_up = self._create_residual_block(features * 16, features * 16, rngs)
 
-        # Decoder path with skip connections
+        # Decoder path with skip connections:
         self.up_conv4 = self._create_residual_block(features * 24, features * 8, rngs)
         self.up_conv3 = self._create_residual_block(features * 12, features * 4, rngs)
         self.up_conv2 = self._create_residual_block(features * 6, features * 2, rngs)
         self.up_conv1 = self._create_residual_block(features * 3, features, rngs)
 
-        # Output layers
+        # Output layers:
         self.final_norm = nnx.LayerNorm(features, rngs=rngs)
         self.final_conv = nnx.Conv(in_features=features,
                                  out_features=out_channels,
@@ -327,11 +316,9 @@ class UNet(nnx.Module):
 
 +++ {"id": "XJaqiL07HD9D"}
 
-### Diffusion Model
+### Creating the final diffusion model
 
-Now it is time to create the second part of your diffusion model. It will rely on the UNet model and will include all the layers needed to perform the diffusion operations.
-
-This class implements the diffusion process with:
+The final diffusion model will rely on the `UNet` class, and will include all the layers needed to perform the diffusion operations. The `DiffusionModel` class implements the diffusion process with:
 - Forward diffusion (adding noise)
 - Reverse diffusion (denoising)
 - Custom noise scheduling
@@ -404,13 +391,11 @@ class DiffusionModel:
 
 +++ {"id": "wKnYRqMAI06f"}
 
-## Training Components
+## Defining the loss function and the training step
 
-In this section, you will define the training components for our model, including:
-- A Loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty
+In this section, we’ll define the training components for our model, including:
+- A loss function (`loss_fn()`) with [SNR weighting](https://en.wikipedia.org/wiki/Signal-to-noise_ratio) and gradient penalty; and
 - The training step (`train_step()`) with [gradient clipping](https://arxiv.org/pdf/1905.11881)
-
-Next, you will define your model configuration and the training loop implementation.
 
 ```{code-cell}
 :id: rq9Ic8WYCCJI
@@ -471,11 +456,13 @@ def train_step(model: UNet,
 
 +++ {"id": "4slhkQ6vI5tZ"}
 
-### Model Training Configuration
+### Model training configuration
 
-Now, you set up:
+Next, we’ll define the model configuration and the training loop implementation.
+
+We need to set up:
 - Model hyperparameters;
-- An optimizer with learning rate schedule.
+- An optimizer with the learning rate schedule.
 
 ```{code-cell}
 :id: w4CwR-6ivIjS
@@ -555,11 +542,11 @@ print("\nModel initialized successfully")
 
 +++ {"id": "LrzTfkDPJm2X"}
 
-### Training Loop Implementation
+### Implementing the training loop
 
-Here you have the main training loop for the diffusion model with:
-- Progressive timestep sampling strategy
-- [Exponential Moving Average (EMA)](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) loss tracking
+Finally, we need to implement the main training loop for the diffusion model with:
+- The progressive timestep sampling strategy
+- [Exponential moving average (EMA)](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) loss tracking
 - Adaptive noise generation
 
 ```{code-cell}
@@ -618,9 +605,9 @@ print("\nTraining completed.")
 
 ### Training loss visualization
 
-It uses a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
+To visualize the training loss, we can use a logarithmic scale to better display the exponential decay of the loss values over time. This representation helps identify both early rapid improvements and later fine-tuning phases of the training process.
 
-You can see that your model performs well, due to the reducing training loss over the training time.
+Based on the results, the model appears to be performing well as the training loss is falling over time during training.
 
 ```{code-cell}
 ---
@@ -643,9 +630,10 @@ plt.show()
 
 +++ {"id": "M2ql0KwYJLqn"}
 
-## Visualization Functions
+## Visualization functions
 
-In this section, you will include utilities for:
+Here, we can create several utilities for:
+
 - Sample generation
 - Forward/reverse process visualization
 - Training progress tracking
@@ -807,6 +795,6 @@ plot_forward_and_reverse(model, diffusion, images_test[0], subkey)
 +++ {"id": "o43bRWpiM6Mt"}
 
 ## Summary
-This tutorial demonstrated the implementation of a diffusion model using JAX and Flax libraries. You explored the U-Net architecture with attention mechanisms, efficient training strategies using JIT compilation, and comprehensive visualization techniques for the diffusion process. The implementation showcases JAX's powerful features for high-performance machine learning, including automatic differentiation, vectorization, and just-in-time compilation.
 
-Check the [JAX documentation](https://jax.readthedocs.io/en/latest/) for more tutorials and experiments with the JAX stack.
+In this tutorial, we implemented a simple diffusion model using JAX and Flax, and trained it with Optax and Flax. The model consisted of the U-Net model architecture with attention mechanisms, the training used Flax’s NNX JIT compilation, and we also learned how to visualize the diffusion process.
+
