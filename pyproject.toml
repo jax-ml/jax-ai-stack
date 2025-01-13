@@ -17,7 +17,7 @@ keywords = []
 dependencies = [
     "jax==0.4.38",
     "flax==0.10.2",
-    "ml_dtypes==0.4.0",
+    "ml_dtypes==0.5.1",
     "optax==0.2.4",
     "orbax-checkpoint==0.11.0",
     "orbax-export==0.0.6",
