@@ -38,7 +38,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install pytest pytest-xdist
-          python -m pip install -U jax flax grain ml_dtypes optax orbax-checkpoint orbax-export tensorflow tensorflow_datasets
+          python -m pip install -U chex jax flax grain ml_dtypes optax orbax-checkpoint orbax-export tensorflow tensorflow_datasets
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
@@ -139,6 +139,31 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds,grain]
           python -m pip install --upgrade 'git+https://github.com/google/orbax/#subdirectory=checkpoint' 'git+https://github.com/google/orbax/#subdirectory=export'
+      - name: Run tests
+        run: |
+          pytest -n auto jax_ai_stack
+      - name: Notify failed build
+        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        if: failure() && github.event.pull_request == null
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  chex-nightly:
+    name: Test with chex nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with:
+          python-version: 3.12
+      - name: Install dependencies with chex nightly
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev,tfds,grain]
+          python -m pip install --upgrade 'git+https://github.com/google-deepmind/chex/'
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
