@@ -5,6 +5,8 @@ body {
 .doc-body {
   display: flex;
   flex-direction: column;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 @media (min-width: 960px) {
@@ -38,7 +40,7 @@ section {
 }
 
 .doc-body h3 {
-  font-size: 1.75rem;
+  font: 500 1.75rem 'Google Sans', 'Roboto', sans-serif;
   line-height: 1.15;
   margin: 2.75rem 0 1.05rem;
 }
