@@ -5,9 +5,9 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.16.6
 kernelspec:
-  display_name: Python 3 (ipykernel)
+  display_name: jax-ai-stack
   language: python
   name: python3
 ---
@@ -18,15 +18,46 @@ kernelspec:
 
 +++
 
-To keep things straightforward and familiar, we reuse the model and data from [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html) - if you haven't read that yet and want the primer, start there before returning.
+Measuring and visualizing experiment metrics is an essential part of the machine learning workflow.
+In this tutorial, we will measure a JAX model using [TensorBoard](https://www.tensorflow.org/tensorboard) - a visualization tool that allows tracking loss and accuracy, visualizing model graphs, and more.
 
-All of the modeling and training code is the same here. What we have added are the tensorboard connections and the discussion around them.
+We'll measure the model defined in [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html). Go through that tutorial before continuing because we'll use the same modeling and training code, and add TensorBoard connections to it.
+
+## Setup
+
+TensorBoard is a part of the TensorFlow library. We'll install TensorFlow, load the TensorBoard extension for use within Jupyter Notebooks, and import the required libraries.
+
+```{code-cell} ipython3
+# python -m pip install tensorflow-cpu
+```
+
+```{code-cell} ipython3
+%load_ext tensorboard
+```
 
 ```{code-cell} ipython3
 import tensorflow as tf
 import io
 from datetime import datetime
 ```
+
+In TensorFlow, a `SummaryWriter` object handles outputs and logs. Let's create this object using [`tf.summary.create_file_writer`](https://www.tensorflow.org/api_docs/python/tf/summary/create_file_writer) and set the directory where the outputs should be stored. The following organization structure is arbitrary, but keeping a folder for each training run can make future navigation more straightforward.
+
+```{code-cell} ipython3
+# Optional - Clear any logs from previous runs
+# !rm -rf ./runs/test/
+```
+
+```{code-cell} ipython3
+file_path = "runs/test/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+test_summary_writer = tf.summary.create_file_writer(file_path)
+```
+
+## Load the dataset
+
+In the [Getting Started tutorial](https://docs.jaxstack.ai/en/latest/getting_started_with_jax_for_AI.html), we loaded the  scikit-learn digits dataset and used matplotlib to display a few images in the notebook.
+
+We can also stash these images in TensorBoard. If a training needs to be repeated, it's more space efficient to stash the training data information and skip this step for subsequent trainings, provided the input is static.
 
 ```{code-cell} ipython3
 :id: hKhPLnNxfOHU
@@ -36,20 +67,15 @@ from sklearn.datasets import load_digits
 digits = load_digits()
 ```
 
-Here we set the location of the tensorflow writer - the organization is somewhat arbitrary, though keeping a folder for each training run can make later navigation more straightforward.
+Taken from the [TensorBoard example on displaying image data](https://www.tensorflow.org/tensorboard/image_summaries), the following convert function makes it easier to view matplotlib figures (which are in images) directly in TensorBoard.
 
 ```{code-cell} ipython3
-file_path = "runs/test/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-test_summary_writer = tf.summary.create_file_writer(file_path)
-```
-
-Pulled from the official tensorboard examples, this convert function makes it simple to drop matplotlib figures directly into tensorboard
-
-```{code-cell} ipython3
+# Source: https://www.tensorflow.org/tensorboard/image_summaries#logging_arbitrary_image_data
 def plot_to_image(figure):
-  """Sourced from https://www.tensorflow.org/tensorboard/image_summaries
+  """
   Converts the matplotlib plot specified by 'figure' to a PNG image and
-  returns it. The supplied figure is closed and inaccessible after this call."""
+  returns it. The supplied figure is closed and inaccessible after this call.
+  """
   # Save the plot to a PNG in memory.
   buf = io.BytesIO()
   plt.savefig(buf, format='png')
@@ -64,7 +90,9 @@ def plot_to_image(figure):
   return image
 ```
 
-Whereas previously the example displays the training data snapshot in the notebook, here we stash it in the tensorboard images.  If a given training is to be repeated many, many times it can save space to stash the training data information as its own run and skip this step for each subsequent training, provided the input is static.  Note that this pattern uses the writer in a `with` context manager. We are able to step into and out of this type of context through the run without losing the same file/folder experiment.
+We'll use the `SummaryWriter` in a `with` context manager, to step in and out of this type of context through the run.
+
+[tf.summary](https://www.tensorflow.org/api_docs/python/tf/summary) has several functions to log different types of information. Here, use [`tf.summary.image`](https://www.tensorflow.org/api_docs/python/tf/summary/image) to write the image.
 
 ```{code-cell} ipython3
 :id: Y8cMntSdfyyT
@@ -79,36 +107,35 @@ fig, axes = plt.subplots(10, 10, figsize=(6, 6),
 for i, ax in enumerate(axes.flat):
     ax.imshow(digits.images[i], cmap='binary', interpolation='gaussian')
     ax.text(0.05, 0.05, str(digits.target[i]), transform=ax.transAxes, color='green')
+
 with test_summary_writer.as_default():
     tf.summary.image("Training Data", plot_to_image(fig), step=0)
 ```
 
-After running all above and launching `tensorboard --logdir runs/test` from the same folder, you should see the following in the supplied URL:
+We can now launch TensorBoard within the notebook. Notice the stored training data image.
 
-![image.png](./_static/images/training_data_example.png)
+```{code-cell} ipython3
+%tensorboard --logdir runs/test
+```
+
+## Define and train the model
+
++++
+
+We can now create a simple neural network using Flax.
 
 ```{code-cell} ipython3
 :id: 6jrYisoPh6TL
 
 from sklearn.model_selection import train_test_split
-splits = train_test_split(digits.images, digits.target, random_state=0)
-```
-
-```{code-cell} ipython3
-:id: oMRcwKd4hqOo
-:outputId: 0ad36290-397b-431d-eba2-ef114daf5ea6
-
 import jax.numpy as jnp
+from flax import nnx
+
+splits = train_test_split(digits.images, digits.target, random_state=0)
+
 images_train, images_test, label_train, label_test = map(jnp.asarray, splits)
 print(f"{images_train.shape=} {label_train.shape=}")
 print(f"{images_test.shape=}  {label_test.shape=}")
-```
-
-```{code-cell} ipython3
-:id: U77VMQwRjTfH
-:outputId: 345fed7a-4455-4036-85ed-57e673a4de01
-
-from flax import nnx
 
 class SimpleNN(nnx.Module):
 
@@ -131,13 +158,9 @@ model = SimpleNN(rngs=nnx.Rngs(0))
 nnx.display(model)  # Interactive display if penzai is installed.
 ```
 
-We've now created the basic model - the above cell will render an interactive view of the model. Which, when fully expanded, should look something like this:
+To track loss across our training run, we'll calculate loss in the training step.
 
-![image.png](./_static/images/nnx_display_example.png)
-
-+++
-
-In order to track loss across our training run, we've collected the loss function call inside the training step:
+Note that in the [Getting Started tutorial](https://docs.jaxstack.ai/en/latest/getting_started_with_jax_for_AI.html), this metric was computed once at the end of training, and called within the `for` loop.
 
 ```{code-cell} ipython3
 :id: QwRvFPkYl5b2
@@ -172,9 +195,12 @@ def train_step(
     return loss
 ```
 
-Now, we've collected the metrics that were previously computed once at the end of training and called them throughout the `for` loop, as you would in an eval stage.
-
-With the summary_writer context in place, we write out the `Loss` scalar every epoch, test the model accuracy every 10, and stash a accuracy test sheet every 500.  Any custom metric can be added this way, through the tf.summary API.
+With the summary writer context in place, we can write the following to TensorBoard:
+- the `Loss` scalar every epoch,
+- model accuracy every 10 epochs
+- accuracy test sheet every 500 epochs
+ 
+Any custom metric can be added this through the `tf.summary` API.
 
 ```{code-cell} ipython3
 :id: l9mukT0eqmsr
@@ -209,40 +235,48 @@ with test_summary_writer.as_default():
             tf.summary.image(f"Step {i+1} Accuracy Testsheet", plot_to_image(fig), step=i+1)
 ```
 
-During the training has run, and after, the added `Loss` and `Accuracy` scalars are available in the tensorboard UI under the run folder we've dynamically created by the datetime.
-
-The output there should look something like the following:
-
-![image.png](./_static/images/loss_acc_example.png)
+## View metrics on TensorBoard
 
 +++
 
-Since we've stored the example test sheet every 500 epochs, it's easy to go back and step through the progress. With each training step using all of the training data the steps and epochs are essentially the same here.
-
-At step 1, we see poor accuracy, as you would expect
-
-![image.png](./_static/images/testsheet_start_example.png)
-
-By 500, the model is essentially done, but we see the bottom row `7` get lost and recovered at higher epochs as we go far into an overfitting regime. This kind of stored data can be very useful when the training routines become automated and a human is potentially only looking when something has gone wrong.
-
-![image.png](./_static/images/testsheets_500_3000.png)
-
-+++
-
-Finally, it can be useful to use nnx.display's ability to visualize networks and model output.  Here we feed the top 35 test images into the model and display the final output vector for each - in the top plot, each row is an individual image prediction result: each column corresponds to a class, in this case the digits (0-9).  Since we're calling the highest value in a given row the class prediction (`.argmax(axis=1)`), the final image predictions (bottom plot) simply match the largest value in each row in the upper plot.
+On TensorBoard UI, the added `Loss` and `Accuracy` metrics are available in the `Scalars` tab under the `runs/test/` folder created dynamically using datetime.
 
 ```{code-cell} ipython3
-nnx.display(model(images_test[:35])), nnx.display(model(images_test[:35]).argmax(axis=1))
+%tensorboard --logdir runs/test
 ```
 
-The above cell output will give you an interactive plot that looks like this image below, where here we've 'clicked' in the bottom plot for entry `7` and hover over the corresponding value in the top plot.
+Since we've stored the example test sheet every 500 epochs, we can go back and step through the progress. With each training step using all of the training data, the steps and epochs are essentially the same here.
 
-![image.png](./_static/images/model_display_example.png)
+Navigate to the `Images` tab. 
+
+At step 1, we see poor accuracy, as expected:
+
+<img src="./_static/images/testsheet_start_example.png" width="75%" height="auto" alt="TensorBoard UI with Images Tab showing the Accuracy testsheet at Step 1" />
+
+By 500, the model is essentially done. However, in the bottom row `7` gets lost and recovered at higher epochs as we go far into an overfitting regime. This kind of stored data can be very useful when the training routines become automated, and a human is potentially only checking when something has gone wrong.
+
+![Accuracy testsheets at Step 500, 2500, and 3000](./_static/images/testsheets_500_3000.png)
 
 +++
 
-## Extra Resources
+## Visualize model output
 
-For further information about `TensorBoard` see [https://www.tensorflow.org/tensorboard/get_started](https://www.tensorflow.org/tensorboard/get_started)
++++
 
-For more about `nnx.display()`, which calls Treescope under the hood, see [https://treescope.readthedocs.io/en/stable/](https://treescope.readthedocs.io/en/stable/)
+In addition to the TensorBoard visualization, Flax [`nnx.display`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/visualization.html#flax.nnx.display)'s interactive visualizations of networks and model outputs are also helpful. 
+ 
+We can feed the top 35 test images into the model and display the final output vector for each. In the following plot, each row is an individual image prediction result, and each column corresponds to a class, in this case the digits (0-9).
+
+```{code-cell} ipython3
+nnx.display(model(images_test[:35]))
+```
+
+The highest value in a given row is the class prediction (`.argmax(axis=1)`). The following plot shows image predictions matching the largest value in each row in the previous(above) plot.
+
+```{code-cell} ipython3
+nnx.display(model(images_test[:35]).argmax(axis=1))
+```
+
+For more information about these tools, check out the [TensorBoard documentation](https://www.tensorflow.org/tensorboard/get_started) and [Treescope documentation ](https://treescope.readthedocs.io/en/stable/) (library behind `nnx.display`).
+
++++
