@@ -1,6 +1,6 @@
 [project]
 name = "jax-ai-stack"
-version = "2024.12.10"  # keep in sync with jax_ai_stack/__init__.py
+version = "2025.1.9"  # keep in sync with jax_ai_stack/__init__.py
 description = ""
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -15,11 +15,12 @@ keywords = []
 
 # pip dependencies of the project
 dependencies = [
-    "jax==0.4.38",
+    "chex==0.1.88",
+    "jax==0.5.0",
     "flax==0.10.2",
     "ml_dtypes==0.4.0",
     "optax==0.2.4",
-    "orbax-checkpoint==0.10.2",
+    "orbax-checkpoint==0.11.0",
     "orbax-export==0.0.6",
 ]
 
@@ -44,7 +45,7 @@ tfds = [
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
 grain = [
-    "grain==0.2.2",
+    "grain==0.2.3",
 ]
 
 [tool.pyink]

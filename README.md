@@ -43,6 +43,7 @@ together via the integration tests in this repository. Packages include:
 - [ml_dtypes](http://github.com/jax-ml/ml_dtypes): NumPy dtype extensions for machine learning.
 - [optax](https://github.com/google-deepmind/optax): gradient processing and optimization in JAX.
 - [orbax](https://github.com/google/orbax): checkpointing and persistence utilities for JAX.
+- [chex](https://github.com/google-deepmind/chex): utilities for writing reliable JAX code.
 
 ### Optional packages
 
