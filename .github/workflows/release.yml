@@ -50,4 +50,4 @@ jobs:
       - name: List files
         run: ls -l dist/
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc  # v1.12.2
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc  # v1.12.4
