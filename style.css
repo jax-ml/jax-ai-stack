@@ -1,0 +1,237 @@
+body {
+  font: 400 16px 'Arial', sans-serif;
+}
+
+.doc-body {
+  display: flex;
+  flex-direction: column;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 960px) {
+  .doc-body {
+    align-items: center;
+
+    max-width: 80rem;
+    align-self: center;
+    width: -moz-available;
+    width: -webkit-fill-available;
+    width: fill-available;
+    margin: auto;
+    padding: 50px;
+  }
+
+  section.hero,
+  section.banner {
+    max-width: 90rem !important;
+  }
+}
+
+section {
+  box-sizing: border-box;
+}
+
+.doc-body p,
+.doc-body ul {
+  font: 400 16px 'Roboto', sans-serif;
+  color: #5F6368;
+  line-height: 24px;
+}
+
+.doc-body h3 {
+  font: 500 1.75rem 'Google Sans', 'Roboto', sans-serif;
+  line-height: 1.15;
+  margin: 2.75rem 0 1.05rem;
+}
+
+.hero {
+  width: 100%;
+  display: grid;
+  grid: auto-flow / 1fr .8fr;
+  gap: 20px;
+  align-items: center;
+  background: url(_static/images/hero-radial.svg) no-repeat top -750px right -450px / 1500px #202124;
+  border-radius: 24px;
+  padding-left: 5%;
+}
+
+.hero span {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.hero span img {
+  margin-right: 24px;
+  background: transparent !important;
+}
+
+.hero h1 {
+  font: 700 52px 'Google Sans', 'Roboto', sans-serif;
+  color: white;
+  margin: 0;
+}
+
+.hero p {
+  color: #bdc1c6;
+}
+
+.hero-image {
+  background: none !important;
+}
+
+.button-primary {
+  background: #1A73E8;
+  border-radius: 4px;
+  color: white;
+  font: 400 14px 'Google Sans', 'Roboto', sans-serif;
+  text-decoration: none;
+  padding: 9px 26px;
+  transition: background-color .2s, border .2s, box-shadow .2s;
+  width: max-content;
+}
+
+.button-primary:visited:hover {
+  color: white !important;
+}
+
+.button-primary:hover {
+  background-color: #1765cc;
+  color: white;
+  transition: background-color .2s, border .2s, box-shadow .2s;
+  box-shadow: 0 1px 2px 0 rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);
+}
+
+.button-primary:active {
+  background-color: #185abc;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgba(60,64,67,.3),0 2px 6px 2px rgba(60,64,67,.15);
+}
+
+.button-primary:visited {
+  color: white;
+  text-decoration: none;
+}
+
+.three-up {
+  display: grid;
+  grid: auto-flow / 1fr 1fr 1fr;
+  gap: 24px;
+  padding-inline: 60px;
+  margin-top: 20px;
+}
+
+.image-section {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 85px;
+    margin-bottom: 60px;
+}
+
+
+.image-section img {
+    background-color: transparent !important;
+}
+
+.image-section.image-right {
+    flex-direction: row-reverse;
+}
+
+.image-section .text-body {
+    padding-inline: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.image-section .text-body *:last-child {
+    margin-bottom: 0;
+}
+
+.image-section li:not(:last-of-type) {
+    margin-bottom: 12px;
+}
+
+.image-section .button {
+    margin-top: 12px;
+}
+
+@media (max-width: 1240px) {
+    .hero h1 {
+        font-size: 42px;
+        margin-bottom: 24px;
+    }
+
+    .image-section {
+        gap: 32px;
+    }
+
+    .image-section img {
+        min-width: 50%;
+    }
+
+    .image-section .text-body {
+        padding-inline: 0;
+    }
+}
+
+@media (max-width: 1020px) {
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .image-section {
+        margin-bottom: 40px;
+    }
+}
+
+@media (max-width: 860px) {
+    .three-up {
+        grid: auto-flow / 1fr;
+        padding-inline: 0;
+    }
+
+    .three-up h3 {
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 800px) {
+    .hero {
+        grid: auto-flow / 1fr;
+        padding: 24px;
+    }
+
+    .hero > img {
+        display: none;
+    }
+
+    .image-section,
+    .image-section.image-right {
+        flex-direction: column;
+        margin-bottom: 80px;
+    }
+
+    .image-section h3 {
+        margin-top: 0;
+    }
+
+    .image-section .button {
+        margin-top: 0;
+    }
+}
+
+.banner {
+    background: #E8F0FE;
+    border-radius: 24px;
+    margin-block: 80px 100px;
+    padding-inline: 50px;
+    padding-bottom: 24px;
+}
+
+footer {
+  font-size: 14px;
+  text-align: center;
+}
