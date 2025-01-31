@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.6
+    jupytext_version: 1.15.2
 kernelspec:
   display_name: jax-ai-stack
   language: python
@@ -278,5 +278,3 @@ nnx.display(model(images_test[:35]).argmax(axis=1))
 ```
 
 For more information about these tools, check out the [TensorBoard documentation](https://www.tensorflow.org/tensorboard/get_started) and [Treescope documentation ](https://treescope.readthedocs.io/en/stable/) (library behind `nnx.display`).
-
-+++
