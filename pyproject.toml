@@ -1,6 +1,6 @@
 [project]
 name = "jax-ai-stack"
-version = "2025.1.9"  # keep in sync with jax_ai_stack/__init__.py
+dynamic = ["version"]
 description = ""
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -64,6 +64,9 @@ requires = [
 [tool.setuptools]
 packages = ["jax_ai_stack"]
 include-package-data = false
+
+[tool.setuptools.dynamic]
+version = {attr = "jax_ai_stack.__version__"}
 
 [tool.ruff.lint.per-file-ignores]
 # F811: Redefinition of unused name.
