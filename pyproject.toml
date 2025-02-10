@@ -20,7 +20,7 @@ dependencies = [
     "flax==0.10.2",
     "ml_dtypes==0.4.0",
     "optax==0.2.4",
-    "orbax-checkpoint==0.11.1",
+    "orbax-checkpoint==0.11.4",
     "orbax-export==0.0.6",
 ]
 
