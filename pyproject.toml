@@ -16,7 +16,7 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "chex==0.1.89",
-    "jax==0.5.0",
+    "jax==0.5.2",
     "flax==0.10.4",
     "ml_dtypes==0.4.0",
     "optax==0.2.4",
