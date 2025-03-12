@@ -16,9 +16,9 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "chex==0.1.89",
-    "jax==0.5.0",
+    "jax==0.5.2",
     "flax==0.10.4",
-    "ml_dtypes==0.4.0",
+    "ml_dtypes==0.5.1",
     "optax==0.2.4",
     "orbax-checkpoint==0.11.8",
     "orbax-export==0.0.6",
@@ -39,7 +39,7 @@ dev = [
 
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
-    "tensorflow==2.18.0",
+    "tensorflow==2.19.0",
     "tensorflow_datasets==4.9.7",
 ]
 
