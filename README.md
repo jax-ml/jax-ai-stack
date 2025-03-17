@@ -53,7 +53,7 @@ The following command:
 pip install jax-ai-stack[grain]
 ```
 will install a compatible version of the [grain](https://github.com/google/grain) data
-loader (currently linux-only).
+loader (currently mac and linux-only).
 
 Similarly, the following command:
 ```
