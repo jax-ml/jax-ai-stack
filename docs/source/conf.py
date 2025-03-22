@@ -67,6 +67,7 @@ exclude_patterns = [
     'JAX_transformer_text_classification.md',
     'data_loaders_on_cpu_with_jax.md',
     'data_loaders_on_gpu_with_jax.md',
+    'JAX_using_LoRA.md',
 ]
 
 suppress_warnings = [
@@ -104,4 +105,6 @@ nb_execution_excludepatterns = [
     'JAX_transformer_text_classification.ipynb',
     'data_loaders_on_cpu_with_jax.ipynb',
     'data_loaders_on_gpu_with_jax.ipynb',
+    'JAX_using_LoRA.ipynb',
+
 ]
