@@ -5,62 +5,71 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.16.6
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
   name: python3
 ---
 
-# Implement Vision Transformer (ViT) model from scratch
+# Train a Vision Transformer (ViT) for image classification with JAX for AI
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_Vision_transformer.ipynb)
 
-In this tutorial we implement from scratch the Vision Transformer (ViT) model based on the paper by Dosovitskiy et al: [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929). We load the ImageNet pretrained weights and finetune this model on [Food 101](https://huggingface.co/datasets/ethz/food101) dataset.
-This tutorial is originally inspired by [HuggingFace Image classification tutorial](https://huggingface.co/docs/transformers/tasks/image_classification).
+This tutorial walks you through developing and training a Vision Transformer (ViT) model using JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io). The architecture is based on ["An Image is Worth 16x16 Words"](https://arxiv.org/abs/2010.11929) by Dosovitskiy et al. (2020). After implementing the ViT model, we will load the pretrained ImageNet weights and finetune the model on the [Food 101](https://huggingface.co/datasets/ethz/food101) dataset for image classification. This tutorial draws inspiration from the HuggingFace [Image classification tutorial](https://huggingface.co/docs/transformers/tasks/image_classification). The original JAX-based implementation of a ViT can be found in the [`google-research/vision_transformer`](https://github.com/google-research/vision_transformer/) GitHub repo.
+
+If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with Flax, Optax and JAX.
 
 +++
 
-## Requirements installation
+## Setup
 
-We will need to install the following Python packages:
-- HuggingFace [Datasets](https://huggingface.co/docs/datasets/) will be used for dataset provision
-- [TorchVision](https://pytorch.org/vision) will be used for image augmentations
-- [grain](https://github.com/google/grain/) will be be used for efficient data loading
-- [tqdm](https://tqdm.github.io/) for a progress bar to monitor the training progress.
-- [Matplotlib](https://matplotlib.org/stable/) will be used for visualization purposes
+JAX for AI (the stack) installation is covered [here](https://docs.jaxstack.ai/en/latest/install.html). And JAX (the library) installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. 
 
-```{code-cell} ipython3
-# !pip install -U datasets grain torchvision tqdm matplotlib
-# !pip install -U flax optax
-```
+This tutorial uses HuggingFace [Datasets](https://huggingface.co/docs/datasets/) for dataset loading,[TorchVision](https://pytorch.org/vision) for image augmentations, [grain](https://github.com/google/grain/) for efficient data loading, [tqdm](https://tqdm.github.io/) for a progress bar to monitor training, and [matplotlib](https://matplotlib.org/stable/) for visualization purposes. These libraries can be installed with `!pip install -U datasets grain torchvision tqdm matplotlib`.
+
+Start with importing JAX, JAX NumPy, Flax NNX, and Optax.
 
 ```{code-cell} ipython3
 import jax
+import jax.numpy as jnp
+from flax import nnx
 import flax
 import optax
-print("Jax version:", jax.__version__)
-print("Flax version:", flax.__version__)
-print("Optax version:", optax.__version__)
 ```
 
-## Vision Transformer implementation
+## The ViT architecture
 
-Vision Transformer (ViT) architecture contains the following block:
-- Patch and position embedding
-- Transformer Encoder
-- Classification head
+A Vision Transformer (ViT) treats images as sequences of patches and leverages the attention mechanism from transformers. The architecture includes the following key components:
+
+- **Patch and position embedding:** Breaking down an image into fixed-size patches and embedding each patch into a vector representation. Positional embeddings are added to encode the position of each patch within the original image, which aids with spatial information.
+- **Transformer encoder:** A stack of transformer encoder blocks processes the input embedded patches. Each block consists of:
+  - **Multi-Head (Self-)Attention:** This allows the model to weigh the important of different patches relative to each other, capturing relationships within the image.
+  - **Feed-forward network:** Processes each patch independently, allowing a for non-linear transformations.
+  - **Layer normatlization and residual connections:** Stabilize training and improve gradient flow in the network.
+- **Classification head:** The output of the transformer encoder is fed into a linear layer and then a softmax function, resulting in class probabilities for prediction.
 
 ![ViT-architecture](https://github.com/google-research/vision_transformer/raw/main/vit_figure.png)
 
-Original JAX implementation can be found [here](https://github.com/google-research/vision_transformer/).
+**Note:** The original JAX-based implementation of a ViT can also be found in the [`google-research` GitHub repo](https://github.com/google-research/vision_transformer/).
 
 ```{code-cell} ipython3
-import jax.numpy as jnp
-from flax import nnx
-
-
 class VisionTransformer(nnx.Module):
+    """ Implements the ViT model, inherits from `flax.nnx.Module`.
+
+    Args:
+        num_classes (int): Number of classes in the classification. Defaults to 1000.
+        in_channels (int): Number of input channels in the image (such as 3 for RGB). Defaults to 3.
+        img_size (int): Input image size. Defaults to 224.
+        patch_size (int): Size of the patches extracted from the image. Defaults to 16.
+        num_layers (int): Number of transformer encoder layers. Defaults to 12.
+        num_heads (int): Number of attention heads in each transformer layer. Defaults to 12.
+        mlp_dim (int): Dimension of the hidden layers in the feed-forward/MLP block. Defaults to 3072.
+        hidden_size (int): Dimensionality of the embedding vectors. Defaults to 3072.
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.1.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+
+    """
     def __init__(
         self,
         num_classes: int = 1000,
@@ -75,8 +84,11 @@ class VisionTransformer(nnx.Module):
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
     ):
-        # Patch and position embedding
+        # Calculate the number of patches generated from the image.
         n_patches = (img_size // patch_size) ** 2
+        # Patch embeddings:
+        # - Extracts patches from the input image and maps them to embedding vectors
+        #   using `flax.nnx.Conv` (convolutional layer).
         self.patch_embeddings = nnx.Conv(
             in_channels,
             hidden_size,
@@ -87,47 +99,77 @@ class VisionTransformer(nnx.Module):
             rngs=rngs,
         )
 
+        # Positional embeddings (add information about image patch positions):
+        # Set the truncated normal initializer (using `jax.nn.initializers.truncated_normal`).
         initializer = jax.nn.initializers.truncated_normal(stddev=0.02)
+        # The learnable parameter for positional embeddings (using `flax.nnx.Param`).
         self.position_embeddings = nnx.Param(
             initializer(rngs.params(), (1, n_patches + 1, hidden_size), jnp.float32)
-        )
+        ) # Shape `(1, n_patches +1, hidden_size`)
+        # The dropout layer.
         self.dropout = nnx.Dropout(dropout_rate, rngs=rngs)
 
+        # CLS token (a special token prepended to the sequence of patch embeddings)
+        # using `flax.nnx.Param`.
         self.cls_token = nnx.Param(jnp.zeros((1, 1, hidden_size)))
 
-        # Transformer Encoder blocks
+        # Transformer encoder (a sequence of encoder blocks for feature extraction).
+        # - Create multiple Transformer encoder blocks (with `nnx.Sequential`
+        # and `TransformerEncoder(nnx.Module)` which is defined later).
         self.encoder = nnx.Sequential(*[
             TransformerEncoder(hidden_size, mlp_dim, num_heads, dropout_rate, rngs=rngs)
             for i in range(num_layers)
         ])
+        # Layer normalization with `flax.nnx.LayerNorm`.
         self.final_norm = nnx.LayerNorm(hidden_size, rngs=rngs)
 
-        # Classification head
+        # Classification head (maps the transformer encoder to class probabilities).
         self.classifier = nnx.Linear(hidden_size, num_classes, rngs=rngs)
 
+    # The forward pass in the ViT model.
     def __call__(self, x: jax.Array) -> jax.Array:
-        # Patch and position embedding
+        # Image patch embeddings.
+        # Extract image patches and embed them.
         patches = self.patch_embeddings(x)
+        # Get the batch size of image patches.
         batch_size = patches.shape[0]
+        # Reshape the image patches.
         patches = patches.reshape(batch_size, -1, patches.shape[-1])
 
+        # Replicate the CLS token for each image with `jax.numpy.tile`
+        # by constructing an array by repeating `cls_token` along `[batch_size, 1, 1]` dimensions.
         cls_token = jnp.tile(self.cls_token, [batch_size, 1, 1])
+        # Concatenate the CLS token and image patch embeddings.
         x = jnp.concat([cls_token, patches], axis=1)
+        # Create embedded patches by adding positional embeddings to the concatenated CLS token and image patch embeddings.
         embeddings = x + self.position_embeddings
+        # Apply the dropout layer to embedded patches.
         embeddings = self.dropout(embeddings)
 
-        # Encoder blocks
+        # Transformer encoder blocks.
+        # Process the embedded patches through the transformer encoder layers.
         x = self.encoder(embeddings)
+        # Apply layer normalization
         x = self.final_norm(x)
 
-        # fetch the first token
+        # Extract the CLS token (first token), which represents the overall image embedding.
         x = x[:, 0]
 
-        # Classification
+        # Predict class probabilities based on the CLS token embedding.
         return self.classifier(x)
 
 
 class TransformerEncoder(nnx.Module):
+    """
+    A single transformer encoder block in the ViT model, inheriting from `flax.nnx.Module`.
+
+    Args:
+        hidden_size (int): Input/output embedding dimensionality.
+        mlp_dim (int): Dimension of the feed-forward/MLP block hidden layer.
+        num_heads (int): Number of attention heads.
+        dropout_rate (float): Dropout rate. Defaults to 0.0.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+    """
     def __init__(
         self,
         hidden_size: int,
@@ -137,8 +179,10 @@ class TransformerEncoder(nnx.Module):
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
     ) -> None:
-
+        # First layer normalization before we the Multi-Head Attention layer.
+        # using `flax.nnx.LayerNorm`.
         self.norm1 = nnx.LayerNorm(hidden_size, rngs=rngs)
+        # The Multi-Head Attention layer (using `flax.nnx.MultiHeadAttention`).
         self.attn = nnx.MultiHeadAttention(
             num_heads=num_heads,
             in_features=hidden_size,
@@ -148,8 +192,11 @@ class TransformerEncoder(nnx.Module):
             deterministic=False,
             rngs=rngs,
         )
+        # Second layer normalization using `flax.nnx.LayerNorm`.
         self.norm2 = nnx.LayerNorm(hidden_size, rngs=rngs)
 
+        # The MLP for point-wise feedforward (using `flax.nnx.Sequential`, `flax.nnx.Linear, flax.nnx.Dropout`)
+        # with the GeLU activation function (`flax.nnx.gelu`).
         self.mlp = nnx.Sequential(
             nnx.Linear(hidden_size, mlp_dim, rngs=rngs),
             nnx.gelu,
@@ -158,12 +205,15 @@ class TransformerEncoder(nnx.Module):
             nnx.Dropout(dropout_rate, rngs=rngs),
         )
 
+    # The forward pass through the transformer encoder block.
     def __call__(self, x: jax.Array) -> jax.Array:
+        # The Multi-Head Attention layer with layer normalization.
         x = x + self.attn(self.norm1(x))
+        # The feed-forward network with layer normalization.
         x = x + self.mlp(self.norm2(x))
         return x
 
-
+# Example usage for testing:
 x = jnp.ones((4, 224, 224, 3))
 model = VisionTransformer(num_classes=1000)
 y = model(x)
