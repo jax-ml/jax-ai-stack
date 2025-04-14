@@ -12,50 +12,64 @@ kernelspec:
   name: python3
 ---
 
-# Image segmentation with UNETR model
+# Train a transformer-based UNETR model for image segmentation with JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_examples_image_segmentation.ipynb)
 
-This tutorial demonstrates how to implement and train a model on image segmentation task. Below, we will be using the [Oxford Pets dataset](https://www.robots.ox.ac.uk/%7Evgg/data/pets/) containing images and masks of cats and dogs. We will implement from scratch the [UNETR](https://arxiv.org/abs/2103.10504) model using Flax NNX. We will train the model on a training set and compute image segmentation metrics on the training and validation sets. We will use [Orbax checkpoint manager](https://orbax.readthedocs.io/en/latest/api_reference/checkpoint.checkpoint_manager.html) to store best models during the training.
+This tutorial demonstrates how to implement and train a [UNETR](https://arxiv.org/abs/2103.10504) model for image segmentation using JAX, [Flax NNX](http://flax.readthedocs.io), and [Optax](http://optax.readthedocs.io) using the transformer encoder from the [Vision Transformer (ViT)](https://arxiv.org/abs/2010.11929). We will use [Orbax checkpoint manager](https://orbax.readthedocs.io/en/latest/api_reference/checkpoint.checkpoint_manager.html) to store best models during training.
+
+The tutorial covers the preparation of the [Oxford Pets](https://www.robots.ox.ac.uk/%7Evgg/data/pets/) dataset, model implementation with Flax NNX, and training. The UNETR model utilizes a ViT transformer as the encoder to learn sequence representations of the input and capture the global multi-scale information, while also following the "U-shaped" network design, such as the [U-Net](https://arxiv.org/abs/1505.04597) model:
+
+![UNETR architecture](./_static/images/unetr_architecture.png)
+
+The image above show the UNETR architecture for processing 3D inputs, but it can be adapted to 2D inputs.
 
 +++
 
-## Prepare image segmentation dataset and dataloaders
+## Setup
 
-In this section we use the [Oxford Pets dataset](https://www.robots.ox.ac.uk/%7Evgg/data/pets/).
-We download images and masks and provide a code to work with the dataset.
-This approach can be easily extended to any image segmentation datasets and users can reuse this code for their own datasets.
+JAX for AI (the stack) installation is covered [here](https://docs.jaxstack.ai/en/latest/install.html). And JAX (the library) installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site.
 
-In the code below we make a choice of using OpenCV and Pillow to read images and masks as NumPy arrays, [Albumentations](https://github.com/albumentations-team/albumentations) for data augmentations and
-[`grain`](https://github.com/google/grain/) for batched data loading. Alternatively, one can use  [tensorflow_dataset](https://www.tensorflow.org/datasets) or [torchvision](https://pytorch.org/vision/stable/index.html) for the same task.
-
-+++
-
-### Requirements installation
-
-We will need to install the following Python packages:
+In addition, you will Orbax for checkpointing, as well as OpenCV and Pillow for reading images and masks from the [Oxford Pets dataset](https://www.robots.ox.ac.uk/%7Evgg/data/pets/) as NumPy arrays, [Albumentations](https://github.com/albumentations-team/albumentations) for data augmentations, and
+[`grain`](https://github.com/google/grain/) for batched data loading. (Alternatively, you could also use  [tensorflow_dataset](https://www.tensorflow.org/datasets) or [torchvision](https://pytorch.org/vision/stable/index.html) for the same task.)
 
 ```{code-cell} ipython3
 !pip install -U opencv-python-headless grain albumentations Pillow
 !pip install -U flax optax orbax-checkpoint
 ```
 
+Importing JAX, JAX NumPy, Flax NNX, Optax, Orbax Checkpoint, OpenCV, Albumentations and other dependencies:
+
 ```{code-cell} ipython3
 import jax
 import flax
 import optax
 import orbax.checkpoint as ocp
+
+from flax import nnx
+import jax.numpy as jnp
+
+import albumentations as A
+from typing import Any
+from pathlib import Path
+
+import cv2
+import numpy as np
+from PIL import Image  # we'll read images with opencv and use Pillow as a fallback
+
 print("Jax version:", jax.__version__)
 print("Flax version:", flax.__version__)
 print("Optax version:", optax.__version__)
 print("Orbax version:", ocp.__version__)
 ```
 
-### Data download
+## Loading and preprocessing the Oxford Pets dataset
 
 +++
 
-Let's download the data and extract images and masks.
+### Loading the dataset
+
+Let's download the Oxford Pets dataset and extract images and masks:
 
 ```{code-cell} ipython3
 !rm -rf /tmp/data/oxford_pets
@@ -68,7 +82,7 @@ Let's download the data and extract images and masks.
 !ls /tmp/data/oxford_pets
 ```
 
-We can also inspect the downloaded images folder, listing a subset of these files:
+We can nspect the `images` folder, listing a subset of these files:
 
 ```{code-cell} ipython3
 !ls /tmp/data/oxford_pets/images | wc -l
@@ -77,23 +91,11 @@ We can also inspect the downloaded images folder, listing a subset of these file
 !ls /tmp/data/oxford_pets/annotations/trimaps | head
 ```
 
-### Train/Eval datasets
+### Splitting the dataset into training and validation sets
 
-+++
-
-Let's implement the dataset class providing the access to the images and masks. The class implements `__len__` and `__getitem__` methods.
-In this example, we do not have a hard training and validation data split, so we will use the total dataset and make a random training/validation split by indices.
-For this purpose we provide a helper class to map indices into training and validation parts.
+Next, we'll implement the `OxfordPetsDataset` class providing the access to the images and masks. The class implements `__len__` and `__getitem__` methods. In this example, we do not have a hard training and validation data split, so we will use the total dataset and make a random training/validation split by indices. For this purpose, we create a helper `SubsetDataset` class to map indices into training and validation (test) set parts.
 
 ```{code-cell} ipython3
-from typing import Any
-from pathlib import Path
-
-import cv2
-import numpy as np
-from PIL import Image  # we'll read images with opencv and use Pillow as a fallback
-
-
 class OxfordPetsDataset:
     def __init__(self, path: Path):
         assert path.exists(), path
@@ -159,7 +161,7 @@ class SubsetDataset:
         return self.dataset[i]
 ```
 
-Now, let's define the total dataset and compute data indices for training and validation splits:
+Now, let's define the entire dataset and compute data indices for training and validation (test) splits:
 
 ```{code-cell} ipython3
 seed = 12
@@ -172,8 +174,8 @@ rng = np.random.default_rng(seed=seed)
 le = len(dataset)
 data_indices = list(range(le))
 
-# Let's remove few indices corresponding to corrupted images
-# to avoid libjpeg warnings during the data loading
+# Remove few indices corresponding to corrupted images
+# to avoid libjpeg warnings during the data loading.
 corrupted_data_indices = [3017, 3425]
 for index in corrupted_data_indices:
     data_indices.remove(index)
@@ -184,7 +186,7 @@ train_val_split_index = int(train_split * le)
 train_indices = random_indices[:train_val_split_index]
 val_indices = random_indices[train_val_split_index:]
 
-# Ensure there is no overlapping
+# Ensure there is no overlapping.
 assert len(set(train_indices) & set(val_indices)) == 0
 
 train_dataset = SubsetDataset(dataset, indices=train_indices)
@@ -194,7 +196,7 @@ print("Training dataset size:", len(train_dataset))
 print("Validation dataset size:", len(val_dataset))
 ```
 
-To verify our work so far, let's display few training and validation images and masks:
+Let's inspect the training and validation datasets by displaying images and masks:
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
@@ -219,14 +221,11 @@ display_datapoint(train_dataset[0], label=" (train set)")
 display_datapoint(val_dataset[0], label=" (val set)")
 ```
 
-### Data augmentations
+### Data augmentation
 
-Next, let's define a simple data augmentation pipeline of joined image and mask transformations using [Albumentations](https://albumentations.ai/docs/examples/example/). We apply geometric and color transformations to increase the diversity of the training data. For more details on the Albumentations transformations, we can check [Albumentations reference API](https://albumentations.ai/docs/api_reference/full_reference/).
+Here, we'll define a simple data augmentation pipeline of joined image and mask transformations using [Albumentations](https://albumentations.ai/docs/examples/example/). We will apply geometric and color transformations to increase the diversity of the training data. For more details on the Albumentations transformations, check the [Albumentations reference API](https://albumentations.ai/docs/api_reference/full_reference/).
 
 ```{code-cell} ipython3
-import albumentations as A
-
-
 img_size = 256
 
 train_transforms = A.Compose([
@@ -258,7 +257,7 @@ print("Image array info:", img.dtype, img.shape, img.min(), img.mean(), img.max(
 print("Mask array info:", mask.dtype, mask.shape, mask.min(), mask.max())
 ```
 
-### Data loaders
+### Data loading with `grain.IndexSampler` and `grain.DataLoader`
 
 Let's now use [`grain`](https://github.com/google/grain) to perform data loading, augmentations and batching on a single device using multiple workers. We will create a random index sampler for training and an unshuffled sampler for validation.
 
@@ -282,37 +281,37 @@ train_batch_size = 72
 val_batch_size = 2 * train_batch_size
 
 
-# Create an IndexSampler with no sharding for single-device computations
+# Create a `grin.IndexSampler` with no sharding for single-device computations.
 train_sampler = grain.IndexSampler(
-    len(train_dataset),  # The total number of samples in the data source
-    shuffle=True,            # Shuffle the data to randomize the order of samples
-    seed=seed,               # Set a seed for reproducibility
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,            # Iterate over the dataset for one epoch
+    len(train_dataset),  # The total number of samples in the data source.
+    shuffle=True,            # Shuffle the data to randomize the order of samples.
+    seed=seed,               # Set a seed for reproducibility.
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,            # Iterate over the dataset for one epoch.
 )
 
 val_sampler = grain.IndexSampler(
-    len(val_dataset),  # The total number of samples in the data source
-    shuffle=False,         # Do not shuffle the data
-    seed=seed,             # Set a seed for reproducibility
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,          # Iterate over the dataset for one epoch
+    len(val_dataset),  # The total number of samples in the data source.
+    shuffle=False,         # Do not shuffle the data.
+    seed=seed,             # Set a seed for reproducibility.
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,          # Iterate over the dataset for one epoch.
 )
 ```
 
 ```{code-cell} ipython3
 train_loader = grain.DataLoader(
     data_source=train_dataset,
-    sampler=train_sampler,                 # Sampler to determine how to access the data
-    worker_count=4,                        # Number of child processes launched to parallelize the transformations among
-    worker_buffer_size=2,                  # Count of output batches to produce in advance per worker
+    sampler=train_sampler,                 # A sampler to determine how to access the data.
+    worker_count=4,                        # Number of child processes launched to parallelize the transformations along.
+    worker_buffer_size=2,                  # Count the output batches to produce in advance, per each worker.
     operations=[
         DataAugs(train_transforms),
         grain.Batch(train_batch_size, drop_remainder=True),
     ]
 )
 
-# Validation dataset loader
+# Validation dataset `grain.DataLoader`.
 val_loader = grain.DataLoader(
     data_source=val_dataset,
     sampler=val_sampler,                   # Sampler to determine how to access the data
@@ -324,7 +323,7 @@ val_loader = grain.DataLoader(
     ]
 )
 
-# Training dataset loader for evaluation (without dataaugs)
+# Training `grain.DataLoader` for evaluation (without data augmentation).
 train_eval_loader = grain.DataLoader(
     data_source=train_dataset,
     sampler=train_sampler,                 # Sampler to determine how to access the data
@@ -337,17 +336,19 @@ train_eval_loader = grain.DataLoader(
 )
 ```
 
+Split the training and validation sets into batches.
+
 ```{code-cell} ipython3
 train_batch = next(iter(train_loader))
 val_batch = next(iter(val_loader))
 ```
 
 ```{code-cell} ipython3
-print("Train images batch info:", type(train_batch["image"]), train_batch["image"].shape, train_batch["image"].dtype)
-print("Train masks batch info:", type(train_batch["mask"]), train_batch["mask"].shape, train_batch["mask"].dtype)
+print("Training set images batch info:", type(train_batch["image"]), train_batch["image"].shape, train_batch["image"].dtype)
+print("Training set masks batch info:", type(train_batch["mask"]), train_batch["mask"].shape, train_batch["mask"].dtype)
 ```
 
-Finally, let's display the training and validation data:
+Display the training and validation data:
 
 ```{code-cell} ipython3
 images, masks = train_batch["image"], train_batch["mask"]
@@ -363,29 +364,19 @@ for img, mask in zip(images[:3], masks[:3]):
     display_datapoint({"image": img, "mask": mask}, label=" (augmented validation set)")
 ```
 
-## Model for Image Segmentation
+## Defining the UNETR architecture with the ViT encoder
 
-In this section we will implement the [UNETR](https://arxiv.org/abs/2103.10504) model from scratch using Flax NNX. The reference PyTorch implementation of this model can be found on the [MONAI Library GitHub repository](https://github.com/Project-MONAI/MONAI/blob/dev/monai/networks/nets/unetr.py).
+In this section, we will implement the UNETR model from scratch using Flax NNX. The transformer encoder of UNETR is a Vision Transformer (ViT), as discussed in the beginning of this tutorial The feature maps returned by ViT have the same spatial size (`H / 16, W / 16`), and deconvolutions are used to upsample the feature maps, while the feature maps are upsampled and concatenated up to the original image size.
 
-The UNETR model utilizes a transformer as the encoder to learn sequence representations of the input and to capture the global multi-scale information, while also following the “U-shaped” network design like [UNet](https://arxiv.org/abs/1505.04597) model:
-![image.png](./_static/images/unetr_architecture.png)
+The reference PyTorch implementation of this model can be found on the [MONAI Library GitHub repository](https://github.com/Project-MONAI/MONAI/blob/dev/monai/networks/nets/unetr.py).
 
-The UNETR architecture on the image above is processing 3D inputs, but it can be easily adapted to 2D input.
+### The ViT encoder implementation
 
-The transformer encoder of UNETR is [Vision Transformer (ViT)](https://arxiv.org/abs/2010.11929). The feature maps returned by ViT have all the same spatial size: (H / 16, W / 16) and deconvolutions are used to upsample the feature maps. Finally, the feature maps are upsampled and concatenated up to the original image size.
+Here, we will implement the following modules of the ViT:
 
-```{code-cell} ipython3
-from flax import nnx
-import jax.numpy as jnp
-```
-
-### Vision Transformer encoder implementation
-
-Below, we will implement the following modules:
-- Vision Transformer, `ViT`
-  - `PatchEmbeddingBlock`: patch embedding block, which maps patches of pixels to a sequence of vectors
-  - `ViTEncoderBlock`: vision transformer encoder block
-    - `MLPBlock`: multilayer perceptron block
+- `PatchEmbeddingBlock`: The patch embedding block, which maps patches of pixels to a sequence of vectors.
+- `ViTEncoderBlock`: The ViT encoder block.
+  - `MLPBlock`: The multilayer perceptron (MLP) block.
 
 ```{code-cell} ipython3
 ---
@@ -394,15 +385,23 @@ jupyter:
 ---
 class PatchEmbeddingBlock(nnx.Module):
     """
-    A patch embedding block, based on: "Dosovitskiy et al.,
-    An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
+    A patch embedding block, based on the ViT ("An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale" https://arxiv.org/abs/2010.11929
+
+    Args:
+        in_channels (int): Number of input channels in the image (such as 3 for RGB).
+        img_size (int): Input image size.
+        patch_size (int): Size of the patches extracted from the image.
+        hidden_size (int): Dimensionality of the embedding vectors.
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.0.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+
     """
     def __init__(
         self,
-        in_channels: int,  # dimension of input channels.
-        img_size: int,  # dimension of input image.
-        patch_size: int,  # dimension of patch size.
-        hidden_size: int,  # dimension of hidden layer.
+        in_channels: int,  # Dimension of input channels.
+        img_size: int,  # Dimension of input image.
+        patch_size: int,  # Dimension of patch size.
+        hidden_size: int,  # Dimension of hidden layer.
         dropout_rate: float = 0.0,
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
