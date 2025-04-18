@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# Train a transformer-based UNETR model for image segmentation with JAX
+# Image segmentation with Vision Transformer and UNETR using JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_examples_image_segmentation.ipynb)
 
@@ -23,6 +23,14 @@ The tutorial covers the preparation of the [Oxford Pets](https://www.robots.ox.a
 ![UNETR architecture](./_static/images/unetr_architecture.png)
 
 The image above show the UNETR architecture for processing 3D inputs, but it can be adapted to 2D inputs.
+
+By the end of this tutorial, you will learn how to:
+
+- Prepare and preprocess the Oxford Pets dataset for image segmentation.
+- Implement the UNETR model with a Vision Transformer encoder using Flax NNX.
+- Train the model, evaluate its performance, and visualize predictions.
+
+This tutorial assumes familiarity with JAX, Flax NNX, and basic deep learning and AI concepts. If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
 
 +++
 
@@ -56,6 +64,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image  # we'll read images with opencv and use Pillow as a fallback
+
+from typing import Any, Callable
+import grain.python as grain
 
 print("Jax version:", jax.__version__)
 print("Flax version:", flax.__version__)
@@ -93,7 +104,7 @@ We can nspect the `images` folder, listing a subset of these files:
 
 ### Splitting the dataset into training and validation sets
 
-Next, we'll implement the `OxfordPetsDataset` class providing the access to the images and masks. The class implements `__len__` and `__getitem__` methods. In this example, we do not have a hard training and validation data split, so we will use the total dataset and make a random training/validation split by indices. For this purpose, we create a helper `SubsetDataset` class to map indices into training and validation (test) set parts.
+Next, we'll create the `OxfordPetsDataset` class providing access to our images and masks. The class implements `__len__` and `__getitem__` methods. In this example, we do not have a hard training and validation data split, so we will use the total dataset and make a random training/validation split by indices. For this purpose, we create a helper `SubsetDataset` class to map indices into training and validation (test) set parts.
 
 ```{code-cell} ipython3
 class OxfordPetsDataset:
@@ -223,7 +234,7 @@ display_datapoint(val_dataset[0], label=" (val set)")
 
 ### Data augmentation
 
-Here, we'll define a simple data augmentation pipeline of joined image and mask transformations using [Albumentations](https://albumentations.ai/docs/examples/example/). We will apply geometric and color transformations to increase the diversity of the training data. For more details on the Albumentations transformations, check the [Albumentations reference API](https://albumentations.ai/docs/api_reference/full_reference/).
+Data augmentation can be important for increasing the diversity of the dataset, which includes random rotations, resizing crops, horizontal flips, and brightness/contrast adjustments. In this section, we'll define a simple data augmentation pipeline of joined image and mask transformations using [Albumentations](https://albumentations.ai/docs/examples/example/), so that we can apply geometric and color transformations to increase the diversity of the training data. For more details on the Albumentations transformations, check the [Albumentations reference API](https://albumentations.ai/docs/api_reference/full_reference/).
 
 ```{code-cell} ipython3
 img_size = 256
@@ -231,8 +242,8 @@ img_size = 256
 train_transforms = A.Compose([
     A.Affine(rotate=(-35, 35), cval_mask=1, p=0.3),  # Random rotations -35 to 35 degrees
     A.RandomResizedCrop(width=img_size, height=img_size, scale=(0.7, 1.0)),  # Crop a random part of the input and rescale it to a specified size
-    A.HorizontalFlip(p=0.5),  # Horizontal random flip
-    A.RandomBrightnessContrast(p=0.4),  # Randomly changes the brightness and contrast
+    A.HorizontalFlip(p=0.5),  # Horizontal random flip.
+    A.RandomBrightnessContrast(p=0.4),  # Randomly changes the brightness and contrast.
     A.Normalize(),  # Normalize the image and cast to float
 ])
 
@@ -242,6 +253,16 @@ val_transforms = A.Compose([
     A.Normalize(),  # Normalize the image and cast to float
 ])
 ```
+
+In the code above:
+
+- `Affine`: Applies random rotations to augment the dataset.
+- `RandomResizedCrop`: Crops a random part of the image and then rescales it.
+- `HorizontalFlip`: Randomly flips images horizontally.
+- `RandomBrightnessContrast`: Adjusts brightness and contrast to introduce variation to our data.
+- `Normalize`: Normalizes the images.
+
+Let's preview the dataset after transformations:
 
 ```{code-cell} ipython3
 output = train_transforms(**train_dataset[0])
@@ -259,14 +280,9 @@ print("Mask array info:", mask.dtype, mask.shape, mask.min(), mask.max())
 
 ### Data loading with `grain.IndexSampler` and `grain.DataLoader`
 
-Let's now use [`grain`](https://github.com/google/grain) to perform data loading, augmentations and batching on a single device using multiple workers. We will create a random index sampler for training and an unshuffled sampler for validation.
+Let's now use [`grain`](https://github.com/google/grain) to perform data loading, augmentations and batching on a single device using multiple workers. We will create a random index sampler for training and an unshuffled sampler for validation. Note that using multiple workers (`worker_count`) allows us to parallelize data transformations, speeding up the data loading process.
 
 ```{code-cell} ipython3
-from typing import Any, Callable
-
-import grain.python as grain
-
-
 class DataAugs(grain.MapTransform):
     def __init__(self, transforms: Callable):
         self.albu_transforms = transforms
@@ -298,6 +314,8 @@ val_sampler = grain.IndexSampler(
     num_epochs=1,          # Iterate over the dataset for one epoch.
 )
 ```
+
+Using multiple workers (`worker_count=4`) allows for parallel processing of transformations, improving efficiency.
 
 ```{code-cell} ipython3
 train_loader = grain.DataLoader(
@@ -336,7 +354,7 @@ train_eval_loader = grain.DataLoader(
 )
 ```
 
-Split the training and validation sets into batches.
+Split the training and validation sets into batches:
 
 ```{code-cell} ipython3
 train_batch = next(iter(train_loader))
@@ -364,7 +382,7 @@ for img, mask in zip(images[:3], masks[:3]):
     display_datapoint({"image": img, "mask": mask}, label=" (augmented validation set)")
 ```
 
-## Defining the UNETR architecture with the ViT encoder
+## Implementing the UNETR architecture with the ViT encoder
 
 In this section, we will implement the UNETR model from scratch using Flax NNX. The transformer encoder of UNETR is a Vision Transformer (ViT), as discussed in the beginning of this tutorial The feature maps returned by ViT have the same spatial size (`H / 16, W / 16`), and deconvolutions are used to upsample the feature maps, while the feature maps are upsampled and concatenated up to the original image size.
 
@@ -372,11 +390,11 @@ The reference PyTorch implementation of this model can be found on the [MONAI Li
 
 ### The ViT encoder implementation
 
-Here, we will implement the following modules of the ViT:
+Here, we will implement the following modules of the ViT, based on the ViT paper (["An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale"](https://arxiv.org/abs/2010.11929)):
 
 - `PatchEmbeddingBlock`: The patch embedding block, which maps patches of pixels to a sequence of vectors.
+- `MLPBlock`: The multilayer perceptron (MLP) block.
 - `ViTEncoderBlock`: The ViT encoder block.
-  - `MLPBlock`: The multilayer perceptron (MLP) block.
 
 ```{code-cell} ipython3
 ---
@@ -385,7 +403,7 @@ jupyter:
 ---
 class PatchEmbeddingBlock(nnx.Module):
     """
-    A patch embedding block, based on the ViT ("An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale" https://arxiv.org/abs/2010.11929
+    A patch embedding block, based on the ViT paper.
 
     Args:
         in_channels (int): Number of input channels in the image (such as 3 for RGB).
@@ -407,6 +425,7 @@ class PatchEmbeddingBlock(nnx.Module):
         rngs: nnx.Rngs = nnx.Rngs(0),
     ):
         n_patches = (img_size // patch_size) ** 2
+        # The convolution to extract patch embeddings using `flax.nnx.Conv`.
         self.patch_embeddings = nnx.Conv(
             in_channels,
             hidden_size,
@@ -417,20 +436,27 @@ class PatchEmbeddingBlock(nnx.Module):
             rngs=rngs,
         )
 
+        # Positional embeddings for each patch using `flax.nnx.Param` and `jax.nn.initializers.truncated_normal`.
         initializer = jax.nn.initializers.truncated_normal(stddev=0.02)
         self.position_embeddings = nnx.Param(
             initializer(rngs.params(), (1, n_patches, hidden_size), jnp.float32)
         )
+        # Dropout for regularization using `flax.nnx.Dropout`.
         self.dropout = nnx.Dropout(dropout_rate, rngs=rngs)
 
     def __call__(self, x: jax.Array) -> jax.Array:
+        # Apply the convolution to extract patch embeddings.
         x = self.patch_embeddings(x)
+        # Reshape for adding positional embeddings.
         x = x.reshape(x.shape[0], -1, x.shape[-1])
+        # Add positional embeddings.
         embeddings = x + self.position_embeddings
+        # Apply dropout for regularization.
         embeddings = self.dropout(embeddings)
         return embeddings
 
 
+# Instantiate the patch embedding block.
 mod = PatchEmbeddingBlock(3, 256, 16, 768, 0.5)
 x = jnp.ones((4, 256, 256, 3))
 y = mod(x)
@@ -447,13 +473,19 @@ from typing import Callable
 
 class MLPBlock(nnx.Sequential):
     """
-    A multi-layer perceptron block, based on: "Dosovitskiy et al.,
-    An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
+    A multi-layer perceptron (MLP) block, inheriting from `flax.nnx.Module`.
+
+    Args:
+        hidden_size (int): Dimensionality of the hidden layer.
+        mlp_dim (int): Dimension of the hidden layers in the feed-forward/MLP block. 
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.0.
+        activation_layer: Activation function. Defaults to `flax.nnx.gelu` (GeLU).
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
     """
     def __init__(
         self,
-        hidden_size: int,  # dimension of hidden layer.
-        mlp_dim: int,      # dimension of feedforward layer
+        hidden_size: int,  # Dimension of hidden layer.
+        mlp_dim: int,      # Dimension of feedforward layer
         dropout_rate: float = 0.0,
         activation_layer: Callable = nnx.gelu,
         *,
@@ -468,7 +500,7 @@ class MLPBlock(nnx.Sequential):
         ]
         super().__init__(*layers)
 
-
+# Instantiate the MLP block.
 mod = MLPBlock(768, 3072, 0.5)
 x = jnp.ones((4, 256, 768))
 y = mod(x)
@@ -482,14 +514,21 @@ jupyter:
 ---
 class ViTEncoderBlock(nnx.Module):
     """
-    A transformer encoder block, based on: "Dosovitskiy et al.,
-    An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
+    A ViT encoder block, inheriting from `flax.nnx.Module`.
+    
+    Args:
+        hidden_size (int): Dimensionality of the hidden layer.
+        mlp_dim (int): Dimension of the hidden layers in the feed-forward/MLP block. 
+        num_heads (int): Number of attention heads in each transformer layer.
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.0.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+
     """
     def __init__(
         self,
-        hidden_size: int,  # dimension of hidden layer.
-        mlp_dim: int,      # dimension of feedforward layer.
-        num_heads: int,    # number of attention heads
+        hidden_size: int,  # Dimension of hidden layer.
+        mlp_dim: int,      # Dimension of feedforward layer.
+        num_heads: int,    # Number of attention heads
         dropout_rate: float = 0.0,
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
@@ -511,7 +550,7 @@ class ViTEncoderBlock(nnx.Module):
         x = x + self.mlp(self.norm2(x))
         return x
 
-
+# Instantiate the ViT encoder block.
 mod = ViTEncoderBlock(768, 3072, 12)
 x = jnp.ones((4, 256, 768))
 y = mod(x)
@@ -524,19 +563,28 @@ jupyter:
   source_hidden: true
 ---
 class ViT(nnx.Module):
-    """
-    Vision Transformer (ViT) Feature Extractor, based on: "Dosovitskiy et al.,
-    An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>"
+    """ Implements the ViT feature extractor, inheriting from `flax.nnx.Module`.
+
+    Args:
+        in_channels (int): Number of input channels in the image (such as 3 for RGB)..
+        img_size (int): Input image size.
+        patch_size (int): Size of the patches extracted from the image.
+        hidden_size (int): Dimensionality of the embedding vectors. Defaults to 768.
+        mlp_dim (int): Dimension of the hidden layers in the feed-forward/MLP block. Defaults to 3072.
+        num_layers (int): Number of transformer encoder layers. Defaults to 12.
+        num_heads (int): Number of attention heads in each transformer layer. Defaults to 12.
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.0.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
     """
     def __init__(
         self,
-        in_channels: int,  # dimension of input channels
-        img_size: int,  # dimension of input image
-        patch_size: int,  # dimension of patch size
-        hidden_size: int = 768,  # dimension of hidden layer
-        mlp_dim: int = 3072,  # dimension of feedforward layer
-        num_layers: int = 12,  # number of transformer blocks
-        num_heads: int = 12,   # number of attention heads
+        in_channels: int,  # Dimension of input channels.
+        img_size: int,  # Dimension of input image.
+        patch_size: int,  # Dimension of patch size.
+        hidden_size: int = 768,  # Dimension of hidden layer.
+        mlp_dim: int = 3072,  # Dimension of feedforward layer.
+        num_layers: int = 12,  # Number of transformer blocks.
+        num_heads: int = 12,   # Number of attention heads.
         dropout_rate: float = 0.0,
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
@@ -567,7 +615,7 @@ class ViT(nnx.Module):
         x = self.norm(x)
         return x, hidden_states_out
 
-
+# Instantiate the ViT feature extractor.
 mod = ViT(3, 224, 16)
 x = jnp.ones((4, 224, 224, 3))
 y, hstates = mod(x)
@@ -1069,7 +1117,7 @@ plt.show()
 optimizer = nnx.Optimizer(model, optax.adam(lr_schedule, momentum))
 ```
 
-Let us implement Jaccard loss and the loss function combining Cross-Entropy and Jaccard losses.
+Let us implement the Jaccard loss, and then define the total loss combining the Cross-Entropy and Jaccard losses:
 
 ```{code-cell} ipython3
 def compute_softmax_jaccard_loss(logits, masks, reduction="mean"):
@@ -1100,16 +1148,20 @@ def compute_softmax_jaccard_loss(logits, masks, reduction="mean"):
 def compute_losses_and_logits(model: nnx.Module, images: jax.Array, masks: jax.Array):
     logits = model(images)
 
+    # Cross-Entropy loss.
     xentropy_loss = optax.softmax_cross_entropy_with_integer_labels(
         logits=logits, labels=masks
     ).mean()
 
+    # Jaccard loss.
     jacc_loss = compute_softmax_jaccard_loss(logits=logits, masks=masks)
+
+    # Total loss.
     loss = xentropy_loss + jacc_loss
     return loss, (xentropy_loss, jacc_loss, logits)
 ```
 
-Now, we will implement a confusion matrix metric derived from [`nnx.Metric`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/metrics.html#flax.nnx.metrics.Metric). A confusion matrix will help us to compute the Intersection-Over-Union (IoU) metric per class and on average. Finally, we can also compute the accuracy metric using the confusion matrix.
+Now, we will implement a confusion matrix metric derived from [`flax.nnx.Metric`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/metrics.html#flax.nnx.metrics.Metric). A confusion matrix will help us to compute the Intersection-Over-Union (IoU) metric per class and on average. Finally, we can also compute the accuracy metric using the confusion matrix.
 
 ```{code-cell} ipython3
 class ConfusionMatrix(nnx.Metric):
@@ -1226,8 +1278,9 @@ def eval_step(
     )  # In-place updates.
 ```
 
-We will also define metrics we want to compute during the evaluation phase: total loss and confusion matrix computed on training and validation datasets. Finally, we define helper objects to store the metrics history.
-Metrics like IoU per class, mean IoU and accuracy will be computed using the confusion matrix in the evaluation code.
+Next, we'll define metrics for the evaluation phase: the total loss and the confusion matrix computed on training and validation datasets. And we'll also define helper objects to store the metrics history.
+
+Metrics like IoU per class, mean IoU and accuracy will be calculated using the confusion matrix in the evaluation code.
 
 ```{code-cell} ipython3
 eval_metrics = nnx.MultiMetric(
