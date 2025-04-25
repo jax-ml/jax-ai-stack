@@ -17,7 +17,7 @@ keywords = []
 dependencies = [
     "chex==0.1.89",
     "jax==0.6.0",
-    "flax==0.10.5",
+    "flax==0.10.6",
     "ml_dtypes==0.5.1",
     "optax==0.2.4",
     "orbax-checkpoint==0.11.12",
@@ -45,7 +45,7 @@ tfds = [
 
 # Grain is an extra because as of v0.2.0 it has no OSX wheels.
 grain = [
-    "grain==0.2.7",
+    "grain==0.2.8",
 ]
 
 [tool.pyink]
