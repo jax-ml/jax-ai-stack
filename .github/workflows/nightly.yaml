@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies with jax nightly
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .[dev,tfds,grain]
+          python -m pip install .[dev,tfds]
           python -m pip install --upgrade --pre jax jaxlib -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
       - name: Run tests
         run: |
@@ -87,7 +87,7 @@ jobs:
       - name: Install dependencies with flax nightly
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .[dev,tfds,grain]
+          python -m pip install .[dev,tfds]
           python -m pip install --upgrade git+https://github.com/google/flax.git
       - name: Run tests
         run: |
@@ -112,7 +112,7 @@ jobs:
       - name: Install dependencies with optax nightly
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .[dev,tfds,grain]
+          python -m pip install .[dev,tfds]
           python -m pip install --upgrade git+https://github.com/google-deepmind/optax.git
       - name: Run tests
         run: |
@@ -137,7 +137,7 @@ jobs:
       - name: Install dependencies with orbax-checkpoint and orbax-export nightly
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .[dev,tfds,grain]
+          python -m pip install .[dev,tfds]
           python -m pip install --upgrade 'git+https://github.com/google/orbax/#subdirectory=checkpoint' 'git+https://github.com/google/orbax/#subdirectory=export'
       - name: Run tests
         run: |
@@ -162,7 +162,7 @@ jobs:
       - name: Install dependencies with chex nightly
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .[dev,tfds,grain]
+          python -m pip install .[dev,tfds]
           python -m pip install --upgrade 'git+https://github.com/google-deepmind/chex/'
       - name: Run tests
         run: |

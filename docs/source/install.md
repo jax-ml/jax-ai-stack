@@ -14,18 +14,12 @@ together via the integration tests in this repository. Packages include:
 - [ml_dtypes](http://github.com/jax-ml/ml_dtypes): NumPy dtype extensions for machine learning.
 - [optax](https://github.com/google-deepmind/optax): gradient processing and optimization in JAX.
 - [orbax](https://github.com/google/orbax): checkpointing and persistence utilities for JAX.
+- [chex](https://github.com/google-deepmind/chex): utilities for writing reliable JAX code.
+- [grain](https://github.com/google/grain): data loading.
 
 # Optional packages
 
-Additionally, there are optional packages you can install with `pip` extras.
-The following command:
-```
-pip install jax-ai-stack[grain]
-```
-will install a compatible version of the [grain](https://github.com/google/grain) data
-loader (currently linux-only).
-
-Similarly, the following command:
+Additionally, there are optional packages you can install with `pip` extras. The following command:
 ```
 pip install jax-ai-stack[tfds]
 ```

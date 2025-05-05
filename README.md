@@ -44,20 +44,16 @@ together via the integration tests in this repository. Packages include:
 - [optax](https://github.com/google-deepmind/optax): gradient processing and optimization in JAX.
 - [orbax](https://github.com/google/orbax): checkpointing and persistence utilities for JAX.
 - [chex](https://github.com/google-deepmind/chex): utilities for writing reliable JAX code.
+- [grain](https://github.com/google/grain): data loading.
 
 ### Optional packages
 
 Additionally, there are optional packages you can install with `pip` extras.
-The following command:
-```
-pip install jax-ai-stack[grain]
-```
-will install a compatible version of the [grain](https://github.com/google/grain) data
-loader (currently mac and linux-only).
 
-Similarly, the following command:
+The following command:
 ```
 pip install jax-ai-stack[tfds]
 ```
-will install a compatible version of [tensorflow](https://github.com/tensorflow/tensorflow)
+will install a compatible version of
+[tensorflow](https://github.com/tensorflow/tensorflow)
 and [tensorflow-datasets](https://github.com/tensorflow/datasets).
