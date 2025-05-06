@@ -57,3 +57,14 @@ pip install jax-ai-stack[tfds]
 will install a compatible version of
 [tensorflow](https://github.com/tensorflow/tensorflow)
 and [tensorflow-datasets](https://github.com/tensorflow/datasets).
+
+### Hardware support
+
+To install `jax-ai-stack` with hardware-specific JAX support, add the JAX installation
+command in the same `pip install` invocation. For example:
+```
+pip install jax-ai-stack "jax[cuda]"  # JAX + AI stack with GPU/CUDA support
+pip install jax-ai-stack "jax[tpu]"  # JAX + AI stack with TPU support
+```
+For more information on available options for hardware-specific JAX installation, refer
+to [JAX installation](https://docs.jax.dev/en/latest/installation.html).
