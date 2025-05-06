@@ -35,3 +35,15 @@ command:
 pip install jax-ai-stack==2024.11.1
 ```
 For the full list of released versions and the pinned packages, refer to the [Change log](https://github.com/jax-ml/jax-ai-stack/blob/main/CHANGELOG.md).
+
+
+## Hardware support
+
+To install `jax-ai-stack` with hardware-specific JAX support, add the JAX installation
+command in the same `pip install` invocation. For example:
+```
+pip install jax-ai-stack "jax[cuda]"  # JAX + AI stack with GPU/CUDA support
+pip install jax-ai-stack "jax[tpu]"  # JAX + AI stack with TPU support
+```
+For more information on available options for hardware-specific JAX installation, refer
+to [JAX installation](https://docs.jax.dev/en/latest/installation.html).
