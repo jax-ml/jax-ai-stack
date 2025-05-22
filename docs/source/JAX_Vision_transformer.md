@@ -251,7 +251,7 @@ def vit_inplace_copy_weights(*, src_model, dst_model):
 
     # Notice the use of `flax.nnx.state`.
     flax_model_params = nnx.state(dst_model, nnx.Param)
-    flax_model_params_fstate = flax_model_params.flat_state()
+    flax_model_params_fstate = dict(flax_model_params.flat_state())
 
     # Mapping from Flax parameter names to TF parameter names.
     params_name_mapping = {

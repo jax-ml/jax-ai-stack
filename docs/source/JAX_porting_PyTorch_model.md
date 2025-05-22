@@ -180,13 +180,13 @@ class Model(nnx.Module):
 To inspect NNX module's learnable parameters and buffers, we can use `nnx.state`:
 ```python
 nnx_module = ...
-for k, v in nnx.state(nnx_module, nnx.Param).flat_state().items():
+for k, v in nnx.state(nnx_module, nnx.Param).flat_state():
     print(
         k,
         v.value.mean() if v.value is not None else None
     )
 
-for k, v in nnx.state(nnx_module, (nnx.BatchStat, Buffer)).flat_state().items():
+for k, v in nnx.state(nnx_module, (nnx.BatchStat, Buffer)).flat_state():
     print(
         k,
         v.value.mean() if v.value.dtype == "float32" else v.value.sum()

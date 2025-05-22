@@ -458,7 +458,7 @@ def vit_inplace_copy_weights(*, src_model, dst_model):
     tf_model_params_fstate = nnx.traversals.flatten_mapping(tf_model_params)
 
     flax_model_params = nnx.state(dst_model, nnx.Param)
-    flax_model_params_fstate = flax_model_params.flat_state()
+    flax_model_params_fstate = dict(flax_model_params.flat_state())
 
     src_num_params = sum([p.size for p in tf_model_params_fstate.values()])
     dst_num_params = sum([p.value.size for p in flax_model_params_fstate.values()])
@@ -913,7 +913,7 @@ model_diffstate = nnx.DiffState(0, trainable_params_filter)
 ```
 
 ```{code-cell} ipython3
-for key in list(nnx.state(model, trainable_params_filter).flat_state().keys()):
+for key, _ in nnx.state(model, trainable_params_filter).flat_state():
     assert "encoder" not in key
 ```
 
