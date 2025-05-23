@@ -27,7 +27,7 @@ Here, you will learn how to:
 - Train the model on Google Colab’s Cloud TPU v2
 - Profile for hyperparameter tuning
 
-If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
+If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
 
 +++ {"id": "hTmz5Cbco7n_"}
 

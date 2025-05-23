@@ -52,7 +52,7 @@ exclude_patterns = [
     'build/jupyter_execute',
     # Exclude markdown sources for notebooks:
     'digits_vae.md',
-    'getting_started_with_jax_for_AI.md',
+    'neural_net_basics.md',
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
     'digits_diffusion_model.md',

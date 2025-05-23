@@ -27,7 +27,7 @@ In this tutorial, you'll learn how to:
 - Train the model (with Google Colab’s Cloud TPU v2)
 - Visualize and track the model’s progress
 
-If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which covers neural network building with Flax, Optax and JAX.
+If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with Flax, Optax and JAX.
 
 +++ {"id": "gwaaMmjXt7n7"}
 
