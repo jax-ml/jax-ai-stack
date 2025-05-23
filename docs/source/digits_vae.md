@@ -13,7 +13,7 @@ kernelspec:
 
 +++ {"id": "47OmRSTR1dJU"}
 
-# Variational autoencoder (VAE) and debugging in JAX
+# Part 2: Debug a variational autoencoder (VAE)
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_vae.ipynb)
 

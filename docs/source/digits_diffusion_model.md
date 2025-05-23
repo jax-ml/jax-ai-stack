@@ -13,7 +13,7 @@ kernelspec:
 
 +++ {"id": "Kzqlx7fpXRnJ"}
 
-# Train a diffusion model for image generation with JAX for AI
+# Part 3: Train a diffusion model for image generation
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_diffusion_model.ipynb)
 
