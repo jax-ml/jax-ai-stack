@@ -476,4 +476,4 @@ print(f"- Predicted review sentiment: {'positive' if pred_label == 0 else 'negat
 In this tutorial we implemented from scratch a simple convolutional neural network and trained it on a text classification dataset. Trained model shows 87% classification accuracy due to its convolutional nature. Next steps to improve the metrics could be to change the model to a transformer-based architecture.
 
 - Model checkpointing and exporting using [Orbax](https://orbax.readthedocs.io/en/latest/).
-- Other NLP tutorials in [jax-ai-stack](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html).
+- Other NLP tutorials in [jax-ai-stack](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html).

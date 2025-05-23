@@ -809,7 +809,7 @@ More details about Flax NNX API, how to save and load the model's state and abou
 
 
 Other AI/ML tutorials to check out:
-- [JAX AI Stack tutorials](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html)
+- [JAX AI Stack tutorials](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html)
 
 ## Just-In-Time (JIT) compilation in JAX
 

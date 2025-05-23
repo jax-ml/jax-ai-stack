@@ -1630,4 +1630,4 @@ cosine_dist
 ## Further reading
 
 - [Flax documentation: Core Examples](https://flax.readthedocs.io/en/latest/examples/core_examples.html)
-- [JAX AI Stack tutorials](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html)
+- [JAX AI Stack tutorials](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html)

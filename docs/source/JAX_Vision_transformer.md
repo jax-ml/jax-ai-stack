@@ -797,4 +797,4 @@ For further reading, check out:
 - Model checkpointing and exporting with [Orbax](https://orbax.readthedocs.io/en/latest/).
 - Optimizers and learning rate scheduling with [Optax](https://optax.readthedocs.io/en/latest/).
 - Freezing model's parameters using trainable parameters filtering with examples: 1) [`flax.nnx.optimizer.Optimizer.update`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/optimizer.html#flax.nnx.optimizer.Optimizer.update) and 2) [example 2 on `google/flax` GitHub Issues](https://github.com/google/flax/issues/4167#issuecomment-2324245208).
-- Other computer vision tutorials using the [JAX AI Stack](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html).
+- Other computer vision tutorials using the [JAX AI Stack](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html).
