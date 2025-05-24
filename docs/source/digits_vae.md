@@ -17,15 +17,15 @@ kernelspec:
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/digits_vae.ipynb)
 
-This tutorial explores a simplified version of a generative model called [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) with [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset, and expands on what we learned in [Getting started with JAX](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html). Along the way, you'll learn more about how JAX's [JIT compilation](https://jax.readthedocs.io/en/latest/jit-compilation.html#jit-compilation) (`jax.jit`) actually works, and what this means for [debugging](https://jax.readthedocs.io/en/latest/debugging/index.html) [JAX programs](https://jax.readthedocs.io/en/latest/debugging.html), as we learn how to identify what can go wrong during model training.
+This tutorial explores a simplified version of a generative model called [Variational Autoencoder (VAE)](https://en.wikipedia.org/wiki/Variational_autoencoder) with [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset, and expands on what we learned in [Getting started with JAX](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html). Along the way, you'll learn more about how JAX's [JIT compilation](https://jax.readthedocs.io/en/latest/jit-compilation.html#jit-compilation) (`jax.jit`) actually works, and what this means for [debugging](https://jax.readthedocs.io/en/latest/debugging/index.html) [JAX programs](https://jax.readthedocs.io/en/latest/debugging.html), as we learn how to identify what can go wrong during model training.
 
-If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), which explains how to build a simple neural netwwork with Flax and Optax, and JAX's key features, including the NumPy-style interface with `jax.numpy`, JAX transformations for JIT compilation with `jax.jit`, automatic vectorization with `jax.vmap`, and automatic differentiation with `jax.grad`.
+If you are new to JAX for AI, check out the [first tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which explains how to build a simple neural netwwork with Flax and Optax, and JAX's key features, including the NumPy-style interface with `jax.numpy`, JAX transformations for JIT compilation with `jax.jit`, automatic vectorization with `jax.vmap`, and automatic differentiation with `jax.grad`.
 
 +++ {"id": "k19povzxp7hS"}
 
 ## Loading the data
 
-As [before](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), this example uses the well-known, small and self-contained [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset:
+As [before](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), this example uses the well-known, small and self-contained [scikit-learn `digits`](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_digits.html) dataset:
 
 ```{code-cell}
 :id: aIwDAfS6PtFh
@@ -47,13 +47,13 @@ print(f"{images_test.shape=}")
 
 +++ {"id": "2_Q16JRyrW7V"}
 
-The dataset comprises 1800 images of hand-written digits, each represented by an `8x8` pixel grid, and their corresponding labels. For visualization of this data, refer to [loading the data](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html#loading-the-data) in the previous tutorial.
+The dataset comprises 1800 images of hand-written digits, each represented by an `8x8` pixel grid, and their corresponding labels. For visualization of this data, refer to [loading the data](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html#loading-the-data) in the previous tutorial.
 
 +++ {"id": "Z9TPYqipPyBp"}
 
 ## Defining the VAE with Flax
 
-[Previously](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html), we learned how to use [Flax NNX](http://flax.readthedocs.io) to create a simple [feed-forward](https://en.wikipedia.org/wiki/Feedforward_neural_network) neural network trained for classification with an architecture that looked roughly like this:
+[Previously](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), we learned how to use [Flax NNX](http://flax.readthedocs.io) to create a simple [feed-forward](https://en.wikipedia.org/wiki/Feedforward_neural_network) neural network trained for classification with an architecture that looked roughly like this:
 
 ```{code-cell}
 :id: HNlg-ydpr5yH

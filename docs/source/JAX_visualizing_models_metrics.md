@@ -18,7 +18,7 @@ kernelspec:
 
 +++
 
-To keep things straightforward and familiar, we reuse the model and data from [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/getting_started_with_jax_for_AI.html) - if you haven't read that yet and want the primer, start there before returning.
+To keep things straightforward and familiar, we reuse the model and data from [Getting started with JAX for AI](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html) - if you haven't read that yet and want the primer, start there before returning.
 
 All of the modeling and training code is the same here. What we have added are the tensorboard connections and the discussion around them.
 

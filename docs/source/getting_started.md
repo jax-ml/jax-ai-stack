@@ -20,7 +20,7 @@ After working through this content, you may wish to visit the [JAX documentation
 ```{toctree}
 :maxdepth: 1
 
-getting_started_with_jax_for_AI
+neural_net_basics
 digits_vae
 digits_diffusion_model
 ```
