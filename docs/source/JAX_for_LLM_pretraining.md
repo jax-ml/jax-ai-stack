@@ -464,7 +464,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 Start training. It takes ~50 minutes on Colab.
 
-Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put` with `NamedeSharding`.
+Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put` with `NamedSharding`.
 
 We are also using the `jax.vmap` transformation to produce the target sequences faster.
 
