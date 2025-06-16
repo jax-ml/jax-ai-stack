@@ -6,6 +6,14 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
+   :maxdepth: 1
+
+   blog
+   events
+   videos
+
+.. toctree::
+   :hidden:
    :caption: Getting started
    :maxdepth: 1
 
