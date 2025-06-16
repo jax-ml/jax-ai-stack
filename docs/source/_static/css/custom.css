@@ -38,7 +38,7 @@ body:has(.hero) .bd-article > section > h1 {
 
     body:has(.hero) .header-article-items,
     body:has(.hero) .doc-body > section {
-        max-width: 80rem !important;
+        max-width: 80% !important;
         align-self: center;
         width: -moz-available;
         width: -webkit-fill-available;
@@ -87,6 +87,14 @@ body:has(.hero) .bd-article > section > h1 {
 
 .hero-image {
     background: none !important;
+}
+
+.hero-cta {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
 }
 
 .button-primary {
@@ -161,7 +169,6 @@ body:has(.hero) .bd-article > section > h1 {
     gap: 85px;
     margin-bottom: 60px;
 }
-
 
 .image-section img {
     background-color: transparent !important;
