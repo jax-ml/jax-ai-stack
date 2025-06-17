@@ -11,5 +11,5 @@ matplotlib
 penzai
 scikit-learn
 
-# install jax-ai-stack from current directory
-.
+# install jax-ai-stack from parent directory
+../.
