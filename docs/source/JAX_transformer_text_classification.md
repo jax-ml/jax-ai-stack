@@ -153,7 +153,7 @@ x_test = pad_sequences(x_test, max_len=maxlen)
 
 ## Apply efficient data loading and preprocessing using Grain
 
-We will utilize the Grain library for efficient data loading and preprocessing. Grain supports custom setups where data sources may come in different forms, and in this tutorial we will implement the `grain.RandomAccessDataSource` (a Grain data source) interface. (To learn more, you can check out [PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/source/data_sources.md).)
+We will utilize the Grain library for efficient data loading and preprocessing. Grain supports custom setups where data sources may come in different forms, and in this tutorial we will implement the `grain.RandomAccessDataSource` (a Grain data source) interface. (To learn more, you can check out [PyGrain Data Sources](https://google-grain.readthedocs.io/en/latest/tutorials/data_sources/index.html).)
 
 Our dataset is comprised of relatively small NumPy arrays, so the `grain.RandomAccessDataSource` is not complicated:
 
@@ -177,7 +177,7 @@ train_source = DataSource(x_train, y_train)
 test_source = DataSource(x_test, y_test)
 ```
 
-**Note:** We are using a single-device setup, so [device parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) or sharding for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data) is not needed in this example. During sharding, the training data is run via multiple parts - batches - in parallel and simultaneously across different devices, such as GPUs and Google TPUs, and larger batch sizes can speed up training. You can learn more about it in the [miniGPT with JAX tutorial](https://jax-ai-stack.readthedocs.io/en/latest/JAX_for_LLM_pretraining.html) and JAX documentation's [tensor parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) page.
+**Note:** We are using a single-device setup, so [device parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html) or sharding for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data) is not needed in this example. During sharding, the training data is run via multiple parts - batches - in parallel and simultaneously across different devices, such as GPUs and Google TPUs, and larger batch sizes can speed up training. You can learn more about it in the [miniGPT with JAX tutorial](https://jax-ai-stack.readthedocs.io/en/latest/JAX_for_LLM_pretraining.html) and JAX documentation's [tensor parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html) page.
 
 ```{code-cell} ipython3
 # Set the batch sizes for the dataset.
