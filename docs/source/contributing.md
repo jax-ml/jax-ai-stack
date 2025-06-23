@@ -10,7 +10,13 @@ you have in mind!
 
 To contribute to the documentation, you will need to set your development environment.
 
-You can create a virtual environment or conda environment and install the packages in `docs/requirements.txt`.
+You can create a virtual environment or conda environment and install the packages in `docs/requirements.txt` by running
+
+```bash
+pip install -r docs/requirements.txt
+```
+
+from the root of the repository.
 
 ## Documentation via Jupyter notebooks
 
