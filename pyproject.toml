@@ -16,11 +16,11 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "chex==0.1.89",
-    "grain==0.2.9",
-    "jax==0.6.0",
+    "grain==0.2.10",
+    "jax==0.6.2",
     "flax==0.10.6",
     "ml_dtypes==0.5.1",
-    "optax==0.2.4",
+    "optax==0.2.5",
     "orbax-checkpoint==0.11.13",
     "orbax-export==0.0.6",
 ]
@@ -41,7 +41,7 @@ dev = [
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
     "tf-nightly",
-    "tensorflow_datasets==4.9.8",
+    "tensorflow_datasets==4.9.9",
 ]
 
 # Grain is now part of the default installation; keep this for
