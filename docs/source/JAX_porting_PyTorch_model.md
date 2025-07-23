@@ -20,7 +20,7 @@ In this tutorial, we will learn how to port a PyTorch model to JAX and [Flax](ht
 
 Specifically, we will port a PyTorch computer-vision model trained to classify images. We will use [`TorchVision`](https://pytorch.org/vision/stable/index.html) to provide a [MaxVit](https://pytorch.org/vision/stable/models/maxvit.html) model trained on ImageNet ([MaxViT: Multi-Axis Vision Transformer](https://arxiv.org/abs/2204.01697)).
 
-Flax provides an API very similar to the PyTorch `torch.nn` module, which makes porting PyTorch models rather straightforward. 
+Flax provides an API very similar to the PyTorch `torch.nn` module, which makes porting PyTorch models rather straightforward.
 First, we'll set up the model using TorchVision, and briefly explore the model's architecture and the blocks we need to port. Next, we'll define equivalent blocks and the whole model using Flax. After that, we'll port the weights. Finally, we'll run some tests to ensure the correctness of the ported model.
 
 **Note: On Colab, we recommend running this tutorial on a T4 GPU instance. On Kaggle, we recommend a T4x2 or P100 instance.**
