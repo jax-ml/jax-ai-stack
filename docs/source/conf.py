@@ -37,8 +37,8 @@ html_favicon = '_static/favicon.png'
 # Theme-specific options
 # https://sphinx-book-theme.readthedocs.io/en/stable/reference.html
 html_theme_options = {
-    'show_navbar_depth': 2,
-    'show_toc_level': 2,
+    'show_navbar_depth': 1,
+    'show_toc_level': 1,
     'repository_url': 'https://github.com/jax-ml/jax-ai-stack',
     'path_to_docs': 'docs/source/',
     'use_repository_button': True,
@@ -52,7 +52,7 @@ exclude_patterns = [
     'build/jupyter_execute',
     # Exclude markdown sources for notebooks:
     'digits_vae.md',
-    'getting_started_with_jax_for_AI.md',
+    'neural_net_basics.md',
     'JAX_for_PyTorch_users.md',
     'JAX_porting_PyTorch_model.md',
     'digits_diffusion_model.md',

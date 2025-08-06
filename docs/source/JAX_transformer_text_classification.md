@@ -12,35 +12,32 @@ kernelspec:
   name: python3
 ---
 
-# Text classification with transformer model
+# Text classification with a transformer language model using JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_transformer_text_classification.ipynb)
 
-In this short tutorial, we will perform sentiment analysis on movie reviews. We would like
-to know if a review is overall positive or negative, so we're facing a classification task.
+This tutorial demonstrates how to build a text classifier using a transformer language model using JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io). We will perform sentiment analysis on movie reviews from the [IMDB dataset](https://www.tensorflow.org/api_docs/python/tf/keras/datasets/imdb), classifying them as positive or negative.
 
-For that purpose, we're going to build a model comprised of a transformer and dense layers.
-What is special about transformers is that they utilize an attention mechanism that allows
-the model to focus on the most relevant parts of the input sequence when processing information.
+Here, you will learn how to:
 
-We will follow the standard ML model-building process - split data into training and test sets,
-construct the model, run training, and report metrics.
+- Load and preprocess the dataset.
+- Define the transformer model with Flax NNX and JAX.
+- Create loss and training step functions.
+- Train the model.
+- Evaluate the model with an example.
+
+If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
+
+## Setup
+
+JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. We will use [Grain](https://google-grain.readthedocs.io/en/latest/index.html) for data loading, and [tqdm](https://tqdm.github.io/) for a progress bar to monitor the training progress.
 
 ```{code-cell} ipython3
 # Required packages
-# !pip install -U jax flax optax
 # !pip install -U grain tqdm requests matplotlib
 ```
 
-## Tools overview
-
-Here's a list of key packages we will use in this example that belong to JAX AI stack:
-
-- [JAX](https://github.com/jax-ml/jax) will be used for array computations.
-- [Flax](https://github.com/google/flax) for constructing neural networks.
-- [Optax](https://github.com/google-deepmind/optax) for gradient processing and optimization.
-- [grain](https://github.com/google/grain/) will be be used to define data sources.
-- [tqdm](https://tqdm.github.io/) for a progress bar to monitor the training progress.
+Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, tqdm, NumPy and matplotlib:
 
 ```{code-cell} ipython3
 import io
@@ -59,20 +56,35 @@ import numpy as np
 import requests
 ```
 
-## Dataset
+## Loading and preprocessing the data
 
-We're going to use [IMDB dataset](https://ai.stanford.edu/~amaas/data/sentiment/).
-Each review is encoded as a list of word indexes, where words are indexed by
-the frequency. The label is a positive or negative sentiment (0 or 1).
+### Loading the data
+
+This section details loading, preprocessing, and preparing the [IMDB dataset](https://ai.stanford.edu/~amaas/data/sentiment/) movie review dataset.  The dataset contains 25,000 movie reviews from IMDB labeled by sentiment (positive/negative). Reviews are encoded as lists of word indices, where words are indexed by frequency. Positive and negative sentiments have integer labels 1 or 0, respectively.
+
+Let's create two functions: `prepare_imdb_dataset()` that loads and prepares the dataset, and `pad_sequences()` for padding the (NumPy) array sequences to a fixed length:
 
 ```{code-cell} ipython3
 def prepare_imdb_dataset(num_words: int, index_from: int, oov_char: int = 2) -> tuple:
+    """Download and preprocess the IMDB dataset from TensorFlow Datasets.
+
+    Args:
+        num_words (int): The maximum number of words to keep in the vocabulary.
+        index_from (int): The starting index for word indices.
+        oov_char (int): The character to use for out-of-vocabulary words. Defaults to 2.
+
+    Returns:
+        A tuple containing the training and test sets with labels.
+    """
     response = requests.get("https://storage.googleapis.com/tensorflow/tf-keras-datasets/imdb.npz")
     response.raise_for_status()
+
+    # The training and test sets.
     with np.load(io.BytesIO(response.content), allow_pickle=True) as f:
         x_train, y_train = f["x_train"], f["y_train"]
         x_test, y_test = f["x_test"], f["y_test"]
 
+    # Shuffle the training and test sets.
     rng = np.random.RandomState(113)
     indices = np.arange(len(x_train))
     rng.shuffle(indices)
@@ -84,9 +96,11 @@ def prepare_imdb_dataset(num_words: int, index_from: int, oov_char: int = 2) -> 
     x_test = x_test[indices]
     y_test = y_test[indices]
 
+    # Adjust word indices to start from the specified index.
     x_train = [[w + index_from for w in x] for x in x_train]
     x_test = [[w + index_from for w in x] for x in x_test]
 
+    # Combine training and test sets, then truncates/pads sequences.
     xs = x_train + x_test
     labels = np.concatenate([y_train, y_test])
     xs = [
@@ -99,8 +113,16 @@ def prepare_imdb_dataset(num_words: int, index_from: int, oov_char: int = 2) -> 
 
     return (x_train, y_train), (x_test, y_test)
 
-
 def pad_sequences(arrs: typing.Iterable, max_len: int) -> np.ndarray:
+    """Pad array sequences to a fixed length.
+
+    Args:
+        arrs (typing.Iterable): A list of arrays.
+        max_len (int): The desired maximum length.
+
+    Returns:
+        A NumPy array of padded sequences.
+    """
     # Ensure that each sample is the same length
     result = []
     for arr in arrs:
@@ -115,25 +137,28 @@ def pad_sequences(arrs: typing.Iterable, max_len: int) -> np.ndarray:
 ```
 
 ```{code-cell} ipython3
-index_from = 3  # make sure that 0 encodes pad token
-vocab_size = 20000  # Only consider the top 20k words
-maxlen = 200  # Only consider the first 200 words of each movie review
+index_from = 3  # Ensures that 0 encodes the padding token.
+vocab_size = 20000  # Considers only the top 20,000 words.
+maxlen = 200  # Limits each review to the first 200 words.
+
+# Instantiate the training and test sets.
 (x_train, y_train), (x_test, y_test) = prepare_imdb_dataset(num_words=vocab_size, index_from=index_from)
 print(len(x_train), "Training sequences")
 print(len(x_test), "Validation sequences")
+
+# Pad array sequences to a fixed length.
 x_train = pad_sequences(x_train, max_len=maxlen)
 x_test = pad_sequences(x_test, max_len=maxlen)
 ```
 
-For handling input data we're going to use Grain, a pure Python package developed for JAX and
-Flax models. Grain supports custom setups where data sources might come in different forms, but
-they all need to implement the `grain.RandomAccessDataSource` interface. See
-[PyGrain Data Sources](https://github.com/google/grain/blob/main/docs/source/data_sources.md)
-for more details.
+## Apply efficient data loading and preprocessing using Grain
 
-Our dataset is comprised of relatively small NumPy arrays so our `DataSource` is uncomplicated:
+We will utilize the Grain library for efficient data loading and preprocessing. Grain supports custom setups where data sources may come in different forms, and in this tutorial we will implement the `grain.RandomAccessDataSource` (a Grain data source) interface. (To learn more, you can check out [PyGrain Data Sources](https://google-grain.readthedocs.io/en/latest/tutorials/data_sources/index.html).)
+
+Our dataset is comprised of relatively small NumPy arrays, so the `grain.RandomAccessDataSource` is not complicated:
 
 ```{code-cell} ipython3
+# Implement a custom data source for Grain to handle the IMDB dataset.
 class DataSource(grain.RandomAccessDataSource):
     def __init__(self, x, y):
         self._x = x
@@ -147,37 +172,43 @@ class DataSource(grain.RandomAccessDataSource):
 ```
 
 ```{code-cell} ipython3
+# Instantiate the training and test set data sources.
 train_source = DataSource(x_train, y_train)
 test_source = DataSource(x_test, y_test)
 ```
 
+**Note:** We are using a single-device setup, so [device parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html) or sharding for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data) is not needed in this example. During sharding, the training data is run via multiple parts - batches - in parallel and simultaneously across different devices, such as GPUs and Google TPUs, and larger batch sizes can speed up training. You can learn more about it in the [miniGPT with JAX tutorial](https://jax-ai-stack.readthedocs.io/en/latest/JAX_for_LLM_pretraining.html) and JAX documentation's [tensor parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html) page.
+
 ```{code-cell} ipython3
+# Set the batch sizes for the dataset.
 seed = 12
 train_batch_size = 128
 test_batch_size = 2 * train_batch_size
 
+# Define `grain.IndexSampler`s for training and testing data.
 train_sampler = grain.IndexSampler(
     len(train_source),
     shuffle=True,
     seed=seed,
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,                      # Iterate over the dataset for one epoch
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,                      # Iterate over the dataset for one epoch.
 )
 
 test_sampler = grain.IndexSampler(
     len(test_source),
     shuffle=False,
     seed=seed,
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,                      # Iterate over the dataset for one epoch
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,                      # Iterate over the dataset for one epoch.
 )
 
 
+# Create `grain.DataLoader`s for training and test sets.
 train_loader = grain.DataLoader(
     data_source=train_source,
-    sampler=train_sampler,  # Sampler to determine how to access the data
-    worker_count=4,         # Number of child processes launched to parallelize the transformations among
-    worker_buffer_size=2,   # Count of output batches to produce in advance per worker
+    sampler=train_sampler,  # A `grain.IndexSampler` determining how to access the data.
+    worker_count=4,         # The number of child processes launched to parallelize the transformations.
+    worker_buffer_size=2,   # The number count of output batches to produce in advance per worker.
     operations=[
         grain.Batch(train_batch_size, drop_remainder=True),
     ]
@@ -185,68 +216,130 @@ train_loader = grain.DataLoader(
 
 test_loader = grain.DataLoader(
     data_source=test_source,
-    sampler=test_sampler,  # Sampler to determine how to access the data
-    worker_count=4,        # Number of child processes launched to parallelize the transformations among
-    worker_buffer_size=2,  # Count of output batches to produce in advance per worker
+    sampler=test_sampler,  # A `grain.IndexSampler` to determine how to access the data.
+    worker_count=4,        # The number of child processes launched to parallelize the transformations.
+    worker_buffer_size=2,  # The number count of output batches to produce in advance per worker.
     operations=[
         grain.Batch(test_batch_size),
     ]
 )
 ```
 
-## Model
+## Define the transformer model with Flax and JAX
 
-Here we construct the model with the transformer and dense layers:
+In this section, we'll construct the transformer model using JAX and Flax NNX.
+
+Let's begin with the transformer block, subclassing `flax.nnx.Module`. This class processes the embedded sequences.
 
 ```{code-cell} ipython3
 class TransformerBlock(nnx.Module):
+    """ A single Transformer block that processes the embedded sequences.
+
+    Each Transformer block processes input sequences via self-attention and feed-forward networks.
+
+    Args:
+        embed_dim (int): Embedding dimensionality.
+        num_heads (int): Number of attention heads.
+        ff_dim (int): Dimensionality of the feed-forward network.
+        rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+        rate (float): Dropout rate. Defaults to 0.1.
+    """
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, rngs: nnx.Rngs, rate: float = 0.1):
+        # Multi-Head Attention (MHA) using `flax.nnx.MultiHeadAttention`.
+        # Specifies tensor sharding (depending on the mesh cofiguration).
         self.attention = nnx.MultiHeadAttention(
             num_heads=num_heads, in_features=embed_dim, qkv_features=embed_dim, decode=False, rngs=rngs
         )
-
+        # First linear transformation for the feed-forward network using `flax.nnx.Linear`.
         self.dense_1 = nnx.Linear(in_features=embed_dim, out_features=ff_dim, rngs=rngs)
+        # Second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.dense_2 = nnx.Linear(in_features=ff_dim, out_features=ff_dim, rngs=rngs)
 
+        # First layer normalization using `flax.nnx.LayerNorm`.
         self.layer_norm_1 = nnx.LayerNorm(num_features=embed_dim, epsilon=1e-6, rngs=rngs)
+        # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm_2 = nnx.LayerNorm(num_features=ff_dim, epsilon=1e-6, rngs=rngs)
 
+        # First dropout using `flax.nnx.Dropout`.
         self.dropout_1 = nnx.Dropout(rate, rngs=rngs)
+        # Second dropout using `flax.nnx.Dropout`.
         self.dropout_2 = nnx.Dropout(rate, rngs=rngs)
 
+    # Apply the transformer block to the input sequence.
     def __call__(self, inputs: jax.Array):
+        # Apply Multi-Head Attention.
         x = self.attention(inputs, inputs)
+        # Apply the first dropout.
         x = self.dropout_1(x)
+        # Apply the first layer normalization.
         x_norm_1 = self.layer_norm_1(inputs + x)
+        # The feed-forward network.
+        # Apply the first linear transformation.
         x = self.dense_1(x_norm_1)
+        # Apply the ReLU activation with `jax.nnx.relu`.
         x = jax.nn.relu(x)
+        # Apply the second linear transformation.
         x = self.dense_2(x)
+        # Apply the second dropout.
         x = self.dropout_2(x)
+        # Apply the second layer normalization and return the output of the Transformer block.
         x = self.layer_norm_2(x_norm_1 + x)
         return x
 ```
 
+Next, let's create a class called `TokenAndPositionEmbedding()` that transforms tokens and positions into embeddings that will be fed into the transformer (via `TransformerBlock`) by subclassing `flax.nnx.Module`.
+
+The `TokenAndPositionEmbedding()` class will combine token embeddings (words in an input sentence) with positional embeddings (the position of each word in a sentence). (It handles embedding both word tokens and their positions within the sequence.)
+
 ```{code-cell} ipython3
 class TokenAndPositionEmbedding(nnx.Module):
+    """ Combines token embeddings with positional embeddings.
+
+    Args:
+        maxlen (int): The maximum sequence length.
+        vocal_size (int): The vocabulary size.
+        embed_dim (int): Embedding dimensionality.
+        rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+    """
+
+    # Initializes the token embedding layer (using `flax.nnx.Embed`).
+    # Handles token and positional embeddings.
     def __init__(self, max_length: int, vocab_size: int, embed_dim: int, rngs: nnx.Rngs):
+        # Each unique word has an embedding vector.
         self.token_emb = nnx.Embed(num_embeddings=vocab_size, features=embed_dim, rngs=rngs)
+        # Initialize positional embeddings (using `flax.nnx.Embed`).
         self.pos_emb = nnx.Embed(num_embeddings=max_length, features=embed_dim, rngs=rngs)
 
+    # Generates embeddings for the input tokens and their positions.
+    # Takes a token sequence (integers) and returns the combined token and positional embeddings.
     def __call__(self, x: jax.Array):
         maxlen = jnp.shape(x)[-1]
+        # Generate a sequence of positions for the input tokens.
         positions = jnp.arange(start=0, stop=maxlen, step=1)
+        # Look up the positional embeddings for each position in the input sequence.
         positions = self.pos_emb(positions)
+        # Look up the token embeddings for each token in the input sequence.
         x = self.token_emb(x)
+        # Combine token and positional embeddings.
         return x + positions
 ```
 
+Next, we'll construct the transformer model, `MyModel()`, subclassing `flax.nnx.Module`, which includes `TokenAndPositionEmbedding()` for transforming tokens and positions into embeddings, transformer blocks (`TransformerBlock()`) for processing the embedded sequences, and other layers.
+
 ```{code-cell} ipython3
-embed_dim = 32  # Embedding size for each token
-num_heads = 2  # Number of attention heads
-ff_dim = 32  # Hidden layer size in the feed forward network inside transformer
+embed_dim = 32  # The embedding size for each token.
+num_heads = 2  # The number of attention heads.
+ff_dim = 32  # The hidden layer size in the feed-forward network inside the transformer.
 
 class MyModel(nnx.Module):
     def __init__(self, rngs: nnx.Rngs):
+        """ Initializes the transformer block with the `TokenAndPositionEmbedding()`,
+        `TransformerBlock()`, and other layers.
+
+        Args:
+            rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+        """
+
         self.embedding_layer = TokenAndPositionEmbedding(maxlen, vocab_size, embed_dim, rngs=rngs)
         self.transformer_block = TransformerBlock(embed_dim, num_heads, ff_dim, rngs=rngs)
         self.dropout1 = nnx.Dropout(0.1, rngs=rngs)
@@ -254,6 +347,7 @@ class MyModel(nnx.Module):
         self.dropout2 = nnx.Dropout(0.1, rngs=rngs)
         self.dense2 = nnx.Linear(in_features=20, out_features=2, rngs=rngs)
 
+    # Processes the input sequence through the transformer model.
     def __call__(self, x: jax.Array):
         x = self.embedding_layer(x)
         x = self.transformer_block(x)
@@ -267,25 +361,26 @@ class MyModel(nnx.Module):
         return x
 ```
 
+Instantiate the model, `MyModel()`, as `model` and visualize it by calling `flax.nnx.display()`:
+
 ```{code-cell} ipython3
 model = MyModel(rngs=nnx.Rngs(0))
 nnx.display(model)
 ```
 
-## Training
+## Defining the loss function and training step-related functions
 
-To train our model we construct an `nnx.Optimizer` object with our model and a selected
-optimization algorithm. We're going to use Adam optimizer, which is a popular choice for
-Deep Learning models. Adam automatically adjusts the learning rate for each parameter and
-uses momentum hyperparameter to accelerate convergence.
+Before training the model, we need to construct an `flax.nnx.Optimizer` object with our `MyModel` transformer and the Adam optimizer.
 
 ```{code-cell} ipython3
-num_epochs = 10
-learning_rate = 0.0001
-momentum = 0.9
+num_epochs = 10 # Number of epochs during training.
+learning_rate = 0.0001 # The learning rate.
+momentum = 0.9 # Momentum for Adam.
 
 optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
 ```
+
+Next, we define the loss function - `compute_losses_and_logits()` - using `optax.softmax_cross_entropy_with_integer_labels`:
 
 ```{code-cell} ipython3
 def compute_losses_and_logits(model: nnx.Module, batch_tokens: jax.Array, labels: jax.Array):
@@ -296,6 +391,8 @@ def compute_losses_and_logits(model: nnx.Module, batch_tokens: jax.Array, labels
     ).mean()
     return loss, logits
 ```
+
+Next, let's define the training step - `train_step()` - using the `flax.nnx.jit` transformation decorator. The function takes in `model` (our transformer model), `optimizer` (Adam, as defined earlier) and the `batch` size as arguments. Then, let's define the evaluation step function (`eval_step()`), which takes `model`, `batch` and `eval_metrics` (loss and accuracy - details further below) as arguments.
 
 ```{code-cell} ipython3
 @nnx.jit
@@ -327,6 +424,8 @@ def eval_step(
     )
 ```
 
+For metrics, let's set the evaluation metrics using `flax.nnx.MultiMetric`.
+
 ```{code-cell} ipython3
 eval_metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average('loss'),
@@ -342,6 +441,8 @@ eval_metrics_history = {
     "test_accuracy": [],
 }
 ```
+
+Next, set up a function called `train_one_epoch()` for training one epoch, and a function called `evaluate_model()` for computing metrics on the training and test sets:
 
 ```{code-cell} ipython3
 bar_format = "{desc}[{n_fmt}/{total_fmt}]{postfix} [{elapsed}<{remaining}]"
@@ -363,7 +464,7 @@ def train_one_epoch(epoch):
 
 
 def evaluate_model(epoch):
-    # Compute the metrics on the train and val sets after each training epoch.
+    # Compute the metrics on the training and test sets after each training epoch.
     model.eval()
 
     eval_metrics.reset()  # Reset the eval metrics
@@ -378,6 +479,10 @@ def evaluate_model(epoch):
     print(f"- Accuracy: {eval_metrics_history['test_accuracy'][-1]:0.4f}")
 ```
 
+## Training the model
+
+Train the model over 10 epochs:
+
 ```{code-cell} ipython3
 %%time
 for epoch in range(num_epochs):
@@ -385,10 +490,14 @@ for epoch in range(num_epochs):
     evaluate_model(epoch)
 ```
 
+Let's visualize the training loss:
+
 ```{code-cell} ipython3
 plt.plot(train_metrics_history["train_loss"], label="Loss value during the training")
 plt.legend()
 ```
+
+We can also plot the accuracy and loss metrics on the test set:
 
 ```{code-cell} ipython3
 fig, axs = plt.subplots(1, 2, figsize=(10, 5))
@@ -398,16 +507,11 @@ axs[1].set_title("Accuracy on test set")
 axs[1].plot(eval_metrics_history["test_accuracy"])
 ```
 
-As we can see, we acquired over 85% accuracy on a sentiment classification problem
-after 10 epochs. From the loss plot, we see that in the last few epochs the loss
-value didn't improve much which is an indication that our model has converged.
+The model achieves around 85% accuracy after just 10 epochs. Based on the loss plot, during the last few epochs the loss value didn't improve much, which may indicate that our model converged.
 
-JAX AI stack allowed us to build, train, and evaluate the model with JAX ecosystem
-libraries that interoperate smoothly in a multitude of computing environments.
+## Evaluate the model
 
-Let's now inspect a few predictions ourselves. First we're going to download
-"indices to words" dictionary to decode our samples. Then we will decode a few samples
-and print them together with a prediced and an actual label.
+To inspect the model using a few predictions, let's download "indices to words" dictionary to decode our samples. Then we will decode a few samples and print them together with a prediced and an actual label.
 
 ```{code-cell} ipython3
 response = requests.get("https://storage.googleapis.com/tensorflow/tf-keras-datasets/imdb_word_index.json")

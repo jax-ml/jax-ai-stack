@@ -16,11 +16,12 @@ keywords = []
 # pip dependencies of the project
 dependencies = [
     "chex==0.1.89",
-    "jax==0.5.3",
-    "flax==0.10.5",
-    "ml_dtypes==0.5.1",
+    "grain==0.2.9",
+    "jax==0.6.0",
+    "flax==0.10.6",
+    "ml_dtypes==0.5.3",
     "optax==0.2.4",
-    "orbax-checkpoint==0.11.12",
+    "orbax-checkpoint==0.11.13",
     "orbax-export==0.0.6",
 ]
 
@@ -43,10 +44,9 @@ tfds = [
     "tensorflow_datasets==4.9.8",
 ]
 
-# Grain is an extra because as of v0.2.0 it has no OSX wheels.
-grain = [
-    "grain==0.2.7",
-]
+# Grain is now part of the default installation; keep this for
+# backward compatibility.
+grain = []
 
 [tool.pyink]
 # Formatting configuration to follow Google style-guide

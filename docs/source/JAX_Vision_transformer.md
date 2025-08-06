@@ -12,55 +12,67 @@ kernelspec:
   name: python3
 ---
 
-# Implement Vision Transformer (ViT) model from scratch
+# Train a Vision Transformer (ViT) for image classification with JAX
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_Vision_transformer.ipynb)
 
-In this tutorial we implement from scratch the Vision Transformer (ViT) model based on the paper by Dosovitskiy et al: [An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale](https://arxiv.org/abs/2010.11929). We load the ImageNet pretrained weights and finetune this model on [Food 101](https://huggingface.co/datasets/ethz/food101) dataset.
-This tutorial is originally inspired by [HuggingFace Image classification tutorial](https://huggingface.co/docs/transformers/tasks/image_classification).
+This tutorial guides you through developing and training a Vision Transformer (ViT) model using JAX, [Flax NNX](http://flax.readthedocs.io), and [Optax](http://optax.readthedocs.io). The architecture is based on ["An Image is Worth 16x16 Words"](https://arxiv.org/abs/2010.11929) by Dosovitskiy et al. (2020). The tutorial shows how to define a ViT model using Flax NNX, load the pretrained ImageNet weights from the ViT transformer weights of `google/vit-base-patch16-224` on HuggingFace, which was pretrained on ImageNet-21k, and then fine-tune on the [Food 101](https://huggingface.co/datasets/ethz/food101) dataset for image classification. We will also check the results for consistency with the reference model.
+
+This tutorial draws inspiration from the HuggingFace [Image classification tutorial](https://huggingface.co/docs/transformers/tasks/image_classification). The original JAX-based implementation of the ViT model can be found in the [google-research/vision_transformer](https://github.com/google-research/vision_transformer/) GitHub repository.
+
+If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with Flax, Optax and JAX.
 
 +++
 
-## Requirements installation
+## Setup
 
-We will need to install the following Python packages:
-- HuggingFace [Datasets](https://huggingface.co/docs/datasets/) will be used for dataset provision
-- [TorchVision](https://pytorch.org/vision) will be used for image augmentations
-- [grain](https://github.com/google/grain/) will be be used for efficient data loading
-- [tqdm](https://tqdm.github.io/) for a progress bar to monitor the training progress.
-- [Matplotlib](https://matplotlib.org/stable/) will be used for visualization purposes
+JAX for AI (the stack) installation is covered [here](https://docs.jaxstack.ai/en/latest/install.html). And JAX (the library) installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site.
 
-```{code-cell} ipython3
-# !pip install -U datasets grain torchvision tqdm matplotlib
-# !pip install -U flax optax
-```
+This tutorial uses HuggingFace [Datasets](https://huggingface.co/docs/datasets/) for dataset loading,[TorchVision](https://pytorch.org/vision) for image augmentations, [grain](https://github.com/google/grain/) for efficient data loading, [tqdm](https://tqdm.github.io/) for a progress bar to monitor training, and [matplotlib](https://matplotlib.org/stable/) for visualization purposes. These libraries can be installed with `!pip install -U datasets grain torchvision tqdm matplotlib`.
+
+Start by importing JAX, JAX NumPy, Flax NNX, and Optax:
 
 ```{code-cell} ipython3
 import jax
-import flax
+import jax.numpy as jnp
+from flax import nnx
 import optax
-print("Jax version:", jax.__version__)
-print("Flax version:", flax.__version__)
-print("Optax version:", optax.__version__)
 ```
 
-## Vision Transformer implementation
+## The ViT architecture
 
-Vision Transformer (ViT) architecture contains the following block:
-- Patch and position embedding
-- Transformer Encoder
-- Classification head
+A Vision Transformer (ViT) treats images as sequences of patches and leverages the attention mechanism from transformers. The architecture consists of the following key components:
+
+- **Patch and position embedding:** Breaking down an image into fixed-size patches and embedding each patch into a vector representation. Positional embeddings are added to encode the position of each patch within the original image, which aids with spatial information.
+- **Transformer encoder:** A stack of transformer encoder blocks processes the input embedded patches. Each block consists of:
+  - **Multi-Head (Self-)Attention:** This allows the model to weigh the importance of different patches relative to each other, capturing relationships within the image.
+  - **Feed-forward network:** Processes each patch independently, allowing a for non-linear transformations.
+  - **Layer normatlization and residual connections:** Stabilize training and improve gradient flow in the network.
+- **Classification head:** The output of the transformer encoder is fed into a linear layer and then a softmax function, resulting in class probabilities for prediction.
 
 ![ViT-architecture](https://github.com/google-research/vision_transformer/raw/main/vit_figure.png)
 
-Original JAX implementation can be found [here](https://github.com/google-research/vision_transformer/).
+**Note:** The original JAX-based implementation of a ViT can also be found in the [`google-research` GitHub repo](https://github.com/google-research/vision_transformer/).
+
+### Defining the model with Flax NNX
 
 ```{code-cell} ipython3
-import jax.numpy as jnp
-from flax import nnx
-
-
 class VisionTransformer(nnx.Module):
+    """ Implements the ViT model, inheriting from `flax.nnx.Module`.
+
+    Args:
+        num_classes (int): Number of classes in the classification. Defaults to 1000.
+        in_channels (int): Number of input channels in the image (such as 3 for RGB). Defaults to 3.
+        img_size (int): Input image size. Defaults to 224.
+        patch_size (int): Size of the patches extracted from the image. Defaults to 16.
+        num_layers (int): Number of transformer encoder layers. Defaults to 12.
+        num_heads (int): Number of attention heads in each transformer layer. Defaults to 12.
+        mlp_dim (int): Dimension of the hidden layers in the feed-forward/MLP block. Defaults to 3072.
+        hidden_size (int): Dimensionality of the embedding vectors. Defaults to 3072.
+        dropout_rate (int): Dropout rate (for regularization). Defaults to 0.1.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+
+    """
     def __init__(
         self,
         num_classes: int = 1000,
@@ -75,8 +87,11 @@ class VisionTransformer(nnx.Module):
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
     ):
-        # Patch and position embedding
+        # Calculate the number of patches generated from the image.
         n_patches = (img_size // patch_size) ** 2
+        # Patch embeddings:
+        # - Extracts patches from the input image and maps them to embedding vectors
+        #   using `flax.nnx.Conv` (convolutional layer).
         self.patch_embeddings = nnx.Conv(
             in_channels,
             hidden_size,
@@ -87,47 +102,77 @@ class VisionTransformer(nnx.Module):
             rngs=rngs,
         )
 
+        # Positional embeddings (add information about image patch positions):
+        # Set the truncated normal initializer (using `jax.nn.initializers.truncated_normal`).
         initializer = jax.nn.initializers.truncated_normal(stddev=0.02)
+        # The learnable parameter for positional embeddings (using `flax.nnx.Param`).
         self.position_embeddings = nnx.Param(
             initializer(rngs.params(), (1, n_patches + 1, hidden_size), jnp.float32)
-        )
+        ) # Shape `(1, n_patches +1, hidden_size`)
+        # The dropout layer.
         self.dropout = nnx.Dropout(dropout_rate, rngs=rngs)
 
+        # CLS token (a special token prepended to the sequence of patch embeddings)
+        # using `flax.nnx.Param`.
         self.cls_token = nnx.Param(jnp.zeros((1, 1, hidden_size)))
 
-        # Transformer Encoder blocks
+        # Transformer encoder (a sequence of encoder blocks for feature extraction).
+        # - Create multiple Transformer encoder blocks (with `nnx.Sequential`
+        # and `TransformerEncoder(nnx.Module)` which is defined later).
         self.encoder = nnx.Sequential(*[
             TransformerEncoder(hidden_size, mlp_dim, num_heads, dropout_rate, rngs=rngs)
             for i in range(num_layers)
         ])
+        # Layer normalization with `flax.nnx.LayerNorm`.
         self.final_norm = nnx.LayerNorm(hidden_size, rngs=rngs)
 
-        # Classification head
+        # Classification head (maps the transformer encoder to class probabilities).
         self.classifier = nnx.Linear(hidden_size, num_classes, rngs=rngs)
 
+    # The forward pass in the ViT model.
     def __call__(self, x: jax.Array) -> jax.Array:
-        # Patch and position embedding
+        # Image patch embeddings.
+        # Extract image patches and embed them.
         patches = self.patch_embeddings(x)
+        # Get the batch size of image patches.
         batch_size = patches.shape[0]
+        # Reshape the image patches.
         patches = patches.reshape(batch_size, -1, patches.shape[-1])
 
+        # Replicate the CLS token for each image with `jax.numpy.tile`
+        # by constructing an array by repeating `cls_token` along `[batch_size, 1, 1]` dimensions.
         cls_token = jnp.tile(self.cls_token, [batch_size, 1, 1])
+        # Concatenate the CLS token and image patch embeddings.
         x = jnp.concat([cls_token, patches], axis=1)
+        # Create embedded patches by adding positional embeddings to the concatenated CLS token and image patch embeddings.
         embeddings = x + self.position_embeddings
+        # Apply the dropout layer to embedded patches.
         embeddings = self.dropout(embeddings)
 
-        # Encoder blocks
+        # Transformer encoder blocks.
+        # Process the embedded patches through the transformer encoder layers.
         x = self.encoder(embeddings)
+        # Apply layer normalization
         x = self.final_norm(x)
 
-        # fetch the first token
+        # Extract the CLS token (first token), which represents the overall image embedding.
         x = x[:, 0]
 
-        # Classification
+        # Predict class probabilities based on the CLS token embedding.
         return self.classifier(x)
 
 
 class TransformerEncoder(nnx.Module):
+    """
+    A single transformer encoder block in the ViT model, inheriting from `flax.nnx.Module`.
+
+    Args:
+        hidden_size (int): Input/output embedding dimensionality.
+        mlp_dim (int): Dimension of the feed-forward/MLP block hidden layer.
+        num_heads (int): Number of attention heads.
+        dropout_rate (float): Dropout rate. Defaults to 0.0.
+        rngs (flax.nnx.Rngs): A set of named `flax.nnx.RngStream` objects that generate a stream of JAX pseudo-random number generator (PRNG) keys. Defaults to `flax.nnx.Rngs(0)`.
+    """
     def __init__(
         self,
         hidden_size: int,
@@ -137,8 +182,10 @@ class TransformerEncoder(nnx.Module):
         *,
         rngs: nnx.Rngs = nnx.Rngs(0),
     ) -> None:
-
+        # First layer normalization using `flax.nnx.LayerNorm`
+        # before we apply Multi-Head Attentn.
         self.norm1 = nnx.LayerNorm(hidden_size, rngs=rngs)
+        # The Multi-Head Attention layer (using `flax.nnx.MultiHeadAttention`).
         self.attn = nnx.MultiHeadAttention(
             num_heads=num_heads,
             in_features=hidden_size,
@@ -148,8 +195,11 @@ class TransformerEncoder(nnx.Module):
             deterministic=False,
             rngs=rngs,
         )
+        # Second layer normalization using `flax.nnx.LayerNorm`.
         self.norm2 = nnx.LayerNorm(hidden_size, rngs=rngs)
 
+        # The MLP for point-wise feedforward (using `flax.nnx.Sequential`, `flax.nnx.Linear, flax.nnx.Dropout`)
+        # with the GeLU activation function (`flax.nnx.gelu`).
         self.mlp = nnx.Sequential(
             nnx.Linear(hidden_size, mlp_dim, rngs=rngs),
             nnx.gelu,
@@ -158,19 +208,30 @@ class TransformerEncoder(nnx.Module):
             nnx.Dropout(dropout_rate, rngs=rngs),
         )
 
+    # The forward pass through the transformer encoder block.
     def __call__(self, x: jax.Array) -> jax.Array:
+        # The Multi-Head Attention layer with layer normalization.
         x = x + self.attn(self.norm1(x))
+        # The feed-forward network with layer normalization.
         x = x + self.mlp(self.norm2(x))
         return x
 
-
+# Example usage for testing:
 x = jnp.ones((4, 224, 224, 3))
 model = VisionTransformer(num_classes=1000)
 y = model(x)
 print("Predictions shape: ", y.shape)
 ```
 
-Let's now load the weights pretrained on the ImageNet dataset using HuggingFace Transformers. We load all weights and check whether we have consistent results with the reference model.
+## Loading the pretrained weights
+
+In this section, we'll load the weights pretrained on the ImageNet dataset using HuggingFace's `transformers` library.
+
+First, import [`transformers.FlaxViTForImageClassification`](https://huggingface.co/docs/transformers/main/en/model_doc/vit) - a ViT Model transformer with an image classification head on top.
+
+Then, load the weights of `google/vit-base-patch16-224` - a ViT model pretrained on ImageNet-21k at the 224x224 resolution - from HuggingFace.
+
+We'll also check whether we have consistent results with the reference model.
 
 ```{code-cell} ipython3
 from transformers import FlaxViTForImageClassification
@@ -179,6 +240,8 @@ tf_model = FlaxViTForImageClassification.from_pretrained('google/vit-base-patch1
 ```
 
 ```{code-cell} ipython3
+# Copies weights from a TF ViT model to a Flax ViT model, reshaping layers
+# to match the expected shapes in Flax.
 def vit_inplace_copy_weights(*, src_model, dst_model):
     assert isinstance(src_model, FlaxViTForImageClassification)
     assert isinstance(dst_model, VisionTransformer)
@@ -186,9 +249,11 @@ def vit_inplace_copy_weights(*, src_model, dst_model):
     tf_model_params = src_model.params
     tf_model_params_fstate = nnx.traversals.flatten_mapping(tf_model_params)
 
+    # Notice the use of `flax.nnx.state`.
     flax_model_params = nnx.state(dst_model, nnx.Param)
-    flax_model_params_fstate = flax_model_params.flat_state()
+    flax_model_params_fstate = dict(flax_model_params.flat_state())
 
+    # Mapping from Flax parameter names to TF parameter names.
     params_name_mapping = {
         ("cls_token",): ("vit", "embeddings", "cls_token"),
         ("position_embeddings",): ("vit", "embeddings", "position_embeddings"),
@@ -263,13 +328,16 @@ def vit_inplace_copy_weights(*, src_model, dst_model):
         assert dst_value.value.mean() == src_value.mean(), (dst_value.value, src_value.mean())
 
     assert len(nonvisited) == 0, nonvisited
+    # Notice the use of `flax.nnx.update` and `flax.nnx.State`.
     nnx.update(dst_model, nnx.State.from_flat_path(flax_model_params_fstate))
 
 
 vit_inplace_copy_weights(src_model=tf_model, dst_model=model)
 ```
 
-Let's check the pretrained weights of our model and compare with the reference model results:
+## Verifying image prediction
+
+Load a sample image from a URL, perform inference, and compare the predictions to verify the weight transfer:
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
@@ -291,7 +359,7 @@ model.eval()
 x = jnp.transpose(inputs["pixel_values"], axes=(0, 2, 3, 1))
 output = model(x)
 
-# model predicts one of the 1000 ImageNet classes
+# Model predicts one of the 1000 ImageNet classes.
 ref_class_idx = logits.argmax(-1).item()
 pred_class_idx = output.argmax(-1).item()
 assert jnp.abs(logits[0, :] - output[0, :]).max() < 0.1
@@ -307,7 +375,7 @@ axs[1].set_title(
 axs[1].imshow(image)
 ```
 
-Now let's replace the classifier with a smaller fully-connected layer returning 20 classes instead of 1000:
+Replace the classifier with a smaller fully-connected layer returning 20 classes instead of 1000:
 
 ```{code-cell} ipython3
 model.classifier = nnx.Linear(model.classifier.in_features, 20, rngs=nnx.Rngs(0))
@@ -317,15 +385,13 @@ y = model(x)
 print("Predictions shape: ", y.shape)
 ```
 
-In the following sections we set up a image classification dataset and train this model.
-
-+++
-
 ## Food 101 dataset
 
-In the this tutorial we use [Food 101](https://huggingface.co/datasets/ethz/food101) dataset which consists of 101 food categories, with 101,000 images. For each class, 250 manually reviewed test images are provided as well as 750 training images. On purpose, the training images were not cleaned, and thus still contain some amount of noise. This comes mostly in the form of intense colors and sometimes wrong labels. All images were rescaled to have a maximum side length of 512 pixels.
+In this section, we'll prepare the dataset and train the ViT model. The dataset is [Food 101](https://huggingface.co/datasets/ethz/food101), which consists of 101 food categories with 101,000 images.
 
-We will download the data using [HuggingFace Datasets](https://huggingface.co/docs/datasets/) and select 20 classes to reduce the dataset size and the model training time. We will be using [TorchVision](https://pytorch.org/vision) to transform input images and [`grain`](https://github.com/google/grain/) for efficient data loading.
+In our example, each class will have 250 test set images and 750 training set images. The training images won't be cleaned and will contain some amount of noise (on purpose), mostly in the form of intense colors and sometimes wrong labels. All images are rescaled to have a maximum side length of 512 pixels.
+
+Let's download the dataset from [HuggingFace Datasets](https://huggingface.co/docs/datasets/) and select 20 classes to reduce the dataset size and the model training time. We'll use [TorchVision](https://pytorch.org/vision) to transform input images and [`grain`](https://github.com/google/grain/) for efficient data loading.
 
 ```{code-cell} ipython3
 from datasets import load_dataset
@@ -337,7 +403,7 @@ val_size = 20 * 250
 train_dataset = load_dataset("food101", split=f"train[:{train_size}]")
 val_dataset = load_dataset("food101", split=f"validation[:{val_size}]")
 
-# Let's create labels mapping where we map current labels between 0 and 19
+# Create labels mapping where we map current labels between 0 and 19.
 labels_mapping = {}
 index = 0
 for i in range(0, len(val_dataset), 250):
@@ -374,7 +440,7 @@ def display_datapoints(*datapoints, tag="", names_map=None):
         axs[i].imshow(img)
 ```
 
-Let's display few samples of the dataset:
+Visualize a few samples from the training and test sets:
 
 ```{code-cell} ipython3
 display_datapoints(
@@ -390,7 +456,7 @@ display_datapoints(
 )
 ```
 
-Let's define training and testing image preprocessing methods. Training image transformations will also contain random augmentations to prevent overfitting and make trained model more robust.
+We need to define training and test set image preprocessing helper functions. Training image transformations will also contain random augmentations to prevent overfitting and make the trained model more robust.
 
 ```{code-cell} ipython3
 import numpy as np
@@ -457,39 +523,39 @@ train_batch_size = 32
 val_batch_size = 2 * train_batch_size
 
 
-# Create an IndexSampler with no sharding for single-device computations
+# Create an `grain.IndexSampler` with no sharding for single-device computations.
 train_sampler = grain.IndexSampler(
-    len(train_dataset),  # The total number of samples in the data source
-    shuffle=True,            # Shuffle the data to randomize the order of samples
-    seed=seed,               # Set a seed for reproducibility
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,            # Iterate over the dataset for one epoch
+    len(train_dataset),  # The total number of samples in the data source.
+    shuffle=True,            # Shuffle the data to randomize the order.of samples
+    seed=seed,               # Set a seed for reproducibility.
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,            # Iterate over the dataset for one epoch.
 )
 
 val_sampler = grain.IndexSampler(
-    len(val_dataset),  # The total number of samples in the data source
-    shuffle=False,         # Do not shuffle the data
-    seed=seed,             # Set a seed for reproducibility
-    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup
-    num_epochs=1,          # Iterate over the dataset for one epoch
+    len(val_dataset),  # The total number of samples in the data source.
+    shuffle=False,         # Do not shuffle the data.
+    seed=seed,             # Set a seed for reproducibility.
+    shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+    num_epochs=1,          # Iterate over the dataset for one epoch.
 )
 
 
 train_loader = grain.DataLoader(
     data_source=train_dataset,
-    sampler=train_sampler,                 # Sampler to determine how to access the data
-    worker_count=4,                        # Number of child processes launched to parallelize the transformations among
-    worker_buffer_size=2,                  # Count of output batches to produce in advance per worker
+    sampler=train_sampler,                 # A sampler to determine how to access the data.
+    worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
+    worker_buffer_size=2,                  # Count of output batches to produce in advance per worker.
     operations=[
         grain.Batch(train_batch_size, drop_remainder=True),
     ]
 )
 
-# Validation dataset loader
+# Test (validation) dataset `grain.DataLoader`.
 val_loader = grain.DataLoader(
     data_source=val_dataset,
-    sampler=val_sampler,                   # Sampler to determine how to access the data
-    worker_count=4,                        # Number of child processes launched to parallelize the transformations among
+    sampler=val_sampler,                   # A sampler to determine how to access the data.
+    worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
     worker_buffer_size=2,
     operations=[
         grain.Batch(val_batch_size),
@@ -497,7 +563,7 @@ val_loader = grain.DataLoader(
 )
 ```
 
-Let's visualize training and validation batches
+Let's visualize the training and test set batches:
 
 ```{code-cell} ipython3
 train_batch = next(iter(train_loader))
@@ -525,13 +591,13 @@ display_datapoints(
 )
 ```
 
-## Model training
+## Defining the optimizier, the loss function, training/test steps, and metrics
 
-We defined training and validation datasets and the model. In this section we will train the model and define the loss function and the optimizer to perform the parameters optimization.
+In this section, we'll define the optimizer, the loss function, the training and test step functions, and then begin training the model.
+
+First, initiliaze the learning rate and the SGD optimizer with `optax`, using `optax.sgd` and `flax.nnx.Optimizer`:
 
 ```{code-cell} ipython3
-import optax
-
 num_epochs = 3
 learning_rate = 0.001
 momentum = 0.8
@@ -556,6 +622,8 @@ plt.show()
 optimizer = nnx.Optimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
 ```
 
+Define a loss function with `optax.softmax_cross_entropy_with_integer_labels`:
+
 ```{code-cell} ipython3
 def compute_losses_and_logits(model: nnx.Module, images: jax.Array, labels: jax.Array):
     logits = model(images)
@@ -565,6 +633,8 @@ def compute_losses_and_logits(model: nnx.Module, images: jax.Array, labels: jax.
     ).mean()
     return loss, logits
 ```
+
+Set up the train and test steps (with `flax.nnx.jit` and `flax.nnx.value_and_grad`:
 
 ```{code-cell} ipython3
 @nnx.jit
@@ -598,6 +668,8 @@ def eval_step(
         labels=labels,
     )
 ```
+
+Instantiae the metrics function with `flax.nnx.MultiMetric`:
 
 ```{code-cell} ipython3
 eval_metrics = nnx.MultiMetric(
@@ -639,8 +711,8 @@ def train_one_epoch(epoch):
 
 
 def evaluate_model(epoch):
-    # Compute the metrics on the train and val sets after each training epoch.
-    model.eval()  # Set model to evaluation model: e.g. use stored batch statistics
+    # Computes the metrics on the training and test sets after each training epoch.
+    model.eval()  # Sets model to evaluation model: e.g. use stored batch statistics.
 
     eval_metrics.reset()  # Reset the eval metrics
     for val_batch in val_loader:
@@ -654,7 +726,9 @@ def evaluate_model(epoch):
     print(f"- Accuracy: {eval_metrics_history['val_accuracy'][-1]:0.4f}")
 ```
 
-Let's train the model.
+## Training the model
+
+Begin training the model:
 
 ```{code-cell} ipython3
 %%time
@@ -664,7 +738,7 @@ for epoch in range(num_epochs):
     evaluate_model(epoch)
 ```
 
-Let's visualize collected metrics:
+Visualize the collected metrics:
 
 ```{code-cell} ipython3
 plt.plot(train_metrics_history["train_loss"], label="Loss value during the training")
@@ -679,7 +753,7 @@ axs[1].set_title("Accuracy on validation set")
 axs[1].plot(eval_metrics_history["val_accuracy"])
 ```
 
-Let's also check few model's predictions on the test data:
+Check the model's predictions on the test data:
 
 ```{code-cell} ipython3
 test_indices = [1, 250, 500, 750, 1000]
@@ -716,13 +790,11 @@ for i in range(num_samples):
 
 ## Further reading
 
-In this tutorial we implemented from scratch the Vision Transformer model and finetuned it on a subset of Food 101 dataset. The trained model shows almost perfect classification accuracy: 95%.
+In this tutorial we implemented the ViT model and finetuned it on a subset of the Food 101 dataset.
 
-- Model checkpointing and exporting using [Orbax](https://orbax.readthedocs.io/en/latest/).
-- Optimizers and the learning rate scheduling using [Optax](https://optax.readthedocs.io/en/latest/).
-- Freezing model's parameters using trainable parameters filtering: [example 1](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/optimizer.html#flax.nnx.optimizer.Optimizer.update) and [example 2](https://github.com/google/flax/issues/4167#issuecomment-2324245208).
-- Other Computer Vision tutorials in [jax-ai-stack](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html).
+For further reading, check out:
 
-```{code-cell} ipython3
-
-```
+- Model checkpointing and exporting with [Orbax](https://orbax.readthedocs.io/en/latest/).
+- Optimizers and learning rate scheduling with [Optax](https://optax.readthedocs.io/en/latest/).
+- Freezing model's parameters using trainable parameters filtering with examples: 1) [`flax.nnx.optimizer.Optimizer.update`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/optimizer.html#flax.nnx.optimizer.Optimizer.update) and 2) [example 2 on `google/flax` GitHub Issues](https://github.com/google/flax/issues/4167#issuecomment-2324245208).
+- Other computer vision tutorials using the [JAX AI Stack](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html).

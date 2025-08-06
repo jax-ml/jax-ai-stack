@@ -458,7 +458,7 @@ def vit_inplace_copy_weights(*, src_model, dst_model):
     tf_model_params_fstate = nnx.traversals.flatten_mapping(tf_model_params)
 
     flax_model_params = nnx.state(dst_model, nnx.Param)
-    flax_model_params_fstate = flax_model_params.flat_state()
+    flax_model_params_fstate = dict(flax_model_params.flat_state())
 
     src_num_params = sum([p.size for p in tf_model_params_fstate.values()])
     dst_num_params = sum([p.value.size for p in flax_model_params_fstate.values()])
@@ -913,7 +913,7 @@ model_diffstate = nnx.DiffState(0, trainable_params_filter)
 ```
 
 ```{code-cell} ipython3
-for key in list(nnx.state(model, trainable_params_filter).flat_state().keys()):
+for key, _ in nnx.state(model, trainable_params_filter).flat_state():
     assert "encoder" not in key
 ```
 
@@ -1131,5 +1131,5 @@ for i, (prefix, pil_image) in enumerate([
 In this tutorial we implemented and trained a transformer-based model for image captioning task. We used a pretrained frozen Vision Transformer encoder and trained a small decoder to predict the next token. Observed generation capabilities of the trained model are not great. Next steps could be (1) to use larger decoder, (2) to unfreeze few top encoder layers, (3) try other decoder architectures.
 
 - Freezing model's parameters using trainable parameters filtering: [example 1](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/training/optimizer.html#flax.nnx.optimizer.Optimizer.update) and [example 2](https://github.com/google/flax/issues/4167#issuecomment-2324245208).
-- Other Computer Vision tutorials in [jax-ai-stack](https://jax-ai-stack.readthedocs.io/en/latest/tutorials.html).
+- Other Computer Vision tutorials in [jax-ai-stack](https://jax-ai-stack.readthedocs.io/en/latest/getting_started.html).
 - [LLM pretraining for text generation](https://jax-ai-stack.readthedocs.io/en/latest/JAX_for_LLM_pretraining.html).

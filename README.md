@@ -23,8 +23,7 @@ single point-of-entry for this suite of libraries, so you can install and begin
 using many of the same open source packages that Google developers are using
 in their everyday work.
 
-To get started with the JAX AI stack, you can check out [Getting started with JAX](
-https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/getting_started_with_jax_for_AI.ipynb).
+To get started with the JAX AI stack, you can check out [Getting started with JAX](https://docs.jaxstack.ai/en/latest/getting_started.html).
 This is still a work-in-progress, please check back for more documentation and tutorials
 in the coming weeks!
 
@@ -44,20 +43,27 @@ together via the integration tests in this repository. Packages include:
 - [optax](https://github.com/google-deepmind/optax): gradient processing and optimization in JAX.
 - [orbax](https://github.com/google/orbax): checkpointing and persistence utilities for JAX.
 - [chex](https://github.com/google-deepmind/chex): utilities for writing reliable JAX code.
+- [grain](https://github.com/google/grain): data loading.
 
 ### Optional packages
 
 Additionally, there are optional packages you can install with `pip` extras.
-The following command:
-```
-pip install jax-ai-stack[grain]
-```
-will install a compatible version of the [grain](https://github.com/google/grain) data
-loader (currently mac and linux-only).
 
-Similarly, the following command:
+The following command:
 ```
 pip install jax-ai-stack[tfds]
 ```
-will install a compatible version of [tensorflow](https://github.com/tensorflow/tensorflow)
+will install a compatible version of
+[tensorflow](https://github.com/tensorflow/tensorflow)
 and [tensorflow-datasets](https://github.com/tensorflow/datasets).
+
+### Hardware support
+
+To install `jax-ai-stack` with hardware-specific JAX support, add the JAX installation
+command in the same `pip install` invocation. For example:
+```
+pip install jax-ai-stack "jax[cuda]"  # JAX + AI stack with GPU/CUDA support
+pip install jax-ai-stack "jax[tpu]"  # JAX + AI stack with TPU support
+```
+For more information on available options for hardware-specific JAX installation, refer
+to [JAX installation](https://docs.jax.dev/en/latest/installation.html).
