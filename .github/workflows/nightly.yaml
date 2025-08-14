@@ -164,6 +164,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
           python -m pip install --upgrade 'git+https://github.com/google-deepmind/chex/'
+          python -m pip freeze
       - name: Run tests
         run: |
           pytest -n auto jax_ai_stack
