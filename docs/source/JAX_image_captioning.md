@@ -925,7 +925,7 @@ learning_rate = 0.015
 momentum = 0.9
 total_steps = len(train_dataset) // train_batch_size
 
-optimizer = nnx.Optimizer(
+optimizer = nnx.ModelAndOptimizer(
     model, optax.sgd(learning_rate, momentum, nesterov=True), wrt=trainable_params_filter
 )
 ```

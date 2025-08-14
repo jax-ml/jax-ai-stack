@@ -1067,7 +1067,7 @@ plt.xlim((0, num_epochs))
 plt.show()
 
 
-optimizer = nnx.Optimizer(model, optax.adam(lr_schedule, momentum))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(lr_schedule, momentum))
 ```
 
 Let us implement Jaccard loss and the loss function combining Cross-Entropy and Jaccard losses.

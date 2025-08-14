@@ -452,7 +452,7 @@ def evaluate_model(epoch):
 
 ```{code-cell} ipython3
 model = TransformerModel(sequence_length, vocab_size, embed_dim, latent_dim, num_heads, dropout_rate, rngs=rng)
-optimizer = nnx.Optimizer(model, optax.adamw(learning_rate))
+optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate))
 ```
 
 ## Start the Training!
