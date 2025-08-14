@@ -129,7 +129,7 @@ With the `SimpleNN` model created and instantiated, we can now choose the loss f
 import jax
 import optax
 
-optimizer = nnx.Optimizer(model, optax.sgd(learning_rate=0.05))
+optimizer = nnx.ModelAndOptimizer(model, optax.sgd(learning_rate=0.05))
 
 def loss_fun(
     model: nnx.Module,

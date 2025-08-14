@@ -40,7 +40,7 @@ class NNXOptaxTest(unittest.TestCase):
 
     model = SimpleModel(nnx.Rngs(0))
     optimizer = optax.adam(learning_rate=1e-3)
-    state = nnx.Optimizer(model, optimizer)
+    state = nnx.ModelAndOptimizer(model, optimizer)
 
     def loss(model, x=x, y=y):
       return jnp.mean((model(x) - y) ** 2)

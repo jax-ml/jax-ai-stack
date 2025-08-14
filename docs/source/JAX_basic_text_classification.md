@@ -303,7 +303,7 @@ num_epochs = 10
 learning_rate = 0.0005
 momentum = 0.9
 
-optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(learning_rate, momentum))
 ```
 
 ```{code-cell} ipython3
