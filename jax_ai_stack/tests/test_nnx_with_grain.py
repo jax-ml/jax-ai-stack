@@ -85,7 +85,7 @@ class NNXTFDSTest(unittest.TestCase):
     )
 
     model = CNN(rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(model, optax.adamw(learning_rate=0.005))
+    optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate=0.005))
 
     def loss_fn(model, batch):
       logits = model(batch['image_scaled'])

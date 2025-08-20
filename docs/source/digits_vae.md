@@ -207,7 +207,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 
 @nnx.jit
 def train_step(model: VAE, optimizer: nnx.Optimizer, x: jax.Array):
@@ -247,7 +247,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 
 with jax.debug_nans(True):
   for epoch in range(2001):
@@ -290,7 +290,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 
 for epoch in range(501):
   loss = train_step(model, optimizer, images_train)
@@ -328,7 +328,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 train_step(model, optimizer, images_train)
 ```
 
@@ -361,7 +361,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 
 for i in range(5):
   train_step(model, optimizer, images_train)
@@ -438,7 +438,7 @@ model = VAE(
   rngs=nnx.Rngs(0, noise=1),
 )
 
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
 
 for epoch in range(2001):
   loss = train_step(model, optimizer, images_train)

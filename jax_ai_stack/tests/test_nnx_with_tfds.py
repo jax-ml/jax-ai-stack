@@ -55,7 +55,7 @@ class NNXTFDSTest(unittest.TestCase):
   def test_nnx_with_tfds(self):
     train_ds = tfds.load('mnist', split='train')
     model = CNN(rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(model, optax.adamw(learning_rate=0.005))
+    optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate=0.005))
 
     def loss_fn(model, batch):
       logits = model(batch['image'])
