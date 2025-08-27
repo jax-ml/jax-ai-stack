@@ -17,7 +17,7 @@ keywords = []
 dependencies = [
     "chex==0.1.90",
     "grain==0.2.12",
-    "jax==0.7.1",
+    "jax==0.7.0",
     "flax==0.11.1",
     "ml_dtypes==0.5.3",
     "optax==0.2.5",
