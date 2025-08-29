@@ -7,11 +7,11 @@
 - `jax-ai-stack` packages:
   - `jax==0.7.0` ↗️
   - `chex==0.1.90` ↗️
-  - `grain==0.2.11` ↗️
+  - `grain==0.2.12` ↗️
   - `flax==0.11.1` ↗️
   - `ml_dtypes==0.5.3` ↗️
   - `optax==0.2.5` ↗️
-  - `orbax-checkpoint==0.11.21` ↗️
+  - `orbax-checkpoint==0.11.23` ↗️
   - `orbax-export==0.0.6`
 - `jax-ai-stack[tfds]` packages:
   - `tensorflow==2.20.0` ↗️
