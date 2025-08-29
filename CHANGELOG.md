@@ -3,7 +3,7 @@
 ↗️ = updated since previous release
 
 
-## v2025.8.14
+## Unreleased
 - `jax-ai-stack` packages:
   - `jax==0.7.0` ↗️
   - `chex==0.1.90` ↗️
