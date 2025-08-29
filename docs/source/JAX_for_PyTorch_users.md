@@ -703,7 +703,7 @@ import optax
 learning_rate = 0.005
 momentum = 0.9
 
-optimizer = nnx.Optimizer(model, optax.adamw(learning_rate, momentum))
+optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate, momentum))
 ```
 
 ```{code-cell} ipython3

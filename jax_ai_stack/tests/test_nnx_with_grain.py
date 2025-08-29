@@ -16,7 +16,6 @@ import contextlib
 import functools
 import unittest
 from flax import nnx
-import grain.python as grain
 import numpy as np
 import optax
 import tensorflow_datasets as tfds
@@ -54,6 +53,11 @@ class NNXTFDSTest(unittest.TestCase):
         self.addCleanup(stack.pop_all().close)
 
   def test_nnx_with_grain(self):
+    # Import locally to ensure fork-safety for parallel testing (`pytest -n`).
+    # This prevents heavy libraries from initializing before worker processes are
+    # created, avoiding crashes on platforms like macOS.
+    import grain.python as grain
+
     data_source = tfds.data_source('mnist', split='train')
 
     sampler = grain.IndexSampler(
@@ -85,7 +89,7 @@ class NNXTFDSTest(unittest.TestCase):
     )
 
     model = CNN(rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(model, optax.adamw(learning_rate=0.005))
+    optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate=0.005))
 
     def loss_fn(model, batch):
       logits = model(batch['image_scaled'])

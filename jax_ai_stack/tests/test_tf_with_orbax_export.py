@@ -16,10 +16,7 @@ import contextlib
 import tempfile
 import unittest
 
-import jax.numpy as jnp
 import numpy as np
-from orbax.export import ExportManager, JaxModule, ServingConfig
-import tensorflow as tf
 
 
 class NNXTFDSTest(unittest.TestCase):
@@ -36,6 +33,13 @@ class NNXTFDSTest(unittest.TestCase):
         self.addCleanup(stack.pop_all().close)
 
   def test_tf_model_with_checkpoint(self):
+    # Import locally to ensure fork-safety for parallel testing (`pytest -n`).
+    # This prevents heavy libraries from initializing before worker processes are
+    # created, avoiding crashes on platforms like macOS.
+    import jax.numpy as jnp
+    import tensorflow as tf
+    from orbax.export import ExportManager, JaxModule, ServingConfig
+
     params = {'a': np.array(5.0), 'b': np.array(1.1), 'c': np.array(0.55)}
 
     def model_fn(params, inputs):
