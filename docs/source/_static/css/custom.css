@@ -38,7 +38,7 @@ body:has(.hero) .bd-article > section > h1 {
 
     body:has(.hero) .header-article-items,
     body:has(.hero) .doc-body > section {
-        max-width: 80rem !important;
+        max-width: 80% !important;
         align-self: center;
         width: -moz-available;
         width: -webkit-fill-available;
