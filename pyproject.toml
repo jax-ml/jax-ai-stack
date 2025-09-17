@@ -15,12 +15,12 @@ keywords = []
 
 # pip dependencies of the project
 dependencies = [
-    "chex==0.1.90",
+    "chex==0.1.91",
     "grain==0.2.12",
-    "jax==0.7.0",
-    "flax==0.11.1",
+    "jax==0.7.2",
+    "flax==0.11.2",
     "ml_dtypes==0.5.3",
-    "optax==0.2.5",
+    "optax==0.2.6",
     "orbax-checkpoint==0.11.25",
     "orbax-export==0.0.8",
 ]
