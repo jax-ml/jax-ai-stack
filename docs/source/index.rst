@@ -9,31 +9,31 @@ JAX AI Stack
    :caption: Getting started
    :maxdepth: 1
 
-   install
    getting_started
+   packages_intro
+   install
 
 .. toctree::
    :hidden:
-   :caption: Tutorials
-   :maxdepth: 1
-
-   JAX_visualizing_models_metrics
-   data_loaders
-   pytorch_users
-
-.. toctree::
-   :hidden:
-   :caption: Example applications
-   :maxdepth: 1
+   :caption: A tour of the stack with MiniGPT
+   :maxdepth: 2
 
    JAX_for_LLM_pretraining
-   JAX_basic_text_classification
-   JAX_transformer_text_classification
-   JAX_machine_translation
-   JAX_examples_image_segmentation
-   JAX_image_captioning
-   JAX_Vision_transformer
-   JAX_time_series_classification
+
+.. toctree::
+   :hidden:
+   :caption: From PyTorch to JAX
+   :maxdepth: 1
+
+   JAX_for_PyTorch_users
+   JAX_porting_PyTorch_model
+
+.. toctree::
+   :hidden:
+   :caption: Cookbooks
+   :maxdepth: 1
+
+   data_loaders
 
 .. toctree::
    :hidden:
