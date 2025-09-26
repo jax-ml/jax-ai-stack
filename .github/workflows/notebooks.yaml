@@ -1,0 +1,49 @@
+name: Notebooks
+
+on:
+  # Trigger the workflow on push or pull request, but only on dev branch
+  push:
+    branches:
+      - revamp-2025
+  pull_request:
+    branches:
+      - revamp-2025
+
+permissions:
+  contents: read  # to fetch code
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  documentation:
+    name: Set up Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install .[dev]
+        pip install ipykernel pytest-notebook
+        pip freeze
+    - name: Turn on test mode
+      run: |
+        find docs/source -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i "s/JAS_TEST_MODE = False/JAS_TEST_MODE = True/g" {} +
+    - name: Register Python3 kernel
+      run: |
+        python -m ipykernel install --user --name "python3" --display-name "Python 3"
+    - name: Test notebooks
+      run: |
+        pytest -n auto --tb=short --nb-force-regen --nb-test-files docs/source/ --ignore=docs/source/JAX_for_LLM_pretraining.ipynb --ignore=docs/source/data_loaders_on_cpu_with_jax.ipynb --ignore=docs/source/data_loaders_on_gpu_with_jax.ipynb --ignore=docs/source/JAX_for_PyTorch_users.ipynb --ignore=docs/source/JAX_porting_PyTorch_model.ipynb
