@@ -1,4 +1,5 @@
 # Getting started with JAX for ML
+TODO update this section
 
 [JAX](http://jax.readthedocs.io) is a Python package for accelerator-oriented array computation and program transformation, and is the engine behind cutting-edge AI research and production models at Google and beyond.
 
@@ -16,11 +17,3 @@ JAX focuses on [array-based](https://jax.readthedocs.io/en/latest/key-concepts.h
 After working through this content, you may wish to visit the [JAX documentation site](http://jax.readthedocs.io/) for a deeper dive into the core JAX concepts.
 
 ## Let's get started!
-
-```{toctree}
-:maxdepth: 1
-
-neural_net_basics
-digits_vae
-digits_diffusion_model
-```
