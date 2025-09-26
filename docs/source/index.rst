@@ -16,7 +16,7 @@ JAX AI Stack
 .. toctree::
    :hidden:
    :caption: A tour of the stack with MiniGPT
-   :maxdepth: 2
+   :maxdepth: 1
 
    JAX_for_LLM_pretraining
 
