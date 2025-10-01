@@ -42,7 +42,6 @@ JAX AI Stack
 
    contributing
 
-
 .. toctree::
    :hidden:
    :maxdepth: 1
