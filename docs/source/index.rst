@@ -48,5 +48,6 @@ JAX AI Stack
    :caption: Other resources
 
    blog
+   news
    events
    videos
