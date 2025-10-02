@@ -44,6 +44,7 @@ html_theme_options = {
     'use_repository_button': True,
     'navigation_with_keys': True,
     'home_page_in_toc': True,
+    'analytics': {'google_analytics_id': 'G-DHXNR4EB32'},
 }
 
 exclude_patterns = [
