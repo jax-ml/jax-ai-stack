@@ -349,3 +349,7 @@ button.sidebar-toggle.primary-toggle.btn.btn-sm {
         width: 18%;
     }
 }
+
+.nav-item {
+    font-size: var(--bs-btn-font-size);
+}
