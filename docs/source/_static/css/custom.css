@@ -1,7 +1,12 @@
 /* Base file modifications */
-body:has(.hero) .bd-sidebar-primary,
 body:has(.hero) .bd-sidebar-secondary {
     display: none !important;
+}
+
+@media (min-width: 960px) {
+    body:has(.hero) .bd-sidebar-primary {
+        display: none !important;
+    }
 }
 
 body:has(.hero) .prev-next-footer {
@@ -297,7 +302,6 @@ html[data-theme="dark"] .button-primary:visited:hover {
 .top-navbar {
     display: flex;
     gap: 32px;
-    font: 500 16px 'Google Sans', 'Roboto', sans-serif;
     flex-direction: row;
 }
 
@@ -306,11 +310,11 @@ html[data-theme="dark"] .button-primary:visited:hover {
 }
 
 .bd-header .navbar-header-items__start {
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 body:has(.hero) .bd-header__inner {
-    max-width: 77% !important;
+    max-width: 75rem !important;
 }
 
 .navbar-brand .logo__image {
@@ -324,32 +328,61 @@ body:has(.hero) .bd-header__inner {
     .bd-header .navbar-header-items__start {
         padding-left: 0px;
     }
+    .bd-header button.sidebar-toggle {
+        display: inline-block;
+    }
+    .bd-header button.sidebar-toggle .svg-inline--fa {
+        vertical-align: super;
+    }
 }
 
 li.nav-item.dropdown > ul.dropdown-menu.show > li > a.dropdown-item {
     padding: 0.8rem;
+    font-size: 1rem;
 }
 
 button.sidebar-toggle.primary-toggle.btn.btn-sm {
     display: none;
 }
 
-@media (max-width: 960px) {
-    body:not(:has(.hero)) .bd-header button.sidebar-toggle {
-        display: inline-block;
-    }
-
-    .bd-header button.sidebar-toggle .svg-inline--fa {
-        vertical-align: super;
-    }
-}
-
 @media (min-width: 960px) {
     .col-lg-3 {
-        width: 18%;
+        width: 19%;
     }
 }
 
-.nav-item {
-    font-size: var(--bs-btn-font-size);
+.bd-header .bd-header__inner {
+    max-width: 75rem;
+}
+
+.nav-item, .dropdown-item {
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+}
+
+.bd-header-article .article-header-buttons {
+  display: none !important;
+}
+
+.navbar-header-items__end .navbar-item .btn.dropdown-toggle::after {
+  display: none;
+}
+
+.navbar-item .article-header-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-item .btn {
+    align-items: center;
+    border: none;
+    color: var(--pst-color-text-muted);
+    display: flex;
+    font-size: 1.3rem;
+    padding-left: .5rem;
+    padding-right: .5rem;
+}
+
+button.secondary-toggle {
+    display: none !important;
 }

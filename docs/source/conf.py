@@ -46,6 +46,7 @@ html_theme_options = {
     'home_page_in_toc': True,
     'navbar_start': ["navbar-logo"],
     'navbar_center': ["navbar-top"],
+    'navbar_end': ['article-header-buttons'],
     'analytics': {'google_analytics_id': 'G-DHXNR4EB32'},
 }
 
