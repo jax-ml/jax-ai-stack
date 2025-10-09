@@ -11,11 +11,20 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "NIOXoY1xgiww"}
-
 # Train a miniGPT language model with JAX
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb)
++++
+
+<table class="tfo-notebook-buttons" align="left">
+  <td>
+    <a target="_blank" href="https://kaggle.com/kernels/welcome?src=https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.kaggle.com/static/images/logos/kaggle-logo-transparent-300.png" height="32" width="70"/>Run in Kaggle</a>
+  </td>
+  <td>
+    <a target="_blank" href="https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.tensorflow.org/images/colab_logo_32px.png" />Run in Google Colab</a>
+  </td>
+</table>
+
++++ {"id": "NIOXoY1xgiww"}
 
 This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
@@ -24,7 +33,7 @@ Here, you will learn how to:
 - Define the miniGPT model with Flax and JAX automatic parallelism
 - Load and preprocess the dataset
 - Create the loss and training step functions
-- Train the model on Google Colab’s Cloud TPU v2
+- Train the model on TPUs on Kaggle or Google Colab
 - Profile for hyperparameter tuning
 
 If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
@@ -111,7 +120,9 @@ One of the most powerful features of JAX is [device parallelism](https://jax.rea
 - Tensor parallelism allows us to split the model parameter tensors across several devices (sharding model tensors).
 - You can learn more about the basics of JAX parallelism in more detail in the [Introduction to parallel programming](https://jax.readthedocs.io/en/latest/sharded-computation.html) on the JAX documentation site.
 
-In this example, we'll utilize a 4-way data parallel and 2-way tensor parallel setup. The free Google Cloud TPU v2 on Google Colab offers 4 chips, each with 2 TPU cores. The TPU v2 architeture aligns with the proposed setup.
+In this example, we'll utilize a 4-way data parallel and 2-way tensor parallel setup, which is aligned with Kaggle TPU v5e-8 or newer GCP TPUs chips.
+
+Note that as of October 2025, free-tier Colab only offers TPU v5e-1, which can no longer support SPMD.
 
 ### jax.sharding.Mesh
 
@@ -123,7 +134,7 @@ Our `Mesh` will have two arguments:
   - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
   - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor paralleism, mapping to the TPU v2 cores.
 
-This matches the `(4, 2)` structure in the Colab's TPU v2 setup.
+This matches the structure in the Kaggle TPU v5e setup.
 
 Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define how data and model parameters are distributed across the devices:
 
@@ -137,6 +148,9 @@ mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 ### JAX enables quick experimentation with different partitioning strategies
 ### like this. We will come back to this point at the end of this tutorial.
 # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+
+### For free-tier Colab TPU, which only has a single TPU core
+# mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -380,7 +394,7 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 256 # You can set a bigger batch size if you use Kaggle's Cloud TPU.
+batch_size = 256 # You can set a bigger batch size if you use Kaggle's TPU v5e-8
 num_epochs = 1
 ```
 
