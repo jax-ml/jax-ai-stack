@@ -331,49 +331,32 @@ class MiniGPT(nnx.Module):
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
+    
+    @nnx.jit
+    def sample_from(self, logits):
+        logits, indices = jax.lax.top_k(logits, k=top_k)
+        logits = nnx.softmax(logits)
+        return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
 
-    # Text generation.
-    def generate_text(self, max_tokens: int, start_tokens: [int], top_k=10):
-        # Sample the next token from a probability distribution based on
-        # `logits` and `tok_k` (top-k) sampling strategy.
-        def sample_from(logits):
-            logits, indices = jax.lax.top_k(logits, k=top_k)
-            # Convert logits to probabilities (using `flax.nnx.softmax`).
-            logits = nnx.softmax(logits)
-            return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
+    @nnx.jit
+    def generate_step(self, padded_tokens, sample_index):
+        logits = self(padded_tokens)
+        next_token = self.sample_from(logits[0][sample_index])
+        return next_token
 
-        # Generate text one token at a time until the maximum token limit is reached (`maxlen`).
-        def generate_step(start_tokens):
-            pad_len = maxlen - len(start_tokens)
-            # Index of the last token in the current sequence.
-            sample_index = len(start_tokens) - 1
-            # If the input is longer than `maxlen`, then truncate it.
-            if pad_len < 0:
-                x = jnp.array(start_tokens[:maxlen])
-                sample_index = maxlen - 1
-            # If the input is shorter than `maxlen`, then pad it (`pad_len`).
-            elif pad_len > 0:
-                x = jnp.array(start_tokens + [0] * pad_len)
-            else:
-                x = jnp.array(start_tokens)
-
-            # Add a batch dimension.
-            x = x[None, :]
-            logits = self(x)
-            next_token = sample_from(logits[0][sample_index])
-            return next_token
-
-        # Store generated tokens.
+    def generate_text(self, max_tokens, start_tokens):
         generated = []
-        # Generate tokens until the end-of-text token is encountered or the maximum token limit is reached.
-        for _ in range(max_tokens):
-            next_token = generate_step(start_tokens + generated)
-            # Truncate whatever is after '<|endoftext|>' (stop word)
+        print(tokenizer.decode(start_tokens), flush=True, end='')
+        for i in range(max_tokens):
+            sample_index = len(start_tokens) + len(generated) - 1
+
+            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
+            next_token = int(self.generate_step(padded_tokens, sample_index))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
-              # Stop text generation if the end-of-text token is encountered.
               break
-            generated.append(int(next_token))
-        # Decode the generated token IDs into text.
+            generated.append(next_token)
+            # decode and print next_token
+            print(tokenizer.decode([next_token]), flush=True, end='')
         return tokenizer.decode(start_tokens + generated)
 
 # Creates the miniGPT model with 4 transformer blocks.
@@ -394,8 +377,9 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 256 # You can set a bigger batch size if you use Kaggle's TPU v5e-8
+batch_size = 192 # You can set a bigger batch size if you use Kaggle's TPU v5e-8
 num_epochs = 1
+top_k = 10
 ```
 
 +++ {"id": "mI1ci-HyMspJ"}
@@ -490,56 +474,61 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3))
 metrics = nnx.MultiMetric(
-  loss=nnx.metrics.Average('loss'),
+    loss=nnx.metrics.Average("loss"),
 )
 rng = jax.random.PRNGKey(0)
 
 start_prompt = "Once upon a time"
 start_tokens = tokenizer.encode(start_prompt)[:maxlen]
-generated_text = model.generate_text(
-    maxlen, start_tokens
-)
-print(f"Initial generated text:\n{generated_text}\n")
-
+print(f"Initial generated text:")
+generated_text = model.generate_text(maxlen, start_tokens)
 
 metrics_history = {
-  'train_loss': [],
+    "train_loss": [],
 }
 
-prep_target_batch = jax.vmap(lambda tokens: jnp.concatenate((tokens[1:], jnp.array([0]))))
+prep_target_batch = jax.vmap(
+    lambda tokens: jnp.concatenate((tokens[1:], jnp.array([0])))
+)
 
 step = 0
 for epoch in range(num_epochs):
     start_time = time.time()
     for batch in text_dl:
         if len(batch) % len(jax.devices()) != 0:
-          continue  # skip the remaining elements
+            continue  # skip the remaining elements
         input_batch = jnp.array(jnp.array(batch).T)
         target_batch = prep_target_batch(input_batch)
-        train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
+        train_step(
+            model,
+            optimizer,
+            metrics,
+            jax.device_put(
+                (input_batch, target_batch), NamedSharding(mesh, P("batch", None))
+            ),
+        )
 
         if (step + 1) % 200 == 0:
-          for metric, value in metrics.compute().items():
-              metrics_history[f'train_{metric}'].append(value)
-          metrics.reset()
+            for metric, value in metrics.compute().items():
+                metrics_history[f"train_{metric}"].append(value)
+            metrics.reset()
 
-          elapsed_time = time.time() - start_time
-          print(f"Step {step + 1}, Loss: {metrics_history['train_loss'][-1]}, Elapsed Time: {elapsed_time:.2f} seconds")
-          start_time = time.time()
+            elapsed_time = time.time() - start_time
+            print(
+                f"\n\nStep {step + 1}, Loss: {metrics_history['train_loss'][-1]}, Elapsed Time: {elapsed_time:.2f} seconds"
+            )
+            start_time = time.time()
 
-          generated_text = model.generate_text(
-              maxlen, start_tokens
-          )
-          print(f"Generated text:\n{generated_text}\n")
+            print(f"Generated text:")
+            generated_text = model.generate_text(maxlen, start_tokens)
+
         step += 1
 
 # Final text generation
-generated_text = model.generate_text(
-    maxlen, start_tokens
-)
-print(f"Final generated text:\n{generated_text}")
+print(f"Final generated text:")
+generated_text = model.generate_text(maxlen, start_tokens)
 ```
 
 +++ {"id": "thaLs6TD0lt5"}
