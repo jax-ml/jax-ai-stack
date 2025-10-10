@@ -43,7 +43,7 @@ jobs:
         python -m ipykernel install --user --name "python3" --display-name "Python 3"
     - name: Turn on test mode
       run: |
-        python -c "import os; os.environ['AI_STACK_TEST_MODE'] = True"
+        python -c "import os; os.environ['AI_STACK_TEST_MODE'] = 'True'"
     - name: Test notebooks
       run: |
         pytest -n auto --tb=short --nb-force-regen --nb-test-files docs/source/ --ignore=docs/source/JAX_for_LLM_pretraining.ipynb --ignore=docs/source/data_loaders_on_cpu_with_jax.ipynb --ignore=docs/source/data_loaders_on_gpu_with_jax.ipynb --ignore=docs/source/JAX_for_PyTorch_users.ipynb --ignore=docs/source/JAX_porting_PyTorch_model.ipynb
