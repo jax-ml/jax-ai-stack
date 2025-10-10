@@ -11,7 +11,8 @@ jupyter:
 ---
 
 ```python
-# Tests that CI substitutes False with True
-JAS_TEST_MODE = False
-JAS_TEST_MODE
+# Tests that CI sets the test mode environment variable
+import os
+test_mode = os.environ.get('AI_STACK_TEST_MODE', False)
+assert test_mode
 ```

@@ -38,12 +38,12 @@ jobs:
         pip install .[dev]
         pip install ipykernel pytest-notebook
         pip freeze
-    - name: Turn on test mode
-      run: |
-        find docs/source -type f \( -name "*.md" -o -name "*.ipynb" \) -exec sed -i "s/JAS_TEST_MODE = False/JAS_TEST_MODE = True/g" {} +
     - name: Register Python3 kernel
       run: |
         python -m ipykernel install --user --name "python3" --display-name "Python 3"
+    - name: Turn on test mode
+      run: |
+        python -c "import os; os.environ['AI_STACK_TEST_MODE'] = True"
     - name: Test notebooks
       run: |
         pytest -n auto --tb=short --nb-force-regen --nb-test-files docs/source/ --ignore=docs/source/JAX_for_LLM_pretraining.ipynb --ignore=docs/source/data_loaders_on_cpu_with_jax.ipynb --ignore=docs/source/data_loaders_on_gpu_with_jax.ipynb --ignore=docs/source/JAX_for_PyTorch_users.ipynb --ignore=docs/source/JAX_porting_PyTorch_model.ipynb
