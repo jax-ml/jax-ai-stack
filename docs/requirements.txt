@@ -10,6 +10,7 @@ sphinx-copybutton
 matplotlib
 penzai
 scikit-learn
+flax==0.10.6
 
 # install jax-ai-stack from current directory
 .
