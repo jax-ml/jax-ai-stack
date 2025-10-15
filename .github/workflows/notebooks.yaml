@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  documentation:
-    name: Set up Python ${{ matrix.python-version }}
+  notebook_test:
+    name: Notebook integration tests ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -42,6 +42,7 @@ jobs:
       run: |
         python -m ipykernel install --user --name "python3" --display-name "Python 3"
     - name: Turn on test mode and test notebooks
+      env:
+        AI_STACK_TEST_MODE: true
       run: |
-        export AI_STACK_TEST_MODE="True"
         pytest -n auto --tb=short --nb-force-regen --nb-test-files docs/source/ --ignore=docs/source/JAX_for_LLM_pretraining.ipynb --ignore=docs/source/data_loaders_on_cpu_with_jax.ipynb --ignore=docs/source/data_loaders_on_gpu_with_jax.ipynb --ignore=docs/source/JAX_for_PyTorch_users.ipynb --ignore=docs/source/JAX_porting_PyTorch_model.ipynb

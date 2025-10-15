@@ -13,6 +13,6 @@ jupyter:
 ```python
 # Tests that CI sets the test mode environment variable
 import os
-test_mode = os.environ.get('AI_STACK_TEST_MODE', 'False')
-assert test_mode == 'True', test_mode
+test_mode = os.getenv('AI_STACK_TEST_MODE', 'false')
+assert test_mode == 'true', test_mode
 ```
