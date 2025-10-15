@@ -476,7 +476,7 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3))
 metrics = nnx.MultiMetric(
   loss=nnx.metrics.Average('loss'),
 )

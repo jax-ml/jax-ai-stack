@@ -377,7 +377,7 @@ num_epochs = 10 # Number of epochs during training.
 learning_rate = 0.0001 # The learning rate.
 momentum = 0.9 # Momentum for Adam.
 
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(learning_rate, momentum))
+optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
 ```
 
 Next, we define the loss function - `compute_losses_and_logits()` - using `optax.softmax_cross_entropy_with_integer_labels`:

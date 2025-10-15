@@ -619,7 +619,7 @@ plt.xlim((0, num_epochs))
 plt.show()
 
 
-optimizer = nnx.ModelAndOptimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
+optimizer = nnx.Optimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
 ```
 
 Define a loss function with `optax.softmax_cross_entropy_with_integer_labels`:

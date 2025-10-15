@@ -250,7 +250,7 @@ num_epochs = 300
 learning_rate = 0.0005
 momentum = 0.9
 
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(learning_rate, momentum))
+optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
 ```
 
 We'll define a loss and logits computation function using Optax's

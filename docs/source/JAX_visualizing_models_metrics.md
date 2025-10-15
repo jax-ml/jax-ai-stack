@@ -145,7 +145,7 @@ In order to track loss across our training run, we've collected the loss functio
 import jax
 import optax
 
-optimizer = nnx.ModelAndOptimizer(model, optax.sgd(learning_rate=0.05))
+optimizer = nnx.Optimizer(model, optax.sgd(learning_rate=0.05))
 
 def loss_fun(
     model: nnx.Module,
