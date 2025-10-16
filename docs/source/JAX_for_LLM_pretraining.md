@@ -22,6 +22,9 @@ kernelspec:
   <td>
     <a target="_blank" href="https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.tensorflow.org/images/colab_logo_32px.png" />Run in Google Colab</a>
   </td>
+  <td>
+    <a target="_blank" href="https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.tensorflow.org/images/GitHub-Mark-32px.png" />View source on GitHub</a>
+  </td>
 </table>
 
 +++ {"id": "NIOXoY1xgiww"}
@@ -56,9 +59,20 @@ outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 
 +++ {"id": "Rcji_799n4eA"}
 
-**Note:** If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v2 as the hardware accelerator.
+**Note:** If you are using [Kaggle](https://www.kaggle.com/), select the free TPU v5e-8 as the hardware accelerator. If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v5e-1 as the hardware accelerator. You may also use Google Cloud TPUs.
 
 Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html). The output of the cell below will show a list of 8 (eight) devices.
+
+```{code-cell}
+import os
+if os.path.exists('/content/'):
+  platform = "Colab"
+elif os.path.exists('/kaggle/'):
+  platform = "Kaggle"
+else:
+  # Assume using Cloud TPU otherwise
+  platform = "GCP"
+```
 
 ```{code-cell}
 ---
@@ -132,7 +146,7 @@ Our `Mesh` will have two arguments:
 - `devices`: This will take the value of [`jax.experimental.mesh_utils((4, 2))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
 - `axis_names`, where:
   - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
-  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor paralleism, mapping to the TPU v2 cores.
+  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor paralleism
 
 This matches the structure in the Kaggle TPU v5e setup.
 
@@ -150,7 +164,8 @@ mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
-# mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
+if platform == 'Colab':
+    mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -331,7 +346,7 @@ class MiniGPT(nnx.Module):
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
-    
+
     @nnx.jit
     def sample_from(self, logits):
         logits, indices = jax.lax.top_k(logits, k=top_k)
@@ -377,7 +392,9 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 192 # You can set a bigger batch size if you use Kaggle's TPU v5e-8
+batch_size = 192*8
+if platform == "Colab":
+    batch_size = 192
 num_epochs = 1
 top_k = 10
 ```
@@ -482,7 +499,7 @@ rng = jax.random.PRNGKey(0)
 
 start_prompt = "Once upon a time"
 start_tokens = tokenizer.encode(start_prompt)[:maxlen]
-print(f"Initial generated text:")
+print("Initial generated text:")
 generated_text = model.generate_text(maxlen, start_tokens)
 
 metrics_history = {
@@ -521,13 +538,13 @@ for epoch in range(num_epochs):
             )
             start_time = time.time()
 
-            print(f"Generated text:")
+            print("Generated text:")
             generated_text = model.generate_text(maxlen, start_tokens)
 
         step += 1
 
 # Final text generation
-print(f"Final generated text:")
+print("Final generated text:")
 generated_text = model.generate_text(maxlen, start_tokens)
 ```
 
@@ -580,6 +597,8 @@ checkpointer.save('/content/save', state)
 ```
 
 ## Profiling for hyperparameter tuning
+
+**Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
