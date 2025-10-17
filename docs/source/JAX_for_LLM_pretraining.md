@@ -64,17 +64,6 @@ outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html). The output of the cell below will show a list of 8 (eight) devices.
 
 ```{code-cell}
-import os
-if os.path.exists('/content/'):
-  platform = "Colab"
-elif os.path.exists('/kaggle/'):
-  platform = "Kaggle"
-else:
-  # Assume using Cloud TPU otherwise
-  platform = "GCP"
-```
-
-```{code-cell}
 ---
 colab:
   base_uri: https://localhost:8080/
@@ -122,6 +111,15 @@ import tiktoken
 import time
 ```
 
+```{code-cell}
+import flax
+from pkg_resources import parse_version
+
+if parse_version(flax.__version__) >= parse_version("0.12"):
+  flax.config.update('flax_always_shard_variable', False)
+  print('Disabling Flax variable eager sharding for backward compatibility...')
+```
+
 +++ {"id": "rPyt7MV6prz1"}
 
 ## Define the miniGPT model with Flax and JAX automatic parallelism
@@ -146,7 +144,7 @@ Our `Mesh` will have two arguments:
 - `devices`: This will take the value of [`jax.experimental.mesh_utils((4, 2))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
 - `axis_names`, where:
   - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
-  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor paralleism
+  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor parallism
 
 This matches the structure in the Kaggle TPU v5e setup.
 
@@ -164,7 +162,7 @@ mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
-if platform == 'Colab':
+if jax.device_count() == 1:
     mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
 ```
 
@@ -392,8 +390,8 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 192*8
-if platform == "Colab":
+batch_size = 192 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+if jax.device_count() == 1:
     batch_size = 192
 num_epochs = 1
 top_k = 10
