@@ -44,6 +44,9 @@ html_theme_options = {
     'use_repository_button': True,
     'navigation_with_keys': True,
     'home_page_in_toc': True,
+    'navbar_start': ['navbar-logo'],
+    'navbar_center': ['navbar-top'],
+    'navbar_end': ['article-header-buttons'],
     'analytics': {'google_analytics_id': 'G-DHXNR4EB32'},
 }
 
@@ -80,7 +83,7 @@ myst_enable_extensions = [
     'dollarmath',
     'linkify',
 ]
-nb_execution_mode = 'force'
+nb_execution_mode = 'off'
 nb_execution_allow_errors = False
 nb_merge_streams = True
 nb_execution_show_tb = True

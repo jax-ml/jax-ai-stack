@@ -41,3 +41,13 @@ JAX AI Stack
    :maxdepth: 1
 
    contributing
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Other resources
+
+   blog
+   news
+   events
+   videos
