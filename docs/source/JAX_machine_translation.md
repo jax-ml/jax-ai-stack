@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
@@ -452,7 +452,7 @@ def evaluate_model(epoch):
 
 ```{code-cell} ipython3
 model = TransformerModel(sequence_length, vocab_size, embed_dim, latent_dim, num_heads, dropout_rate, rngs=rng)
-optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate))
+optimizer = nnx.Optimizer(model, optax.adamw(learning_rate))
 ```
 
 ## Start the Training!

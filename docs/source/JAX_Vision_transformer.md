@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
@@ -619,7 +619,7 @@ plt.xlim((0, num_epochs))
 plt.show()
 
 
-optimizer = nnx.ModelAndOptimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
+optimizer = nnx.Optimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
 ```
 
 Define a loss function with `optax.softmax_cross_entropy_with_integer_labels`:

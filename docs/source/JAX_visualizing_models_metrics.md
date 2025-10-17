@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
@@ -145,7 +145,7 @@ In order to track loss across our training run, we've collected the loss functio
 import jax
 import optax
 
-optimizer = nnx.ModelAndOptimizer(model, optax.sgd(learning_rate=0.05))
+optimizer = nnx.Optimizer(model, optax.sgd(learning_rate=0.05))
 
 def loss_fun(
     model: nnx.Module,

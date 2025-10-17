@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3
   name: python3
@@ -641,7 +641,7 @@ schedule_fn = optax.join_schedules(
 )
 
 # Optimizer configuration (AdamW) with gradient clipping.
-optimizer = nnx.ModelAndOptimizer(model, optax.chain(
+optimizer = nnx.Optimizer(model, optax.chain(
     optax.clip_by_global_norm(0.5), # Gradient clipping.
     optax.adamw(
         learning_rate=schedule_fn,
