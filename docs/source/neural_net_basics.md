@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3
   name: python3
@@ -129,7 +129,7 @@ With the `SimpleNN` model created and instantiated, we can now choose the loss f
 import jax
 import optax
 
-optimizer = nnx.ModelAndOptimizer(model, optax.sgd(learning_rate=0.05))
+optimizer = nnx.Optimizer(model, optax.sgd(learning_rate=0.05))
 
 def loss_fun(
     model: nnx.Module,

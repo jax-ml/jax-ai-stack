@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3
   name: python3
@@ -476,7 +476,7 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3))
 metrics = nnx.MultiMetric(
   loss=nnx.metrics.Average('loss'),
 )

@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: jax-env
   language: python
@@ -250,7 +250,7 @@ num_epochs = 300
 learning_rate = 0.0005
 momentum = 0.9
 
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(learning_rate, momentum))
+optimizer = nnx.Optimizer(model, optax.adam(learning_rate, momentum))
 ```
 
 We'll define a loss and logits computation function using Optax's

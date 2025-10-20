@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3 (ipykernel)
   language: python
@@ -925,7 +925,7 @@ learning_rate = 0.015
 momentum = 0.9
 total_steps = len(train_dataset) // train_batch_size
 
-optimizer = nnx.ModelAndOptimizer(
+optimizer = nnx.Optimizer(
     model, optax.sgd(learning_rate, momentum, nesterov=True), wrt=trainable_params_filter
 )
 ```
