@@ -54,7 +54,7 @@ colab:
 id: 6zMsOIc7ouCO
 outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 ---
-!pip install -Uq tiktoken grain matplotlib
+!pip install -Uq tiktoken grain==0.2.12 matplotlib orbax-checkpoint
 ```
 
 +++ {"id": "Rcji_799n4eA"}
@@ -155,6 +155,9 @@ if jax.device_count() == 8:
     ### JAX enables quick experimentation with different partitioning strategies
     ### like this. We will come back to this point at the end of this tutorial.
     # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+
+    flax.config.update('flax_always_shard_variable', False)
+    print('Disabling Flax variable eager sharding for backward compatibility...')
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
@@ -468,7 +471,10 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, logits), grads = grad_fn(model, batch)
     metrics.update(loss=loss, logits=logits, lables=batch[1])
-    optimizer.update(grads)
+    if parse_version(flax.__version__) >= parse_version("0.11"):
+      optimizer.update(model, grads)
+    else:
+      optimizer.update(grads)
 ```
 
 +++ {"id": "5um2vkeUNckm"}
