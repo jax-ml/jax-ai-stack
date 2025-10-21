@@ -103,21 +103,14 @@ from jax.experimental import mesh_utils
 
 import flax.nnx as nnx
 import optax
+import flax
 
 from dataclasses import dataclass
 import grain.python as pygrain
 import pandas as pd
 import tiktoken
 import time
-```
-
-```{code-cell}
-import flax
-from pkg_resources import parse_version
-
-if parse_version(flax.__version__) >= parse_version("0.12"):
-  flax.config.update('flax_always_shard_variable', False)
-  print('Disabling Flax variable eager sharding for backward compatibility...')
+from packaging.version import parse as parse_version
 ```
 
 +++ {"id": "rPyt7MV6prz1"}
@@ -324,7 +317,12 @@ class MiniGPT(nnx.Module):
                 )
         # Create a list of `TransformerBlock` instances.
         # Each block processes input sequences using attention and feed-forward networks.
-        self.transformer_blocks = [TransformerBlock(
+        if parse_version(flax.__version__) >= parse_version("0.12"):
+            self.transformer_blocks = nnx.List([TransformerBlock(
+            embed_dim, num_heads, feed_forward_dim, rngs=rngs
+        ) for _ in range(num_transformer_blocks)])
+        else:
+            self.transformer_blocks = [TransformerBlock(
             embed_dim, num_heads, feed_forward_dim, rngs=rngs
         ) for _ in range(num_transformer_blocks)]
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
@@ -489,7 +487,7 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
@@ -588,7 +586,7 @@ import orbax.checkpoint as orbax
 state = nnx.state(model)
 
 checkpointer = orbax.PyTreeCheckpointer()
-checkpointer.save('/content/save', state)
+checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True)
 
 # Make sure the files are there
 !ls /content/save/
