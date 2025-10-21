@@ -147,12 +147,14 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 :id: xuMlCK3Q8WJD
 
 # Create a `Mesh` object representing TPU device arrangement.
-mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+# For example, for Kaggle TPU v5e-8:
+if jax.device_count() == 8:
+    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 
-### Alternatively, we could use the 8-way data parallelism with only one line of code change.
-### JAX enables quick experimentation with different partitioning strategies
-### like this. We will come back to this point at the end of this tutorial.
-# mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+    ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
+    ### JAX enables quick experimentation with different partitioning strategies
+    ### like this. We will come back to this point at the end of this tutorial.
+    # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
