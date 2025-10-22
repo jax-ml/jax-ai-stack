@@ -103,7 +103,6 @@ from jax.experimental import mesh_utils
 
 import flax.nnx as nnx
 import optax
-import flax
 
 from dataclasses import dataclass
 import grain.python as pygrain
@@ -154,9 +153,6 @@ if jax.device_count() == 8:
     ### JAX enables quick experimentation with different partitioning strategies
     ### like this. We will come back to this point at the end of this tutorial.
     # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
-
-    flax.config.update('flax_always_shard_variable', False)
-    print('Disabling Flax variable eager sharding for backward compatibility...')
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
@@ -387,9 +383,9 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 160 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+batch_size = 144 * jax.device_count() / 2  # divide by 2 in case of model parallelism
 if jax.device_count() == 1:
-    batch_size = 160
+    batch_size = 144
 num_epochs = 1
 top_k = 10
 ```
@@ -465,7 +461,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, logits), grads = grad_fn(model, batch)
     metrics.update(loss=loss, logits=logits, lables=batch[1])
-    optimizer.update(grads)
+    optimizer.update(model, grads)
 ```
 
 +++ {"id": "5um2vkeUNckm"}
