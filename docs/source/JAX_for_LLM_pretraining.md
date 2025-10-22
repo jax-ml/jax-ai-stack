@@ -54,7 +54,7 @@ colab:
 id: 6zMsOIc7ouCO
 outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 ---
-!pip install -Uq tiktoken grain==0.2.12 matplotlib orbax-checkpoint
+!pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
 +++ {"id": "Rcji_799n4eA"}
@@ -110,7 +110,6 @@ import grain.python as pygrain
 import pandas as pd
 import tiktoken
 import time
-from packaging.version import parse as parse_version
 ```
 
 +++ {"id": "rPyt7MV6prz1"}
@@ -322,12 +321,7 @@ class MiniGPT(nnx.Module):
                 )
         # Create a list of `TransformerBlock` instances.
         # Each block processes input sequences using attention and feed-forward networks.
-        if parse_version(flax.__version__) >= parse_version("0.12"):
-            self.transformer_blocks = nnx.List([TransformerBlock(
-            embed_dim, num_heads, feed_forward_dim, rngs=rngs
-        ) for _ in range(num_transformer_blocks)])
-        else:
-            self.transformer_blocks = [TransformerBlock(
+        self.transformer_blocks = [TransformerBlock(
             embed_dim, num_heads, feed_forward_dim, rngs=rngs
         ) for _ in range(num_transformer_blocks)]
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
@@ -393,9 +387,9 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 192 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+batch_size = 160 * jax.device_count() / 2  # divide by 2 in case of model parallelism
 if jax.device_count() == 1:
-    batch_size = 192
+    batch_size = 160
 num_epochs = 1
 top_k = 10
 ```
@@ -471,10 +465,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, logits), grads = grad_fn(model, batch)
     metrics.update(loss=loss, logits=logits, lables=batch[1])
-    if parse_version(flax.__version__) >= parse_version("0.11"):
-      optimizer.update(model, grads)
-    else:
-      optimizer.update(grads)
+    optimizer.update(grads)
 ```
 
 +++ {"id": "5um2vkeUNckm"}
