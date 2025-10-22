@@ -54,7 +54,7 @@ colab:
 id: 6zMsOIc7ouCO
 outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 ---
-!pip install -Uq tiktoken grain matplotlib
+!pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
 +++ {"id": "Rcji_799n4eA"}
@@ -111,15 +111,6 @@ import tiktoken
 import time
 ```
 
-```{code-cell}
-import flax
-from pkg_resources import parse_version
-
-if parse_version(flax.__version__) >= parse_version("0.12"):
-  flax.config.update('flax_always_shard_variable', False)
-  print('Disabling Flax variable eager sharding for backward compatibility...')
-```
-
 +++ {"id": "rPyt7MV6prz1"}
 
 ## Define the miniGPT model with Flax and JAX automatic parallelism
@@ -154,12 +145,14 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 :id: xuMlCK3Q8WJD
 
 # Create a `Mesh` object representing TPU device arrangement.
-mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+# For example, for Kaggle TPU v5e-8:
+if jax.device_count() == 8:
+    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 
-### Alternatively, we could use the 8-way data parallelism with only one line of code change.
-### JAX enables quick experimentation with different partitioning strategies
-### like this. We will come back to this point at the end of this tutorial.
-# mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+    ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
+    ### JAX enables quick experimentation with different partitioning strategies
+    ### like this. We will come back to this point at the end of this tutorial.
+    # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
@@ -390,9 +383,9 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 192 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+batch_size = 144 * jax.device_count() / 2  # divide by 2 in case of model parallelism
 if jax.device_count() == 1:
-    batch_size = 192
+    batch_size = 144
 num_epochs = 1
 top_k = 10
 ```
@@ -468,7 +461,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, logits), grads = grad_fn(model, batch)
     metrics.update(loss=loss, logits=logits, lables=batch[1])
-    optimizer.update(grads)
+    optimizer.update(model, grads)
 ```
 
 +++ {"id": "5um2vkeUNckm"}
@@ -489,7 +482,7 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
@@ -588,7 +581,7 @@ import orbax.checkpoint as orbax
 state = nnx.state(model)
 
 checkpointer = orbax.PyTreeCheckpointer()
-checkpointer.save('/content/save', state)
+checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True)
 
 # Make sure the files are there
 !ls /content/save/
