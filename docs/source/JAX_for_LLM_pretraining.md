@@ -53,8 +53,16 @@ colab:
   base_uri: https://localhost:8080/
 id: 6zMsOIc7ouCO
 outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
+tags: [nbval-skip]
 ---
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
+```
+
+```{code-cell}
+:tags: [hide-cell]
+
+import os
+AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
 ```
 
 +++ {"id": "Rcji_799n4eA"}
@@ -69,6 +77,7 @@ colab:
   base_uri: https://localhost:8080/
 id: LS9sQEY3n0mB
 outputId: 9ffcf3a6-20ef-4f80-b006-f5d3c5644a15
+tags: [nbval-ignore-output]
 ---
 import jax
 jax.devices()
@@ -84,6 +93,7 @@ colab:
   base_uri: https://localhost:8080/
 id: wUjQsgQEmI1N
 outputId: e6eff24e-5578-4277-a0f9-24e27bd91ee0
+tags: [nbval-skip]
 ---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
@@ -98,8 +108,7 @@ Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, panda
 import jax
 import jax.numpy as jnp
 
-from jax.sharding import Mesh, PartitionSpec as P, NamedSharding # For data and model parallelism (explained in more detail later)
-from jax.experimental import mesh_utils
+from jax.sharding import PartitionSpec as P, NamedSharding # For data and model parallelism (explained in more detail later)
 
 import flax.nnx as nnx
 import optax
@@ -147,7 +156,7 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 # Create a `Mesh` object representing TPU device arrangement.
 # For example, for Kaggle TPU v5e-8:
 if jax.device_count() == 8:
-    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+    mesh = jax.make_mesh((4, 2), ('batch', 'model'))
 
     ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
     ### JAX enables quick experimentation with different partitioning strategies
@@ -156,7 +165,7 @@ if jax.device_count() == 8:
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
-    mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
+    mesh = jax.make_mesh((1, 1), ("batch", "model"))
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -205,36 +214,46 @@ class TransformerBlock(nnx.Module):
         # where we shard the weights across devices for parallel computation.
         self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                          bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
+                                          kernel_init=nnx.with_partitioning(
+                                              nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                          bias_init=nnx.with_partitioning(
+                                              nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
                                           rngs=rngs)
         # The first dropout with `flax.nnx.Dropout`.
         self.dropout1 = nnx.Dropout(rate=rate)
         # First layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), NamedSharding(mesh, P('model'))),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
+                                         scale_init=nnx.with_partitioning(
+                                             nnx.initializers.ones_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                         bias_init=nnx.with_partitioning(
+                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
                                          rngs=rngs)
         # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear1 = nnx.Linear(in_features=embed_dim,
                                   out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
+                                  kernel_init=nnx.with_partitioning(
+                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                  bias_init=nnx.with_partitioning(
+                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
                                   rngs=rngs)
         # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear2 = nnx.Linear(in_features=ff_dim,
                                   out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
+                                  kernel_init=nnx.with_partitioning(
+                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                  bias_init=nnx.with_partitioning(
+                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
                                   rngs=rngs)
         # The second dropout with `flax.nnx.Dropout`.
         self.dropout2 = nnx.Dropout(rate=rate)
         # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), NamedSharding(mesh, P(None, 'model'))),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model'))),
+                                         scale_init=nnx.with_partitioning(
+                                             nnx.initializers.ones_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                         bias_init=nnx.with_partitioning(
+                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
                                          rngs=rngs)
 
 
@@ -317,14 +336,16 @@ class MiniGPT(nnx.Module):
                 )
         # Create a list of `TransformerBlock` instances.
         # Each block processes input sequences using attention and feed-forward networks.
-        self.transformer_blocks = [TransformerBlock(
+        self.transformer_blocks = nnx.List([TransformerBlock(
             embed_dim, num_heads, feed_forward_dim, rngs=rngs
-        ) for _ in range(num_transformer_blocks)]
+        ) for _ in range(num_transformer_blocks)])
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(in_features=embed_dim,
                                        out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                       bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model'))),
+                                       kernel_init=nnx.with_partitioning(
+                                           nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                       bias_init=nnx.with_partitioning(
+                                           nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
                                        rngs=rngs)
 
     def __call__(self, inputs, training: bool = False):
@@ -390,6 +411,17 @@ num_epochs = 1
 top_k = 10
 ```
 
+```{code-cell}
+:tags: [hide-cell]
+
+if AI_STACK_TEST_MODE:
+    num_transformer_blocks = 2
+    maxlen = 16
+    embed_dim = 16
+    num_heads = 2
+    feed_forward_dim = 8
+```
+
 +++ {"id": "mI1ci-HyMspJ"}
 
 ## Loading and preprocessing the data
@@ -438,7 +470,46 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
     )
 
     return dl
+```
 
+```{code-cell}
+:tags: [hide-cell]
+
+if AI_STACK_TEST_MODE:
+    def load_and_preprocess_data(file_path, batch_size, maxlen):
+        del file_path
+
+        @dataclass
+        class TestTextDataset:
+            maxlen: int
+
+            def __len__(self):
+                return 64
+
+            def __getitem__(self, idx: int):
+                encoding = jax.random.randint(jax.random.key(idx), [self.maxlen], minval=0, maxval=1e6)
+                return jnp.unstack(encoding)
+
+        dataset = TestTextDataset(maxlen)
+
+        sampler = pygrain.IndexSampler(
+            len(dataset),
+            shuffle=False,
+            seed=42,
+            shard_options=pygrain.NoSharding(),
+            num_epochs=num_epochs,
+        )
+
+        dl = pygrain.DataLoader(
+            data_source=dataset,
+            sampler=sampler,
+            operations=[pygrain.Batch(batch_size=batch_size, drop_remainder=True)],
+        )
+
+        return dl
+```
+
+```{code-cell}
 text_dl = load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen)
 ```
 
@@ -480,6 +551,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
+tags: [nbval-ignore-output]
 ---
 model = create_model(rngs=nnx.Rngs(0))
 optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
@@ -550,6 +622,7 @@ colab:
   height: 472
 id: B6Eg1Cz2y_iP
 outputId: 7cafe711-1ae4-4eb9-fd37-e1bde54cbfc5
+tags: [nbval-ignore-output]
 ---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
@@ -575,6 +648,7 @@ colab:
   base_uri: https://localhost:8080/
 id: EkoFGCgSZ1yz
 outputId: 3467b8ba-ce05-42f0-fb89-75922cc91e31
+tags: [nbval-skip]
 ---
 import orbax.checkpoint as orbax
 
@@ -592,12 +666,16 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 **Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
 
 Load the tensorboard colab extension.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 %load_ext tensorboard
 ```
 
@@ -627,6 +705,8 @@ def generate_trace():
 Now we'll perform some traces to compare results of different batch sizes. This will take several minutes as we need to reprocess our input data to prepare new batches each time.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 trace_dir = "/tmp/jax-trace-batch-comparison/"
 
 batch_size = 64
@@ -645,6 +725,8 @@ The key metrics to focus on here for this hyperparameter are FLOPS Utilization a
 In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from 64 -> 256 achieves both of those. FLOPS increases from 16% to 27%. Average Step Time increase from 100ms to 260ms, however we increased our batch size by 300%. This means we move from 1.5ms per training example to 1.02ms per training example.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 %tensorboard --logdir=$trace_dir
 ```
 
@@ -657,12 +739,15 @@ JAX will automatically figure out how to shard the model and data to use the new
 How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 trace_dir = "/tmp/jax-trace-parallelism-comparison/"
 
-mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+mesh_dims = (4, 2) if jax.device_count() == 8 else (1, 1)
+mesh = jax.make_mesh(mesh_dims, ('batch', 'model'))
 generate_trace()
 
-mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+mesh = jax.make_mesh((jax.device_count(), 1), ('batch', 'model'))
 generate_trace()
 ```
 
@@ -673,6 +758,8 @@ Looking at the results, we see that the step times are nearly the same, however 
 By looking at the Trace Viewer tool and looking under each TPU's ops, we can see that the TPUs spend a large amount of time idle while waiting for the host, as well as spending a good amount of time in `reduce_sum` operations.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 %tensorboard --logdir=$trace_dir
 ```
 
