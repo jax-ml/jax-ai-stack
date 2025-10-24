@@ -11,6 +11,7 @@ matplotlib
 pandas
 penzai
 scikit-learn
+tiktoken
 
 # install jax-ai-stack from current directory
 .
