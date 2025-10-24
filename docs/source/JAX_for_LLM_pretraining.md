@@ -11,11 +11,23 @@ kernelspec:
   name: python3
 ---
 
-+++ {"id": "NIOXoY1xgiww"}
-
 # Train a miniGPT language model with JAX
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb)
++++
+
+<table class="tfo-notebook-buttons" align="left">
+  <td>
+    <a target="_blank" href="https://kaggle.com/kernels/welcome?src=https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.kaggle.com/static/images/logos/kaggle-logo-transparent-300.png" height="32" width="70"/>Run in Kaggle</a>
+  </td>
+  <td>
+    <a target="_blank" href="https://colab.research.google.com/github/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.tensorflow.org/images/colab_logo_32px.png" />Run in Google Colab</a>
+  </td>
+  <td>
+    <a target="_blank" href="https://github.com/jax-ml/jax-ai-stack/blob/main/docs/source/JAX_for_LLM_pretraining.ipynb"><img src="https://www.tensorflow.org/images/GitHub-Mark-32px.png" />View source on GitHub</a>
+  </td>
+</table>
+
++++ {"id": "NIOXoY1xgiww"}
 
 This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
@@ -24,7 +36,7 @@ Here, you will learn how to:
 - Define the miniGPT model with Flax and JAX automatic parallelism
 - Load and preprocess the dataset
 - Create the loss and training step functions
-- Train the model on Google Colab’s Cloud TPU v2
+- Train the model on TPUs on Kaggle or Google Colab
 - Profile for hyperparameter tuning
 
 If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
@@ -42,12 +54,12 @@ colab:
 id: 6zMsOIc7ouCO
 outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
 ---
-!pip install -Uq tiktoken grain matplotlib
+!pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
 +++ {"id": "Rcji_799n4eA"}
 
-**Note:** If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v2 as the hardware accelerator.
+**Note:** If you are using [Kaggle](https://www.kaggle.com/), select the free TPU v5e-8 as the hardware accelerator. If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v5e-1 as the hardware accelerator. You may also use Google Cloud TPUs.
 
 Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html). The output of the cell below will show a list of 8 (eight) devices.
 
@@ -111,7 +123,9 @@ One of the most powerful features of JAX is [device parallelism](https://jax.rea
 - Tensor parallelism allows us to split the model parameter tensors across several devices (sharding model tensors).
 - You can learn more about the basics of JAX parallelism in more detail in the [Introduction to parallel programming](https://jax.readthedocs.io/en/latest/sharded-computation.html) on the JAX documentation site.
 
-In this example, we'll utilize a 4-way data parallel and 2-way tensor parallel setup. The free Google Cloud TPU v2 on Google Colab offers 4 chips, each with 2 TPU cores. The TPU v2 architeture aligns with the proposed setup.
+In this example, we'll utilize a 4-way data parallel and 2-way tensor parallel setup, which is aligned with Kaggle TPU v5e-8 or newer GCP TPUs chips.
+
+Note that as of October 2025, free-tier Colab only offers TPU v5e-1, which can no longer support SPMD.
 
 ### jax.sharding.Mesh
 
@@ -121,9 +135,9 @@ Our `Mesh` will have two arguments:
 - `devices`: This will take the value of [`jax.experimental.mesh_utils((4, 2))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
 - `axis_names`, where:
   - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
-  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor paralleism, mapping to the TPU v2 cores.
+  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor parallism
 
-This matches the `(4, 2)` structure in the Colab's TPU v2 setup.
+This matches the structure in the Kaggle TPU v5e setup.
 
 Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define how data and model parameters are distributed across the devices:
 
@@ -131,12 +145,18 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 :id: xuMlCK3Q8WJD
 
 # Create a `Mesh` object representing TPU device arrangement.
-mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+# For example, for Kaggle TPU v5e-8:
+if jax.device_count() == 8:
+    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
 
-### Alternatively, we could use the 8-way data parallelism with only one line of code change.
-### JAX enables quick experimentation with different partitioning strategies
-### like this. We will come back to this point at the end of this tutorial.
-# mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+    ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
+    ### JAX enables quick experimentation with different partitioning strategies
+    ### like this. We will come back to this point at the end of this tutorial.
+    # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+
+### For free-tier Colab TPU, which only has a single TPU core
+if jax.device_count() == 1:
+    mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -318,48 +338,31 @@ class MiniGPT(nnx.Module):
         outputs = self.output_layer(x)
         return outputs
 
-    # Text generation.
-    def generate_text(self, max_tokens: int, start_tokens: [int], top_k=10):
-        # Sample the next token from a probability distribution based on
-        # `logits` and `tok_k` (top-k) sampling strategy.
-        def sample_from(logits):
-            logits, indices = jax.lax.top_k(logits, k=top_k)
-            # Convert logits to probabilities (using `flax.nnx.softmax`).
-            logits = nnx.softmax(logits)
-            return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
+    @nnx.jit
+    def sample_from(self, logits):
+        logits, indices = jax.lax.top_k(logits, k=top_k)
+        logits = nnx.softmax(logits)
+        return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
 
-        # Generate text one token at a time until the maximum token limit is reached (`maxlen`).
-        def generate_step(start_tokens):
-            pad_len = maxlen - len(start_tokens)
-            # Index of the last token in the current sequence.
-            sample_index = len(start_tokens) - 1
-            # If the input is longer than `maxlen`, then truncate it.
-            if pad_len < 0:
-                x = jnp.array(start_tokens[:maxlen])
-                sample_index = maxlen - 1
-            # If the input is shorter than `maxlen`, then pad it (`pad_len`).
-            elif pad_len > 0:
-                x = jnp.array(start_tokens + [0] * pad_len)
-            else:
-                x = jnp.array(start_tokens)
+    @nnx.jit
+    def generate_step(self, padded_tokens, sample_index):
+        logits = self(padded_tokens)
+        next_token = self.sample_from(logits[0][sample_index])
+        return next_token
 
-            # Add a batch dimension.
-            x = x[None, :]
-            logits = self(x)
-            next_token = sample_from(logits[0][sample_index])
-            return next_token
-
-        # Store generated tokens.
+    def generate_text(self, max_tokens, start_tokens):
         generated = []
-        # Generate tokens until the end-of-text token is encountered or the maximum token limit is reached.
-        for _ in range(max_tokens):
-            next_token = generate_step(start_tokens + generated)
-            # Truncate whatever is after '<|endoftext|>' (stop word)
+        print(tokenizer.decode(start_tokens), flush=True, end='')
+        for i in range(max_tokens):
+            sample_index = len(start_tokens) + len(generated) - 1
+
+            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
+            next_token = int(self.generate_step(padded_tokens, sample_index))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
-              # Stop text generation if the end-of-text token is encountered.
               break
-            generated.append(int(next_token))
-        # Decode the generated token IDs into text.
+            generated.append(next_token)
+            # decode and print next_token
+            print(tokenizer.decode([next_token]), flush=True, end='')
         return tokenizer.decode(start_tokens + generated)
 
 # Creates the miniGPT model with 4 transformer blocks.
@@ -380,8 +383,11 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 256 # You can set a bigger batch size if you use Kaggle's Cloud TPU.
+batch_size = 144 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+if jax.device_count() == 1:
+    batch_size = 144
 num_epochs = 1
+top_k = 10
 ```
 
 +++ {"id": "mI1ci-HyMspJ"}
@@ -455,7 +461,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, logits), grads = grad_fn(model, batch)
     metrics.update(loss=loss, logits=logits, lables=batch[1])
-    optimizer.update(grads)
+    optimizer.update(model, grads)
 ```
 
 +++ {"id": "5um2vkeUNckm"}
@@ -476,56 +482,61 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
 model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.ModelAndOptimizer(model, optax.adam(1e-3))
+optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
-  loss=nnx.metrics.Average('loss'),
+    loss=nnx.metrics.Average("loss"),
 )
 rng = jax.random.PRNGKey(0)
 
 start_prompt = "Once upon a time"
 start_tokens = tokenizer.encode(start_prompt)[:maxlen]
-generated_text = model.generate_text(
-    maxlen, start_tokens
-)
-print(f"Initial generated text:\n{generated_text}\n")
-
+print("Initial generated text:")
+generated_text = model.generate_text(maxlen, start_tokens)
 
 metrics_history = {
-  'train_loss': [],
+    "train_loss": [],
 }
 
-prep_target_batch = jax.vmap(lambda tokens: jnp.concatenate((tokens[1:], jnp.array([0]))))
+prep_target_batch = jax.vmap(
+    lambda tokens: jnp.concatenate((tokens[1:], jnp.array([0])))
+)
 
 step = 0
 for epoch in range(num_epochs):
     start_time = time.time()
     for batch in text_dl:
         if len(batch) % len(jax.devices()) != 0:
-          continue  # skip the remaining elements
+            continue  # skip the remaining elements
         input_batch = jnp.array(jnp.array(batch).T)
         target_batch = prep_target_batch(input_batch)
-        train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
+        train_step(
+            model,
+            optimizer,
+            metrics,
+            jax.device_put(
+                (input_batch, target_batch), NamedSharding(mesh, P("batch", None))
+            ),
+        )
 
         if (step + 1) % 200 == 0:
-          for metric, value in metrics.compute().items():
-              metrics_history[f'train_{metric}'].append(value)
-          metrics.reset()
+            for metric, value in metrics.compute().items():
+                metrics_history[f"train_{metric}"].append(value)
+            metrics.reset()
 
-          elapsed_time = time.time() - start_time
-          print(f"Step {step + 1}, Loss: {metrics_history['train_loss'][-1]}, Elapsed Time: {elapsed_time:.2f} seconds")
-          start_time = time.time()
+            elapsed_time = time.time() - start_time
+            print(
+                f"\n\nStep {step + 1}, Loss: {metrics_history['train_loss'][-1]}, Elapsed Time: {elapsed_time:.2f} seconds"
+            )
+            start_time = time.time()
 
-          generated_text = model.generate_text(
-              maxlen, start_tokens
-          )
-          print(f"Generated text:\n{generated_text}\n")
+            print("Generated text:")
+            generated_text = model.generate_text(maxlen, start_tokens)
+
         step += 1
 
 # Final text generation
-generated_text = model.generate_text(
-    maxlen, start_tokens
-)
-print(f"Final generated text:\n{generated_text}")
+print("Final generated text:")
+generated_text = model.generate_text(maxlen, start_tokens)
 ```
 
 +++ {"id": "thaLs6TD0lt5"}
@@ -570,13 +581,15 @@ import orbax.checkpoint as orbax
 state = nnx.state(model)
 
 checkpointer = orbax.PyTreeCheckpointer()
-checkpointer.save('/content/save', state)
+checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True)
 
 # Make sure the files are there
 !ls /content/save/
 ```
 
 ## Profiling for hyperparameter tuning
+
+**Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
