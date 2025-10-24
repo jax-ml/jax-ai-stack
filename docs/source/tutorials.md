@@ -7,7 +7,6 @@ orphan: true
 ```{toctree}
 :maxdepth: 1
 
-JAX_visualizing_models_metrics
+JAX_for_LLM_pretraining
 data_loaders
-pytorch_users
 ```
