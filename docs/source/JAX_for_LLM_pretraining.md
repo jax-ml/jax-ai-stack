@@ -58,13 +58,6 @@ tags: [nbval-skip]
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
-```{code-cell}
-:tags: [hide-cell]
-
-import os
-AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
-```
-
 +++ {"id": "Rcji_799n4eA"}
 
 **Note:** If you are using [Kaggle](https://www.kaggle.com/), select the free TPU v5e-8 as the hardware accelerator. If you are using [Google Colab](https://colab.research.google.com/), select the free Google Cloud TPU v5e-1 as the hardware accelerator. You may also use Google Cloud TPUs.
@@ -463,6 +456,10 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 
 ```{code-cell}
 :tags: [hide-cell]
+
+# This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
+import os
+AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
 
 if AI_STACK_TEST_MODE:
     num_transformer_blocks = 2
