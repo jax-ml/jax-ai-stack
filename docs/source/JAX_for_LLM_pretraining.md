@@ -411,17 +411,6 @@ num_epochs = 1
 top_k = 10
 ```
 
-```{code-cell}
-:tags: [hide-cell]
-
-if AI_STACK_TEST_MODE:
-    num_transformer_blocks = 2
-    maxlen = 16
-    embed_dim = 16
-    num_heads = 2
-    feed_forward_dim = 8
-```
-
 +++ {"id": "mI1ci-HyMspJ"}
 
 ## Loading and preprocessing the data
@@ -476,6 +465,12 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 :tags: [hide-cell]
 
 if AI_STACK_TEST_MODE:
+    num_transformer_blocks = 2
+    maxlen = 16
+    embed_dim = 16
+    num_heads = 2
+    feed_forward_dim = 8
+
     def load_and_preprocess_data(file_path, batch_size, maxlen):
         del file_path
 
