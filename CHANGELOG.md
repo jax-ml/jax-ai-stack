@@ -2,6 +2,19 @@
 
 ↗️ = updated since previous release
 
+## v2025.10.28
+- `jax-ai-stack` packages:
+  - `jax==0.8.0` ↗️
+  - `chex==0.1.91` ↗️
+  - `grain==0.2.13` ↗️
+  - `flax==0.12.0` ↗️
+  - `ml_dtypes==0.5.3`
+  - `optax==0.2.6` ↗️
+  - `orbax-checkpoint==0.11.26` ↗️
+  - `orbax-export==0.0.8` ↗️
+- `jax-ai-stack[tfds]` packages:
+  - `tensorflow==2.20.0`
+  - `tensorflow_datasets==4.9.9`
 
 ## v2025.9.3
 - `jax-ai-stack` packages:
