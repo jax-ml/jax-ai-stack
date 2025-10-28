@@ -1,3 +1,3 @@
 """jax-ai-stack metapackage."""
 
-__version__ = "2025.9.3"
+__version__ = "2025.10.28"
