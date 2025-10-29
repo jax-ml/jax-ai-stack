@@ -455,8 +455,10 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 ```
 
 ```{code-cell}
+:cellView: form
 :tags: [hide-cell]
 
+# @title [hidden cell; used for testing]
 # This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
 import os
 AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
