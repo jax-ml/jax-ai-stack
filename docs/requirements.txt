@@ -8,8 +8,10 @@ sphinx-copybutton
 
 # Packages required for notebook execution
 matplotlib
+pandas
 penzai
 scikit-learn
+tiktoken
 
 # install jax-ai-stack from current directory
 .
