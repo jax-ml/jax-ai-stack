@@ -29,6 +29,8 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
+[REVAMP 0]: Expand intro.
+
 This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
 Here, you will learn how to:
@@ -115,7 +117,10 @@ import time
 
 +++ {"id": "rPyt7MV6prz1"}
 
-## Define the miniGPT model with Flax and JAX automatic parallelism
+## Define the miniGPT model with NNX and JAX automatic parallelism
+
+### NNX: A JAX-based neural network library
+[REVAMP 1]: Introduce NNX.
 
 ### Leveraging JAX's data and tensor parallelism
 
@@ -131,10 +136,10 @@ Note that as of October 2025, free-tier Colab only offers TPU v5e-1, which can n
 
 ### jax.sharding.Mesh
 
-Earlier, we imported [`jax.sharding.Mesh`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.Mesh) - is a multidimensional NumPy array of JAX devices, where each axis of the mesh has a name, such as `'x'` or `'y'`. This will help encapsulate the information about the TPU resource organization for distributing computations across the devices.
+[`jax.sharding.Mesh`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.Mesh) is a multidimensional NumPy array of JAX devices, where each axis of the mesh has a name, such as `'x'` or `'y'`. This will help encapsulate the information about the TPU resource organization for distributing computations across the devices.
 
 Our `Mesh` will have two arguments:
-- `devices`: This will take the value of [`jax.experimental.mesh_utils((4, 2))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
+- `devices`: This will take the value of [`jax.make_mesh((4, 2), ('batch', 'model'))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
 - `axis_names`, where:
   - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
   - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor parallism
@@ -406,7 +411,9 @@ top_k = 10
 
 +++ {"id": "mI1ci-HyMspJ"}
 
-## Loading and preprocessing the data
+## Grain: Load and preprocess the data
+
+[REVAMP 2]: Expand the intro to Grain.
 
 Data loading and preprocessing with [Grain](https://github.com/google/grain).
 
@@ -531,7 +538,9 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 +++ {"id": "5um2vkeUNckm"}
 
-## Training the model
+## Optax: Train the model
+
+[REVAMP 3]: Expand the intro to Optax.
 
 Start training. It takes ~50 minutes on Colab.
 
@@ -630,9 +639,17 @@ plt.show()
 
 As you can see, the model goes from generating completely random words at the beginning to generating sensible tiny stories at the end of the training. So essentially we have pretrained a small LLM to write tiny stories for us.
 
++++
+
+## Debugging the model
+
+[REVAMP 4]: Add a debugging section.
+
 +++ {"id": "soPqiR1JNmjf"}
 
-## Saving the checkpoint
+## Orbax: Save the checkpoint
+
+[REVAMP 5] Introduce Orbax.
 
 Save the model checkpoint.
 
@@ -655,7 +672,17 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 !ls /content/save/
 ```
 
-## Profiling for hyperparameter tuning
+## Tunix: Fine-tuning
+
+[REVAMP 6] Introduce Tunix.
+
+```{code-cell}
+# TODO(windmaple): Code example.
+```
+
+## Xprof: profiling for hyperparameter tuning
+
+[REVAMP 7]: Intro xprof
 
 **Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
@@ -726,7 +753,7 @@ In general, we want to maximize FLOPS Utilization while minimizing the step time
 
 Next, we can explore alternative parallelism methods. In cell #4, we used 4-way data parallel and 2-way tensor parallel. 8-way data parallel is another popular way. Let's compare results between them. To switch to 8-way data parallel, we'll replace the `Mesh` definition with:
 
-`mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))`
+`mesh = jax.make_mesh((8, 1), ('batch', 'model'))`
 
 JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
 
@@ -758,3 +785,13 @@ By looking at the Trace Viewer tool and looking under each TPU's ops, we can see
 ```
 
 By changing hyperparameters and comparing profiles, we're able to gain significant insights into our bottlenecks and limitations. These are just two examples of hyperparameters to tune, but plenty more of them will have significant effects on training speed and resource utilization.
+
++++
+
+## Inference with vLLM
+
+[REVAMP 8]: Introduce vLLM.
+
+```{code-cell}
+# TODO: Code example.
+```
