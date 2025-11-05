@@ -212,62 +212,56 @@ class TransformerBlock(nnx.Module):
         # where we shard the weights across devices for parallel computation.
         self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(
-                                              nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                          bias_init=nnx.with_partitioning(
-                                              nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                          kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                          bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
+                                          decode=True,
                                           rngs=rngs)
         # The first dropout with `flax.nnx.Dropout`.
         self.dropout1 = nnx.Dropout(rate=rate)
         # First layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), P('model')),
+                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
         # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear1 = nnx.Linear(in_features=embed_dim,
                                   out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
         # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear2 = nnx.Linear(in_features=ff_dim,
                                   out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
         # The second dropout with `flax.nnx.Dropout`.
         self.dropout2 = nnx.Dropout(rate=rate)
         # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), P('model')),
+                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
 
 
     # Apply the Transformer block to the input sequence.
-    def __call__(self, inputs, training: bool = False):
+    def __call__(self, inputs, training: bool = False, decode: bool = False):
         input_shape = inputs.shape
         _, seq_len, _ = input_shape
 
         # Instantiate the causal attention mask.
-        mask = causal_attention_mask(seq_len)
+        if decode:
+            mask = None
+        else:
+            mask = causal_attention_mask(seq_len)
 
         # Apply Multi-Head Attention with the causal attention mask.
         attention_output = self.mha(
             inputs_q=inputs,
             mask=mask,
-            decode=False
+            decode=decode
         )
         # Apply the first dropout.
         attention_output = self.dropout1(attention_output, deterministic=not training)
@@ -304,9 +298,9 @@ class TokenAndPositionEmbedding(nnx.Module):
         self.pos_emb = nnx.Embed(num_embeddings=maxlen, features=embed_dim, rngs=rngs)
 
     # Takes a token sequence (integers) and returns the combined token and positional embeddings.
-    def __call__(self, x):
+    def __call__(self, x, start_index=0):
         # Generate a sequence of positions for the input tokens.
-        positions = jnp.arange(0, x.shape[1])[None, :]
+        positions = (start_index + jax.lax.iota(dtype=jnp.int32, size=x.shape[1]))[None, :]
         # Look up the positional embeddings for each position in the input sequence.
         position_embedding = self.pos_emb(positions)
         # Look up the token embeddings for each token in the input sequence.
@@ -340,22 +334,28 @@ class MiniGPT(nnx.Module):
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(in_features=embed_dim,
                                        out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(
-                                           nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                       bias_init=nnx.with_partitioning(
-                                           nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                       kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                       bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
                                        rngs=rngs)
 
-    def __call__(self, inputs, training: bool = False):
+    def __call__(self, inputs, training: bool = False, decode: bool = False):
         # Pass the input tokens through the `embedding_layer` to get token embeddings.
         # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
-        x = self.embedding_layer(inputs)
+        if decode:
+            cache_index = self.transformer_blocks[0].mha.cache_index.value
+            x = self.embedding_layer(inputs, start_index=cache_index)
+        else:
+            x = self.embedding_layer(inputs)
         for transformer_block in self.transformer_blocks:
-            x = transformer_block(x, training=training)
+            x = transformer_block(x, training=training, decode=decode)
         # Pass the output of the transformer blocks through the output layer,
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
+
+    def init_cache(self, input_shape, dtype=jnp.float32):
+        for block in self.transformer_blocks:
+            block.mha.init_cache(input_shape, dtype)
 
     @nnx.jit
     def sample_from(self, logits):
@@ -364,24 +364,40 @@ class MiniGPT(nnx.Module):
         return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
 
     @nnx.jit
-    def generate_step(self, padded_tokens, sample_index):
-        logits = self(padded_tokens)
-        next_token = self.sample_from(logits[0][sample_index])
+    def generate_step(self, inputs):
+        logits = self(inputs, decode=True)
+        next_token = self.sample_from(logits[0, -1, :])
         return next_token
 
+    @nnx.jit
+    def prefill(self, prompt):
+        def prefill_one_token(i, model):
+            token = jax.lax.dynamic_slice(prompt, (0, i), (1, 1))
+            model(token, decode=True)
+            return model
+        return jax.lax.fori_loop(0, prompt.shape[1], prefill_one_token, self)
+
     def generate_text(self, max_tokens, start_tokens):
+        self.init_cache((1, maxlen, embed_dim))
         generated = []
         print(tokenizer.decode(start_tokens), flush=True, end='')
-        for i in range(max_tokens):
-            sample_index = len(start_tokens) + len(generated) - 1
 
-            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
-            next_token = int(self.generate_step(padded_tokens, sample_index))
+        # Prefill KV cache
+        if len(start_tokens) > 1:
+            prompt_tokens = jnp.array(start_tokens)[None, :-1]
+            updated_model = self.prefill(prompt_tokens)
+            nnx.update(self, nnx.state(updated_model))
+
+        next_input = jnp.array([start_tokens[-1]])[None, :]
+
+        # Decode
+        for i in range(max_tokens):
+            next_token = int(self.generate_step(next_input))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
               break
             generated.append(next_token)
-            # decode and print next_token
             print(tokenizer.decode([next_token]), flush=True, end='')
+            next_input = jnp.array([next_token])[None, :]
         return tokenizer.decode(start_tokens + generated)
 
 # Creates the miniGPT model with 4 transformer blocks.
@@ -556,8 +572,10 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 tags: [nbval-ignore-output]
 ---
-model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+with mesh:
+    model = create_model(rngs=nnx.Rngs(0))
+    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
