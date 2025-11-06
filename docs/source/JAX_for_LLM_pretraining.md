@@ -299,7 +299,7 @@ class TokenAndPositionEmbedding(nnx.Module):
     # Takes a token sequence (integers) and returns the combined token and positional embeddings.
     def __call__(self, x, start_index=0):
         # Generate a sequence of positions for the input tokens.
-        positions = (start_index + jax.lax.iota(dtype=jnp.int32, size=x.shape[1]))[None, :]
+        positions = start_index + jnp.arange(x.shape[1], dtype=jnp.int32)
         # Look up the positional embeddings for each position in the input sequence.
         position_embedding = self.pos_emb(positions)
         # Look up the token embeddings for each token in the input sequence.
@@ -363,18 +363,14 @@ class MiniGPT(nnx.Module):
         return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
 
     @nnx.jit
-    def generate_step(self, inputs):
+    def decode_step(self, inputs):
         logits = self(inputs, decode=True)
         next_token = self.sample_from(logits[0, -1, :])
         return next_token
 
     @nnx.jit
-    def prefill(self, prompt):
-        def prefill_one_token(i, model):
-            token = jax.lax.dynamic_slice(prompt, (0, i), (1, 1))
-            model(token, decode=True)
-            return model
-        return jax.lax.fori_loop(0, prompt.shape[1], prefill_one_token, self)
+    def prefill_step(self, token):
+        self(token, decode=True)
 
     def generate_text(self, max_tokens, start_tokens):
         self.init_cache((1, maxlen, embed_dim))
@@ -384,14 +380,15 @@ class MiniGPT(nnx.Module):
         # Prefill KV cache
         if len(start_tokens) > 1:
             prompt_tokens = jnp.array(start_tokens)[None, :-1]
-            updated_model = self.prefill(prompt_tokens)
-            nnx.update(self, nnx.state(updated_model))
-
-        next_input = jnp.array([start_tokens[-1]])[None, :]
+            # NNX built-in MHA only supports KV caching one token at a time
+            for i in range(prompt_tokens.shape[1]):
+                token = prompt_tokens[:, i:i+1]
+                self.prefill_step(token)
 
         # Decode
+        next_input = jnp.array([start_tokens[-1]])[None, :]
         for i in range(max_tokens):
-            next_token = int(self.generate_step(next_input))
+            next_token = int(self.decode_step(next_input))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
               break
             generated.append(next_token)
