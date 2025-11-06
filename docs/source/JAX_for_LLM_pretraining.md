@@ -103,7 +103,7 @@ Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, panda
 import jax
 import jax.numpy as jnp
 
-from jax.sharding import PartitionSpec as P, NamedSharding # For data and model parallelism (explained in more detail later)
+from jax.sharding import PartitionSpec as P # For data and model parallelism (explained in more detail later)
 
 import flax.nnx as nnx
 import optax
@@ -159,7 +159,7 @@ if jax.device_count() == 8:
     ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
     ### JAX enables quick experimentation with different partitioning strategies
     ### like this. We will come back to this point at the end of this tutorial.
-    # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+    mesh = jax.make_mesh((8, 1), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
@@ -178,14 +178,11 @@ tokenizer = tiktoken.get_encoding("gpt2")
 
 +++ {"id": "0XHQ0BQ9-KIj"}
 
-To leverage model parallelism, we need to instruct the JAX compiler how to shard the model tensors across the TPU devices. Earlier, we also imported [`jax.sharding.PartitionSpec`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.PartitionSpec) and [`jax.sharding.NamedSharding`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.NamedSharding):
-- [`PartitionSpec`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.PartitionSpec) (using alias `P`) defines how tensors are sharded across the devices in our `Mesh`. Its elements describe how an input dimension is partitioned across mesh dimensions. For example, in `PartitionSpec('x', 'y')` the first dimension of data is sharded across `x` axis of the mesh, and the second one - across the `y` axis.
-  - We'll use `PartitionSpec` to describe how to shard a tensor across, for example, the `model` axis or be replicated on other dimensions (which is denoted by `None`).
-- [`NamedSharding`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.NamedSharding) is a (`Mesh`, `PartitionSpec`) pair that describes how to shard a model tensor across our `mesh`.
-- We combine `Mesh` (the TPU resources) with `PartitionSpec` and create a `NamedSharding`, which instructs how to shard each model tensor across the TPU devices.
+To leverage model parallelism, we need to instruct the JAX compiler how to shard the model tensors across the TPU devices. We'll use Flax NNX's [`flax.nnx.with_partitioning`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/spmd.html#flax.nnx.with_partitioning) to let each model layer know that the model weights or tensors need to be sharded according to our specification. We need to do this for every tensor/layer in the model.
 
-Additionally, we'll use Flax NNX's [`flax.nnx.with_partitioning`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/spmd.html#flax.nnx.with_partitioning) to let each model layer know that the model weights or tensors need to be sharded according to our specification. We need to do this for every tensor/layer in the model.
-- `nnx.with_partitioning` will take two arguments, such as the `initializer` (such as [`flax.nnx.initializers.xavier_uniform`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.xavier_uniform) and [`flax.nnx.initializers.zeros_init`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.zeros_init)) and `sharding` (e.g. `NamedSharding(Mesh, PartitionSpec)` or `NamedSharding(mesh, P('model')` in our case).
+`nnx.with_partitioning` will take two arguments, such as the `initializer` (e.g. [`flax.nnx.initializers.xavier_uniform`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.xavier_uniform) and [`flax.nnx.initializers.zeros_init`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.zeros_init)), and a sharding tuple (e.g. `(None, 'model')` in our case). The sharding tuple describe how to shard a tensor across, for example, the `model` axis or be replicated on other dimensions (which is denoted by `None`).
+
+For a more detailed discussion of Flax NNX sharding, please refer to [this SPMD guide](https://flax.readthedocs.io/en/latest/guides/flax_gspmd.html).
 
 ```{code-cell}
 :id: z0p-IHurrB9i
@@ -212,62 +209,56 @@ class TransformerBlock(nnx.Module):
         # where we shard the weights across devices for parallel computation.
         self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(
-                                              nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                          bias_init=nnx.with_partitioning(
-                                              nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                          kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+                                          bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                          decode=True,
                                           rngs=rngs)
         # The first dropout with `flax.nnx.Dropout`.
         self.dropout1 = nnx.Dropout(rate=rate)
         # First layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),
+                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
                                          rngs=rngs)
         # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear1 = nnx.Linear(in_features=embed_dim,
                                   out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
                                   rngs=rngs)
         # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear2 = nnx.Linear(in_features=ff_dim,
                                   out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), NamedSharding(mesh, P('model')), eager_sharding=False),
+                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
                                   rngs=rngs)
         # The second dropout with `flax.nnx.Dropout`.
         self.dropout2 = nnx.Dropout(rate=rate)
         # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),
+                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
                                          rngs=rngs)
 
 
     # Apply the Transformer block to the input sequence.
-    def __call__(self, inputs, training: bool = False):
+    def __call__(self, inputs, training: bool = False, decode: bool = False):
         input_shape = inputs.shape
         _, seq_len, _ = input_shape
 
         # Instantiate the causal attention mask.
-        mask = causal_attention_mask(seq_len)
+        if decode:
+            mask = None
+        else:
+            mask = causal_attention_mask(seq_len)
 
         # Apply Multi-Head Attention with the causal attention mask.
         attention_output = self.mha(
             inputs_q=inputs,
             mask=mask,
-            decode=False
+            decode=decode
         )
         # Apply the first dropout.
         attention_output = self.dropout1(attention_output, deterministic=not training)
@@ -304,9 +295,9 @@ class TokenAndPositionEmbedding(nnx.Module):
         self.pos_emb = nnx.Embed(num_embeddings=maxlen, features=embed_dim, rngs=rngs)
 
     # Takes a token sequence (integers) and returns the combined token and positional embeddings.
-    def __call__(self, x):
+    def __call__(self, x, start_index=0):
         # Generate a sequence of positions for the input tokens.
-        positions = jnp.arange(0, x.shape[1])[None, :]
+        positions = start_index + jnp.arange(x.shape[1], dtype=jnp.int32)
         # Look up the positional embeddings for each position in the input sequence.
         position_embedding = self.pos_emb(positions)
         # Look up the token embeddings for each token in the input sequence.
@@ -340,22 +331,28 @@ class MiniGPT(nnx.Module):
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(in_features=embed_dim,
                                        out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(
-                                           nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
-                                       bias_init=nnx.with_partitioning(
-                                           nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model')), eager_sharding=False),
+                                       kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+                                       bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
                                        rngs=rngs)
 
-    def __call__(self, inputs, training: bool = False):
+    def __call__(self, inputs, training: bool = False, decode: bool = False):
         # Pass the input tokens through the `embedding_layer` to get token embeddings.
         # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
-        x = self.embedding_layer(inputs)
+        if decode:
+            cache_index = self.transformer_blocks[0].mha.cache_index.value
+            x = self.embedding_layer(inputs, start_index=cache_index)
+        else:
+            x = self.embedding_layer(inputs)
         for transformer_block in self.transformer_blocks:
-            x = transformer_block(x, training=training)
+            x = transformer_block(x, training=training, decode=decode)
         # Pass the output of the transformer blocks through the output layer,
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
+
+    def init_cache(self, input_shape, dtype=jnp.float32):
+        for block in self.transformer_blocks:
+            block.mha.init_cache(input_shape, dtype)
 
     @nnx.jit
     def sample_from(self, logits):
@@ -364,24 +361,37 @@ class MiniGPT(nnx.Module):
         return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
 
     @nnx.jit
-    def generate_step(self, padded_tokens, sample_index):
-        logits = self(padded_tokens)
-        next_token = self.sample_from(logits[0][sample_index])
+    def decode_step(self, inputs):
+        logits = self(inputs, decode=True)
+        next_token = self.sample_from(logits[0, -1, :])
         return next_token
 
+    @nnx.jit
+    def prefill_step(self, token):
+        self(token, decode=True)
+
     def generate_text(self, max_tokens, start_tokens):
+        self.init_cache((1, maxlen, embed_dim))
         generated = []
         print(tokenizer.decode(start_tokens), flush=True, end='')
-        for i in range(max_tokens):
-            sample_index = len(start_tokens) + len(generated) - 1
 
-            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
-            next_token = int(self.generate_step(padded_tokens, sample_index))
+        # Prefill KV cache
+        if len(start_tokens) > 1:
+            prompt_tokens = jnp.array(start_tokens)[None, :-1]
+            # NNX built-in MHA only supports KV caching one token at a time
+            for i in range(prompt_tokens.shape[1]):
+                token = prompt_tokens[:, i:i+1]
+                self.prefill_step(token)
+
+        # Decode
+        next_input = jnp.array([start_tokens[-1]])[None, :]
+        for i in range(max_tokens):
+            next_token = int(self.decode_step(next_input))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
               break
             generated.append(next_token)
-            # decode and print next_token
             print(tokenizer.decode([next_token]), flush=True, end='')
+            next_input = jnp.array([next_token])[None, :]
         return tokenizer.decode(start_tokens + generated)
 
 # Creates the miniGPT model with 4 transformer blocks.
@@ -544,7 +554,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 Start training. It takes ~50 minutes on Colab.
 
-Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put` with `NamedSharding`.
+Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put`.
 
 We are also using the `jax.vmap` transformation to produce the target sequences faster.
 
@@ -556,8 +566,10 @@ id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 tags: [nbval-ignore-output]
 ---
-model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+with mesh:
+    model = create_model(rngs=nnx.Rngs(0))
+    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
@@ -584,14 +596,15 @@ for epoch in range(num_epochs):
             continue  # skip the remaining elements
         input_batch = jnp.array(jnp.array(batch).T)
         target_batch = prep_target_batch(input_batch)
-        train_step(
-            model,
-            optimizer,
-            metrics,
-            jax.device_put(
-                (input_batch, target_batch), NamedSharding(mesh, P("batch", None))
-            ),
-        )
+        with jax.set_mesh(mesh):
+          train_step(
+              model,
+              optimizer,
+              metrics,
+              jax.device_put(
+                  (input_batch, target_batch), P("batch", None)
+              ),
+          )
 
         if (step + 1) % 200 == 0:
             for metric, value in metrics.compute().items():
@@ -708,7 +721,8 @@ trace_dir = "/tmp/jax-trace/"
 def loop_step(batch, step):
     input_batch = jnp.array(jnp.array(batch).T)
     target_batch = prep_target_batch(input_batch)
-    train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
+    with jax.set_mesh(mesh):
+        train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), P('batch', None)))
 
 def generate_trace():
     tracing_steps = 30
