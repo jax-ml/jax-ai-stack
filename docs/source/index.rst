@@ -24,6 +24,14 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
+   :caption: FIXME OVERVIEW
+   :maxdepth: 1
+
+   ecosystem_overview/the_ecosystem_overview_tr
+
+
+.. toctree::
+   :hidden:
    :caption: Example applications
    :maxdepth: 1
 
