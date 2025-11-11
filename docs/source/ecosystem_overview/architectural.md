@@ -6,7 +6,7 @@ If this trend accelerates, all high-level frameworks as they exist today risk be
 
 For TPUs to provide a clear path to this level of performance, the ecosystem must expose an API layer that is closer to the hardware, enabling the development of these highly specialized kernels. As this report will detail, the JAX stack is designed to solve this by offering a continuum of abstraction (See Figure 2), from the automated, high-level optimizations of the XLA compiler to the fine-grained, manual control of the Pallas kernel-authoring library.
 
-![][image3]
+![](../_static/images/programming_TPUS.svg)
 
 **Figure 2: The JAX continuum of abstraction**
 

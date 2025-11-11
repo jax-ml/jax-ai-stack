@@ -24,14 +24,6 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
-   :caption: FIXME OVERVIEW
-   :maxdepth: 1
-
-   ecosystem_overview/the_ecosystem_overview_tr
-
-
-.. toctree::
-   :hidden:
    :caption: Example applications
    :maxdepth: 1
 
@@ -43,6 +35,13 @@ JAX AI Stack
    JAX_image_captioning
    JAX_Vision_transformer
    JAX_time_series_classification
+
+.. toctree::
+   :hidden:
+   :caption: The JAX Ecosystem: A Modular, Scalable, and High-Performance ML Ecosystem
+   :maxdepth: 1
+
+   ecosystem_overview/the_ecosystem_overview_tr
 
 .. toctree::
    :hidden:
