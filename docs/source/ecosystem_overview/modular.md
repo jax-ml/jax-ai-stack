@@ -1,4 +1,4 @@
-## A Modular, Compiler-First Architecture for Modern AI
+# A Modular, Compiler-First Architecture for Modern AI
 
 The [JAX AI stack](https://jaxstack.ai/) extends the JAX numerical core with a collection of Google-backed composable libraries, evolving it into a robust, end-to-end, open-source platform for Machine Learning at extreme scales. As such, the JAX AI stack consists of a comprehensive and robust ecosystem that addresses the entire ML lifecycle:
 

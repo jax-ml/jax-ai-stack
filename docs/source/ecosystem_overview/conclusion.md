@@ -1,4 +1,4 @@
-## Conclusion: A Durable, Production-Ready Platform for the Future of AI 
+# Conclusion: A Durable, Production-Ready Platform for the Future of AI 
 
 The data provided in the table above draws to a rather simple conclusion \- these stacks have their own strengths and weaknesses in a small number of areas but overall are vastly similar from the software standpoint. Both stacks provide out of the box turnkey solutions for pre-training, post-training adaptation and deployment of foundational models.
 

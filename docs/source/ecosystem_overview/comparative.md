@@ -1,4 +1,4 @@
-## A Comparative Perspective: The JAX/TPU Stack as a Compelling Choice
+# A Comparative Perspective: The JAX/TPU Stack as a Compelling Choice
 
 The modern Machine Learning landscape offers many excellent, mature toolchains. The JAX AI Stack, however, presents a unique and compelling set of advantages for developers focused on large-scale, high-performance ML, stemming directly from its modular design and deep hardware co-design.
 
