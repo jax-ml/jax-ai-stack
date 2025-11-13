@@ -6,7 +6,7 @@ The core JAX AI Stack consists of five key libraries that provide the foundation
 
 [JAX](https://docs.jax.dev/en/latest/) is a Python library for accelerator-oriented array computation and program transformation, designed for high-performance numerical computing and large-scale Machine Learning. With its functional programming model and friendly, NumPy-like API, JAX provides a solid foundation for higher-level libraries.
 
-With its compiler-first design, JAX inherently promotes scalability by leveraging [XLA](https://openxla.org/xla) (see Section \<\*\*\*\*\*\*\>) for aggressive, whole-program analysis, optimization, and hardware targeting. The JAX emphasis on functional programming (i.e., pure functions) makes its core program transformations more tractable and, crucially, composable
+With its compiler-first design, JAX inherently promotes scalability by leveraging [XLA](https://openxla.org/xla) (see the [XLA Section](#xla-section)) for aggressive, whole-program analysis, optimization, and hardware targeting. The JAX emphasis on functional programming (i.e., pure functions) makes its core program transformations more tractable and, crucially, composable
 
 These core transformations can be mixed and matched to achieve high performance and scaling of workloads across model size, cluster size, and hardware types:
 

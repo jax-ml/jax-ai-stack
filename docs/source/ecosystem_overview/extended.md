@@ -4,11 +4,12 @@ Beyond the core stack, a rich ecosystem of specialized libraries provides the in
 
 ## Foundational Infrastructure: Compilers and Runtimes
 
+(xla-section)=
 ### XLA: The Hardware-Agnostic, Compiler-Centric Engine
 
 #### Motivation
 
-XLA or Accelerated Linear Algebra is our domain specific compiler, which is well integrated into JAX and supports TPU, CPU and GPU hardware devices.  From inception, XLA has been designed to be  a hardware agnostic code generator targeting TPUs, GPUs, and CPUs.
+[XLA](https://openxla.org/xla) or Accelerated Linear Algebra is our domain specific compiler, which is well integrated into JAX and supports TPU, CPU and GPU hardware devices.  From inception, XLA has been designed to be  a hardware agnostic code generator targeting TPUs, GPUs, and CPUs.
 
 Our compiler-first design is a fundamental architectural choice that creates a durable advantage in a rapidly evolving research landscape. In contrast, the prevailing kernel-centric approach in other ecosystems relies on hand-optimized libraries for performance. While this is highly effective for stable, well-established model architectures, it creates a bottleneck for innovation. When new research introduces novel architectures, the ecosystem must wait for new kernels to be written and optimized. Our compiler-centric design, however, can often generalize to new patterns, providing a high-performance path for cutting-edge research from day one.
 
