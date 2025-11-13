@@ -19,26 +19,16 @@ The seamless integration with XLA's GSPMD (General-purpose SPMD) model allows JA
 
 ## Flax: Flexible Neural Network Authoring and "Model Surgery"
 
-[Flax](https://flax.readthedocs.io/en/latest/index.html) is a library designed to simplify the creation, debugging, and analysis of neural networks in JAX.  While pure functional API provided by JAX can be used to fully specify and train a ML model, users coming from the PyTorch (or TensorFlow) ecosystem are more used to and comfortable with the object oriented approach of specifying models as a graph of `torch.nn.Modules`. The abstractions provided by [Flax](https://flax.readthedocs.io/en/stable/) allow users to think more in terms of layers rather than functions, making it more developer friendly to an audience who value ergonomics and experimentation ease. [Flax](https://flax.readthedocs.io/en/stable/) also enables config driven model construction systems, such as those present in [MaxText](https://maxtext.readthedocs.io/en/latest/) and AxLearn, which separate out model hyperparameters from layer definition code.
+[Flax](https://flax.readthedocs.io/en/latest/index.html) simplifies the creation, debugging, and analysis of neural networks in JAX by providing an intuitive, object-oriented approach to model building. While JAX's functional API is powerful, Flax offers a more familiar layer-based abstraction for developers accustomed to frameworks like PyTorch, without any performance penalty.
 
-With a simple Pythonic API, it allows developers to express models using regular Python objects, while retaining the power and performance of JAX. Flax's NNX API is an evolution of the Flax Linen interface, incorporating lessons learned to offer a more user-friendly interface that remains consistent with the core JAX APIs. Since Flax modules are fully backed by the core JAX APIs, there is no performance penalty associated with defining the model in [Flax](https://flax.readthedocs.io/en/stable/).
+This design simplifies modern ML practices like "model surgery"—the process of modifying or combining trained model components. Techniques such as LoRA and quantization require easily manipulable model definitions, which Flax's NNX API provides through a simple, Pythonic interface. NNX encapsulates model state, reducing user cognitive load, and allows for programmatic traversal and modification of the model hierarchy.
 
-### Motivation
+### Key Strengths:
 
-JAX’s pure functional API, while powerful, can be complex for new users since it requires all the program state to be explicitly managed by the user. This paradigm can be unfamiliar to developers used to other frameworks. Modern model architectures are often complex with individual portions of the model trained separately and merged to form the final model[^3], in a process commonly referred to as model surgery. Even with decoder-only LLMs which tend to have a straightforward architecture, post training techniques such as LoRA and quantization require the model definition to be easily manipulated allowing parts of the architecture to be modified or even replaced.
+* Intuitive Object-Oriented API: Simplifies model construction and enables advanced use cases like submodule replacement and partial initialization.
 
-The Flax NNX library, with its simple yet powerful Pythonic API enables this functionality in a way that is intuitive to the user, reducing the amount of cognitive overhead involved in authoring and training a model.
+* Consistent with Core JAX: Flax provides lifted transformations that are fully compatible with JAX's functional paradigm, offering the full performance of JAX with enhanced developer friendliness.
 
-### Design
-
-The [Flax](https://flax.readthedocs.io/en/stable/) NNX library introduces an object oriented model definition system that encapsulates the model and random number generator state internally, reducing the cognitive overhead of the user and provides a familiar experience for those accustomed to frameworks like PyTorch or TensorFlow. By making submodule definitions Pythonic and providing APIs to traverse the module hierarchy, it allows for the model definition to be easily editable programmatically for model introspection and surgery.
-
-The [Flax](https://flax.readthedocs.io/en/stable/) NNX APIs are designed to be consistent with the core JAX APIs to allow users to exploit the full expressibility and performance of JAX, with lifted transformations for common operations like sharding, jit and others. Models defined using the NNX APIs can also be adapted to work with functional training loops, allowing the user the flexibility they need while retaining an intuitive object oriented API.
-
-### Key Strengths
-
-* **Intuitive object oriented flexible APIs:** Layers are represented as pure Python objects with internal state management, simplifying model construction and training loops, while also advanced model surgery use cases through support for submodule replacement, partial initialization and model hierarchy traversal.
-* **Consistent with Core JAX APIs:** Lifted transformations consistent with core JAX and fully compatible with functional JAX provide the full performance of JAX without sacrificing developer friendliness.
 
 
 (optax:composable)=
@@ -90,47 +80,18 @@ As it can be seen in the example above, setting up an optimizer with a custom le
 (orbax:tensorstore)=
 ## Orbax / TensorStore \- Large scale distributed checkpointing
 
-[**Orbax**](https://orbax.readthedocs.io/en/latest/) is an any-scale checkpointing library for JAX users backed primarily by [**TensorStore**](https://google.github.io/tensorstore/), a library for efficiently reading and writing multi-dimensional arrays. The two libraries operate at different levels of the stack \- Orbax at the level of ML models and states \- TensorStore at the level of individual arrays.
+[Orbax](https://orbax.readthedocs.io/en/latest/) is a checkpointing library for JAX designed for any scale, from single-device to large-scale distributed training. It aims to unify fragmented checkpointing implementations and deliver critical performance features, such as asynchronous and multi-tier checkpointing, to a wider audience. Orbax enables the resilience required for massive training jobs and provides a flexible format for publishing checkpoints.
 
-### Motivation
+Unlike generalized checkpoint/restore systems that snapshot the entire system state, ML checkpointing with Orbax selectively persists only the information essential for resuming training—model weights, optimizer state, and data loader state. This targeted approach minimizes accelerator downtime. Orbax achieves this by overlapping I/O operations with computation, a critical feature for large workloads. The time accelerators are halted is thus reduced to the duration of the device-to-host data transfer, which can be further overlapped with the next training step, making checkpointing nearly free from a performance perspective.  
+At its core, Orbax uses [TensorStore](https://google.github.io/tensorstore/) for efficient, parallel reading and writing of array data. The [Orbax API](https://orbax.readthedocs.io/en/latest/index.html) abstracts this complexity, offering a user-friendly interface for handling [PyTrees](https://docs.jax.dev/en/latest/pytrees.html), which are the standard representation of models in JAX.
 
-[Orbax](https://orbax.readthedocs.io/en/latest/), which centers on JAX users and ML checkpointing, aims to reduce the fragmentation of checkpointing implementations across disparate research codebases, increase adoption of important performance features outside the most cutting-edge codebases, and provide a clean, flexible API for novice and advanced users alike. With advanced features like fully asynchronous distributed checkpointing, multi-tier checkpointing and emergency checkpointing, [Orbax](https://orbax.readthedocs.io/en/latest/) enables resilience in the largest of training jobs while also providing a flexible representation for publishing checkpoints.
+### Key Strengths:
 
-### ML Checkpointing vs Generalized Checkpoint/Restore
+* [Widespread Adoption](https://orbax.readthedocs.io/en/latest/guides/checkpoint/async_checkpointing.html): With millions of monthly downloads, Orbax serves as a common medium for sharing ML artifacts.  
+* Easy to Use: Orbax abstracts away the complexities of distributed checkpointing, including asynchronous saving, atomicity, and filesystem details.  
+* Flexible: While offering simple APIs for common use cases, Orbax allows for customization to handle specialized requirements.  
+* Performant and Scalable: Features like asynchronous checkpointing, an efficient storage format ([OCDBT](https://orbax.readthedocs.io/en/latest/guides/checkpoint/optimized_checkpointing.html)), and intelligent data loading strategies ensure that Orbax scales to training runs involving tens of thousands of nodes.
 
-It is worth considering the difference between ML checkpoint systems ([Orbax](https://orbax.readthedocs.io/en/latest/), NeMO-Megatron, Torch Distributed Checkpoint) with generalized checkpoint systems like CRIU. 
-
-Systems like CRIU & CRIUgpu behave analogously to VM live migration; they halt the entire system and take a snapshot of every last bit of information so it can be faithfully reconstructed. This captures the entirety of the process’ host memory, device memory and operating system state. This is far more information that is actually needed to reconstruct a ML workload, since for a ML workload, a very large fraction of this information (activations, data examples, file handles) is trivially reconstructed. Capturing this much data also incurs a large amount of time when the job is halted.
-
-ML checkpoint systems are designed to minimize the amount of time the accelerator is halted by selectively persisting information that cannot be reconstructed. Specifically, this entails persisting model weights, optimizer state, dataloader state and random number generator state, which is a far smaller amount of data.
-
-### Design
-
-The [Orbax API](https://orbax.readthedocs.io/en/latest/index.html) centers around handling [PyTrees](https://docs.jax.dev/en/latest/pytrees.html) (nested containers) of arrays as the standard representation of JAX models. Saving and loading can be synchronous or asynchronous, with saving consisting of blocking and non-blocking phases. A higher-level `Checkpointer` class is provided, which facilitates checkpointing in a training loop, with save intervals, garbage collection, dataset checkpointing, and metadata management. Finally, Orbax provides customization layers for dealing with user-defined checkpointable objects and PyTree leaves.
-
-The storage layer of [Orbax](https://orbax.readthedocs.io/en/latest/index.html) is the [TensorStore](https://google.github.io/tensorstore/) library, which is not technically part of the JAX ecosystem at all, and seeks to provide a flexible and highly versatile library for array storage. However, it is not designed around ML concepts and introduces too much complexity and manual management for most JAX users. [Orbax](https://orbax.readthedocs.io/en/latest/index.html) smooths out this experience to provide users an easy to use ML specific API surface.
-
-To maximize the utilization of the accelerator, the checkpointing library must minimize the time it halts the training to snapshot the state. This is achieved by overlapping the checkpointing operations with the compute operations as shown in the diagram below. It’s worth noting that asynchronous checkpointing is table-stakes for large workloads and isn’t unique to [Orbax](https://orbax.readthedocs.io/en/latest/index.html). It is also present in other frameworks such as NeMO-Megatron and Torch Distributed Checkpoints.
-
-![](../_static/images/async_checkpointing.svg)
-
-When considering asynchronous checkpointing with non overlapped device-to-host transfers, the amount of time the accelerator is halted is thus a function of the number of model parameters, the size of the parameters and the PCI link speed. Enabling fully overlapped D2H can further reduce this time by overlapping the D2H transfer with the forward pass of the next step. As long as the D2H transfer can complete before the next forward step completes, the checkpoint will become effectively[^4] free.
-
-Restarting from an error is similarly bound by two factors, the XLA compilation time and the speed of reading the weights back from storage. XLA compilation caches can make the former insignificant. Reading from storage is hardware dependent \- emergency checkpoints save to ramdisks which are extremely fast, however there is a speed spectrum that ranges from ramdisk to SSD, HDD and GCS.
-
-Specific industry-leading performance features have their own design challenges, and merit separate attention:
-
-* [**Async checkpointing**](https://orbax.readthedocs.io/en/latest/guides/checkpoint/async_checkpointing.html): Checkpointing only needs to block accelerator computations while data is being transferred from host to/from accelerator memory. Expensive I/O operations can take place in a background thread meaning save time can be reduced by 95-99% relative to blocking saves. Asynchronous loading is also possible, and can save time on startup, but requires more extensive effort to integrate and has not yet seen widespread adoption.
-* [**OCDBT format**](https://orbax.readthedocs.io/en/latest/guides/checkpoint/optimized_checkpointing.html): Most previous checkpointing implementations stored parameters as separate subdirectories, which caused significant overhead for small arrays. TensorStore’s OCDBT format uses an efficient [B+ tree](https://en.wikipedia.org/wiki/B%2B_tree) format, which allows fine-grained control over shard shapes and file sizes that can be tuned to different filesystems and models. The save/load strategy provides scalability to tens of thousands of nodes by ensuring each host independently reads and writes only the relevant pieces of each array.
-* [**Restore \+ broadcast**](https://cloud.google.com/blog/products/compute/unlock-faster-workload-start-time-using-orbax-on-jax): Hero-scale training runs replicate the model weights among multiple data-parallel replicas. Orbax provides a load balancing feature that distributes the burden evenly among available replicas when saving. It also leverages fast chip interconnects to avoid redundant reads of the model on different groups of hosts, instead loading on a single primary replica and broadcasting the weights to all other replicas.
-* **Emergency checkpointing**: Hero-scale training suffers from frequent interruptions and hardware failures. Checkpointing to persistent RAM disk improves goodput for hero-scale jobs by allowing for increased checkpoint frequency, faster restore times, and improved resiliency, since TPU states may be corrupted on some replicas, but not all.
-
-### Key Strengths
-
-* **Widespread adoption:** As checkpoints are a medium for communication of ML artifacts between different codebases and stages of ML development, widespread adoption is an inherent advantage. Currently, Orbax has [\~4 million](https://pypistats.org/packages/orbax-checkpoint) monthly package downloads.
-* **Easy to use:** Orbax abstracts away complex technical aspects of checkpointing like async saving, single- vs. multi-controller, checkpoint atomicity, distributed filesystem details, TPU vs. GPU, etc. It condenses use cases into simple, but generalizable APIs (direct-to-path, sequence-of-steps).
-* **Flexible:** While Orbax focuses on exposing a simple API surface for the majority of users, additional layers for handling custom checkpointable objects and PyTree nodes allow for flexibility in specialized use cases.
-* **Performant and scalable:** Orbax provides a variety of features designed to make checkpointing as fast and as unobtrusive as possible, freeing developers to focus on efficiency in the remainder of the training loop. Scalability to the cutting edge of ML research is a top concern of the library; training runs at a scale of O(10k) nodes currently rely on Orbax.
 
 
 ## Grain: Deterministic and Scalable Input Data Pipelines
@@ -158,10 +119,6 @@ Out of the box, [Grain](https://google-grain.readthedocs.io/en/latest/) supports
 * **Extensible support for multiple formats and backends:** An extensible [data sources](https://google-grain.readthedocs.io/en/latest/tutorials/data_sources/index.html) API supports popular storage formats and backends and allows users to easily add support for new formats and backends. 
 * **Powerful debugging interface:** Data pipeline [visualization tools](https://google-grain.readthedocs.io/en/latest/tutorials/dataset_debugging_tutorial.html) and a debug mode allow users to introspect, debug and optimize the performance of their data pipelines.
 
-
-[^3]:  Image diffusion models are a typical example of this and can commonly be divided logically into a separately trained prompt encoder and a diffusion backbone.
-
-[^4]:  We say effectively free since there could be other bottlenecks such as the DMA engines, HBM bandwidth contention etc. that still incur a performance penalty.
 
 [^5]:  In the Section 5.1 of the [Palm paper](https://dl.acm.org/doi/10.5555/3648699.3648939), the authors note that they observed very large loss spikes despite having gradient clipping enabled and the solution was to remove the offending data batches and restart training from a checkpoint before the loss spike. This is only possible with a fully deterministic and reproducible training setup. 
 
