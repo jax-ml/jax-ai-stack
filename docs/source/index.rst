@@ -11,6 +11,7 @@ JAX AI Stack
 
    install
    getting_started
+   more_learning
 
 .. toctree::
    :hidden:
