@@ -38,10 +38,11 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
-   :caption: The JAX Ecosystem: A Modular, Scalable, and High-Performance ML Ecosystem
+   :caption: Learn more about the JAX AI Ecosystem
    :maxdepth: 1
 
-   ecosystem_overview/the_ecosystem_overview_tr
+   learn_ecosystem
+   jax_tpu_casml
 
 .. toctree::
    :hidden:
