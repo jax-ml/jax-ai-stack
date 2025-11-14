@@ -43,5 +43,3 @@ The following sections provide a technical overview of the JAX ecosystem, its ke
 
 ![](../_static/images/JAX_ecosystem.svg)
 **Figure 1: The JAX AI Stack and Ecosystem Components**
-
-

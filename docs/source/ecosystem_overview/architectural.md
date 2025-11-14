@@ -9,4 +9,3 @@ For TPUs to provide a clear path to this level of performance, the ecosystem mus
 ![](../_static/images/programming_TPUS.svg)
 
 **Figure 2: The JAX continuum of abstraction**
-
