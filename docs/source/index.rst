@@ -43,6 +43,7 @@ JAX AI Stack
 
    learn_ecosystem
    jax_tpu_casml
+   megablocks
 
 .. toctree::
    :hidden:
