@@ -52,12 +52,8 @@ If you are new to JAX for AI, check out the [introductory tutorial](https://jax-
 JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. We will use [Tiktoken](https://github.com/openai/tiktoken) for tokenization and [Grain](https://google-grain.readthedocs.io/en/latest/index.html) for data loading.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: 6zMsOIc7ouCO
-outputId: 30cc9c9a-ce85-414f-ce88-cd04f3a97391
----
+:id: 6zMsOIc7ouCO
+
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
@@ -72,7 +68,7 @@ Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en
 colab:
   base_uri: https://localhost:8080/
 id: LS9sQEY3n0mB
-outputId: b0b62435-51f8-4ec0-92c1-b95d43ff4413
+outputId: 6b9ee4b0-eed0-4bae-dd99-ffed14289ad7
 ---
 import jax
 jax.devices()
@@ -87,7 +83,7 @@ Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/
 colab:
   base_uri: https://localhost:8080/
 id: wUjQsgQEmI1N
-outputId: e799a1e2-dffb-450d-9bf7-cf941e8f7c6f
+outputId: a704b8b3-2a1e-48bc-8915-122329a5df52
 ---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
@@ -97,12 +93,8 @@ outputId: e799a1e2-dffb-450d-9bf7-cf941e8f7c6f
 Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, pandas, and Tiktoken:
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: MKYFNOhdLq98
-outputId: 45bbb282-55f4-4555-c0e0-7dc029b7f750
----
+:id: MKYFNOhdLq98
+
 import jax
 import jax.numpy as jnp
 
@@ -517,7 +509,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 [REVAMP 3]: Expand the intro to Optax.
 
-Start training. It takes ~50 minutes on Colab.
+Start training. It takes ~20 minutes on Colab TPU v5e-1.
 
 Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put`.
 
@@ -528,7 +520,7 @@ We are also using the `jax.vmap` transformation to produce the target sequences 
 colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
-outputId: 9387b5f8-dc38-43d2-87f7-842297474c5a
+outputId: ba3051ad-0e11-4570-a223-28f35ca505e0
 ---
 with mesh:
   model = create_model(rngs=nnx.Rngs(0))
@@ -600,7 +592,7 @@ colab:
   base_uri: https://localhost:8080/
   height: 472
 id: B6Eg1Cz2y_iP
-outputId: 0f91ff36-708f-4ad5-c295-62532de911fb
+outputId: 60e54019-dcdc-425b-e95a-c03e301d688f
 ---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
@@ -633,7 +625,7 @@ Save the model checkpoint.
 colab:
   base_uri: https://localhost:8080/
 id: EkoFGCgSZ1yz
-outputId: 95606ade-979c-4200-bc9b-ad13f5599e47
+outputId: 593af986-77a7-4665-eee4-5deb2d891b7f
 ---
 import orbax.checkpoint as orbax
 
@@ -661,7 +653,7 @@ First we install Tunix and its dependencies, and import necessary libraries.
 colab:
   base_uri: https://localhost:8080/
 id: uipLvy9E7eso
-outputId: 66685b75-50a6-473d-92c4-11dc5e50b053
+outputId: 93cf001f-2964-467c-9848-b106be6cacf5
 ---
 !pip install google-tunix[prod] --no-deps
 !pip install qwix tensorboardX tensorflow
@@ -692,8 +684,47 @@ lora_batch_size = 80
 Previously we used Grain to load the Tiny Stories dataset. JAX is actually flexible to work with other dataloaders as well. So for LoRA fintuning we use TensorFlow Datasets to load the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
 
 ```{code-cell}
-:id: Mtzb0NXb8TVY
-
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 153
+  referenced_widgets: [a72c966e465f43dc9098bd43d8b34ffa, d95fdc7a54b245ccbb427b84ea83352f,
+    c23ecae79270457393853685fd31bc89, 86eaa3062cdd4519acaa523768caf53a, 250835e26a2b4120b7aeea8d3494c260,
+    a31731be71d94ae880162910da68a03f, cb84be7f45a9454d9400f0738a0ed487, c339188d7bcd45e28419b40b6a00376e,
+    4bfc2d051321436f898ee6609872ee5b, 84e82957d77644c7b6effc66b3d7ca00, 80929f4c839e46978ce201f99024d6da,
+    5b5f4774c373459bb0d84f29a6facd92, 3935a66a9ca94e3cb6faa8a2e5df1d66, d038f1d735f3471487a8fc1d83112c1b,
+    4f9ef30fb2c9402aba778c4c1a9a30ea, 5d10072c12d64ecb8bc7a4adad852799, 6d01e3bb82c74cf484fb5956fbf05e8c,
+    512772492db848fdab1b1a04363ba5b5, 54f16106c39b4c0586fe6a53255b0942, 387e522f55214dab859b267ea56d9cff,
+    bfc825dd0dd94444bd2b0f4ec9abc314, 08f60fdbd4a445f586b17aab349ac699, e226faf809f542258f20beb8ccc4439b,
+    da3b41c14bca466689f853cb0eefb0c1, e5f0cb37b7ff4042add84776ccc3db04, fdc9d1e5c0d94091b552ee7dce30489b,
+    e060b5729bb947e9ae33f6d93f3d7b13, 17f6e5d03e2f48e39eddf5163d48d29b, d9f4ff147a8b4270b82d24b72c1ba5b2,
+    559fc74135a24b27bea062e61203467a, 8b9a52e278b8404ca158ba60ed94dae0, 1dda4d74609f46a88aaa837cd6f3bff8,
+    e5d8947c062846068d31aa7b75b93c2a, 66d1829a03474ef68ef2fcea07afd3a8, fb7e577e56dd4095b7189c538c871942,
+    222d998f46714e838ecf58cce9de49a0, 05a13f9a34e54363bb7ce5d0f10fca94, 9218cc6f1ef44efb844bb20f75b72fd6,
+    31b5203c3de94a5287c3546452f179df, 3b84f36fe7404cf0b30eae9615b23be5, d3993c51061845d1bf8ed6e9c80ba2b4,
+    58613e4e6a5a4595be5a46abacf05382, a7fbd0096a874dcaab4b23361a938b5f, fc0956754ab44725afc344e04b0ae4bc,
+    f74f0d0255c444df8253fa7b172afc2c, f5371dd4c35a4dfbbc2a2262dfb8ad1c, 6e944f9cb66e4cd1b467036109603ece,
+    61bb431734f24980b0fa84db09ce7aab, 8d358122ee1c4289853f64f258aebc87, 667f7e559a6e41f58b73f7bf1c26257b,
+    75bc499a5ab84a01aaad74579de3ab04, e946592e20674c13b3443b9875e2abc5, 1156dd53fa9e4b08bbcd31f0b02121cc,
+    224af8b6328949109b73dab0e40059f0, 723f5d1691bc4902ac997b70ed863882, 0b058feb7bdc45ecaca692df3fb3d386,
+    878b1f154e9b4346bd33de2beb7221b3, 8aeef35c47864295af6444d4a3b781f1, 21859db08c2b4729ac3ee25ea5baee03,
+    38f3616cc0d54ca68e7d2ba22923fafb, 2e3c1a576ff24223b5ab2d8f9b0d2d3f, ec476748d6fd48c4b121685a97eaa1a8,
+    79d2727a73334b7d819d718916f52e1a, 811d3149b143455caf5bf0b497c480c5, 4dfb7b04fb5d44b9b8c3f6964fefd466,
+    b958a9690e904afaa8cdbec1bcbd7958, 85888fc2ad114889848171f3d97db9b6, bf2614def3b848e39c9920e57b579f94,
+    65316b1cf6384168bd9cfb2616e36a31, d4fa63bf677b4bac87f974d7b27a77e5, 8ca793076029416384fc920c45425a09,
+    9589fefe62b04b56832e0d4e5528da6d, 5821820092284a1a8cd05233510d69ca, 33df118b47a645a9a8531b97ef5b175f,
+    730dffae94454dfbb359b591b143dd51, e5db15bf9ba9436194db02ca08e5121c, 4667f0c633ae45f29330821e4efe7779,
+    0054b7137fea4932905ad2f78fac3abe, fdb71b58b3de4d0d82ffaf61d16a322e, ed413200a4a942068f930b83e486fa49,
+    848da8d13a38423cbd1d54a2f8fe55b4, 708280bcfe5944518d2a647adc0626c8, f1c2350887a24145b3a55d5f0c14bdef,
+    082c554c2e4b4850b0e104de83837314, 991903feede74de09d73e2bb09d5cfd4, a8b15c6324e742f4a939be7d12397fcc,
+    6920bd9042ac40a9a18aabb4558f375d, 833759b2a96b482286bff1d279688429, 7d22b07309e048058ce66c6d97e393e2,
+    d5d8e3db863442c3bbad4e0fb3fec111, 0cc58048c0aa477b9bb1ae47b562b63a, b5f7d35c7ec648d1bf4d03917ec2c6fb,
+    e6f6660bba804eb0a1937fcca9a67dc7, 89e2c0847ad34856aa9ec518dc14caf5, 1e0a95eb7b8d4b21b2a7ce21281095b7,
+    3155530409ac446bb59fdf7fd2dbdfc0, f5c37c9e8559463ea7f02da9e48a85d4, 2a8807d57acc42bc8d7770591e211063,
+    2b2278b1052144afa259947a1ea5251f]
+id: Mtzb0NXb8TVY
+outputId: 02843d1d-68f6-4c27-9c57-9ebea17cf1c2
+---
 def load_shakespeare_dataset(batch_size, max_len, num_epochs):
     # Load dataset from TFDS
     train_ds_raw = tfds.load("tiny_shakespeare", split="train", as_supervised=False)
@@ -782,17 +813,8 @@ def lora_loss_fn(model, inputs, training):
 Now we can start the finetuning.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 901
-  referenced_widgets: [a71cc33ba14f445ba6ae5a45a9f405df, 6eaa39f9cbbb46aba849156a07c93335,
-    cad960b06b194a178d2dfbf54de690a8, d96b8fe1dbf34f09ab10a381b8f05861, caad6324c8a64d429332818064eca56b,
-    42ada17b8901435eb5447975897e8c28, 2aca2b75ee3247369a82bd435f8de81a, 044c53e685fc493ba143cf73d0d37c62,
-    2a21efb497004c73a44b471d4d9ea84e, 31ef13a20e7c48d48abc859a575d72f2, c79cdc8090c544f39e50f2e721325596]
-id: pIQ5Obif8pfO
-outputId: 75428c08-10d5-4cef-9dc8-af010f703373
----
+:id: pIQ5Obif8pfO
+
 print("Starting LoRA Finetuning...")
 with mesh:
     # Apply LoRA to the model
@@ -811,9 +833,18 @@ with mesh:
 
     # Run LoRA training
     lora_trainer.train(lora_train_ds)
+```
 
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 799
+id: -uTeXvXaLCZb
+outputId: aa52154f-9583-46d3-896a-05e28de603de
+---
 # Generate text with LoRA-finetuned model
-print("\n\nGenerating text after LoRA finetuning:")
+print("\nGenerating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
 ```
 
@@ -834,7 +865,7 @@ After the finetuning, you can easily see that now the model produces text of a d
 colab:
   base_uri: https://localhost:8080/
 id: b5d933c6
-outputId: 1e23c959-a523-4983-b215-7808584dd904
+outputId: f39e18fc-a25f-4202-ab39-9aadfb232522
 ---
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
