@@ -1,7 +1,8 @@
 [project]
 name = "jax-ai-stack"
 dynamic = ["version"]
-description = ""
+description = "Collection of packages for defining & training AI models with JAX."
+requires-python = ">= 3.11"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "jax-ai-stack authors", email="jax-dev+jax-ai-stack@google.com"}]
@@ -17,16 +18,16 @@ keywords = []
 dependencies = [
     "chex==0.1.91",
     "grain==0.2.14",
-    "jax==0.8.0",
+    "jax==0.8.1",
     "flax==0.12.0",
-    "ml_dtypes==0.5.3",
+    "ml_dtypes==0.5.4",
     "optax==0.2.6",
     "orbax-checkpoint==0.11.28",
     "orbax-export==0.0.8",
 ]
 
 [project.urls]
-homepage = "https://github.com/jax-ml/jax_-ai-stack"
+homepage = "https://jaxstack.ai"
 repository = "https://github.com/jax-ml/jax-ai-stack"
 # Other: `documentation`, `changelog`
 
