@@ -665,8 +665,11 @@ colab:
 id: uipLvy9E7eso
 outputId: 93cf001f-2964-467c-9848-b106be6cacf5
 ---
-!pip install google-tunix[prod] --no-deps
-!pip install qwix tensorboardX tensorflow
+if AI_STACK_TEST_MODE:
+    !pip install google-tunix[prod]
+else:
+    !pip install google-tunix[prod] --no-deps
+    !pip install qwix tensorboardX tensorflow
 
 import qwix
 from tunix.sft import peft_trainer
