@@ -69,6 +69,7 @@ colab:
   base_uri: https://localhost:8080/
 id: LS9sQEY3n0mB
 outputId: 6b9ee4b0-eed0-4bae-dd99-ffed14289ad7
+tags: [nbval-ignore-output]
 ---
 import jax
 jax.devices()
@@ -183,7 +184,7 @@ For a more detailed discussion of Flax NNX sharding, please refer to [this SPMD 
 ```{code-cell}
 :id: z0p-IHurrB9i
 
-
+# Define a triangular mask for causal attention with `jax.numpy.tril` and `jax.numpy.ones`.
 def causal_attention_mask(seq_len):
     return jnp.tril(jnp.ones((seq_len, seq_len)))
 
@@ -429,6 +430,7 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 ```{code-cell}
 :cellView: form
 :id: b9tmfMzj7eso
+:tags: [hide-cell]
 
 # @title [hidden cell; used for testing]
 # This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
@@ -575,7 +577,6 @@ for epoch in range(num_epochs):
             generated_text = model.generate_text(maxlen, start_tokens)
 
         step += 1
-        # break
 
 # Final text generation
 print("Final generated text:")
@@ -642,7 +643,7 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 
 ## Tunix: Fine-tuning
 
-[Tunix](https://github.com/google/tunix) is a JAX-native LLM post-training library open sourced by Google. It supports a range of post-training techniques including supervised finetuning, preference tuning, reinforcement learning and model distillation. So in this section, we are going to use Tunix to finetune the miniGPT model we just pretrained using LoRA ([Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)) so that the finetuned model generates output of a different style.
+[Tunix](https://github.com/google/tunix) is a JAX-native LLM post-training library open sourced by Google. It supports a range of post-training techniques including supervised finetuning, preference tuning, reinforcement learning and model distillation. In this section, we are going to use Tunix to finetune the miniGPT model we just pretrained using LoRA ([Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)) so that the finetuned model generates output of a different style.
 
 +++ {"id": "-kJShd9n_iTl"}
 
@@ -730,7 +731,7 @@ lora_train_ds = load_shakespeare_dataset(lora_batch_size, maxlen, lora_num_epoch
 
 +++ {"id": "qvxSxbbcBim7"}
 
-We define a few helper functions to create the LoRA model, loss and etc.
+We define a few helper functions to create the LoRA model, loss, etc.
 
 ```{code-cell}
 :id: oX9F-ZsN8ima
@@ -796,6 +797,10 @@ with mesh:
     lora_trainer.train(lora_train_ds)
 ```
 
++++ {"id": "UWVdZGK9COj0"}
+
+After the finetuning, you can easily see that now the model produces text of a different style, kind of like Shakespeare's work, which means our finetuning works.
+
 ```{code-cell}
 ---
 colab:
@@ -805,13 +810,9 @@ id: -uTeXvXaLCZb
 outputId: aa52154f-9583-46d3-896a-05e28de603de
 ---
 # Generate text with LoRA-finetuned model
-print("\nGenerating text after LoRA finetuning:\n\n")
+print("Generating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
 ```
-
-+++ {"id": "UWVdZGK9COj0"}
-
-After the finetuning, you can easily see that now the model produces text of a different style, kind of like Shakespeare's work, which means our finetuning works.
 
 +++ {"id": "3813cbf2"}
 
