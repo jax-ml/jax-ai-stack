@@ -52,8 +52,13 @@ If you are new to JAX for AI, check out the [introductory tutorial](https://jax-
 JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. We will use [Tiktoken](https://github.com/openai/tiktoken) for tokenization and [Grain](https://google-grain.readthedocs.io/en/latest/index.html) for data loading.
 
 ```{code-cell}
-:id: 6zMsOIc7ouCO
-
+---
+colab:
+  base_uri: https://localhost:8080/
+id: 6zMsOIc7ouCO
+outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
+tags: [nbval-skip]
+---
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
@@ -523,6 +528,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
 outputId: ba3051ad-0e11-4570-a223-28f35ca505e0
+tags: [nbval-ignore-output]
 ---
 with mesh:
   model = create_model(rngs=nnx.Rngs(0))
@@ -594,6 +600,7 @@ colab:
   height: 472
 id: B6Eg1Cz2y_iP
 outputId: 60e54019-dcdc-425b-e95a-c03e301d688f
+tags: [nbval-ignore-output]
 ---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
@@ -627,6 +634,7 @@ colab:
   base_uri: https://localhost:8080/
 id: EkoFGCgSZ1yz
 outputId: 593af986-77a7-4665-eee4-5deb2d891b7f
+tags: [nbval-skip]
 ---
 import orbax.checkpoint as orbax
 
@@ -828,6 +836,7 @@ colab:
   base_uri: https://localhost:8080/
 id: b5d933c6
 outputId: f39e18fc-a25f-4202-ab39-9aadfb232522
+tags: [nbval-skip]
 ---
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
@@ -838,6 +847,7 @@ Load the tensorboard colab extension.
 
 ```{code-cell}
 :id: 74f0c212
+:tags: [nbval-skip]
 
 %load_ext tensorboard
 ```
@@ -876,6 +886,7 @@ Now we'll perform some traces to compare results of different batch sizes. This 
 
 ```{code-cell}
 :id: bc9452a6
+:tags: [nbval-skip]
 
 trace_dir = "/tmp/jax-trace-batch-comparison/"
 
@@ -898,6 +909,7 @@ In general, we want to maximize FLOPS Utilization while minimizing the step time
 
 ```{code-cell}
 :id: b86c565a
+:tags: [nbval-skip]
 
 %tensorboard --logdir=$trace_dir
 ```
@@ -914,6 +926,7 @@ How simple and powerful is this! And that's the beauty of JAX automatic parallel
 
 ```{code-cell}
 :id: 80daa8dc
+:tags: [nbval-skip]
 
 trace_dir = "/tmp/jax-trace-parallelism-comparison/"
 
@@ -935,6 +948,7 @@ By looking at the Trace Viewer tool and looking under each TPU's ops, we can see
 
 ```{code-cell}
 :id: 780e9c72
+:tags: [nbval-skip]
 
 %tensorboard --logdir=$trace_dir
 ```
