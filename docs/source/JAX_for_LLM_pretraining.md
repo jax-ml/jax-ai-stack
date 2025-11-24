@@ -90,6 +90,7 @@ colab:
   base_uri: https://localhost:8080/
 id: wUjQsgQEmI1N
 outputId: a704b8b3-2a1e-48bc-8915-122329a5df52
+tags: [nbval-skip]
 ---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
