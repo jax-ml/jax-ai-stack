@@ -656,7 +656,7 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 
 +++ {"id": "-kJShd9n_iTl"}
 
-First we install Tunix and its dependencies, and import necessary libraries.
+First we install Tunix and its dependencies, and import necessary libraries. Note that Colab will ask you to restart the runtime, but you can just ignore it.
 
 ```{code-cell}
 ---
@@ -665,13 +665,14 @@ colab:
 id: uipLvy9E7eso
 outputId: 93cf001f-2964-467c-9848-b106be6cacf5
 ---
-!pip install google-tunix[prod] --no-deps
-!pip install qwix tensorboardX tensorflow
+!pip install google-tunix[prod]
+!pip install tensorflow
+```
 
+```{code-cell}
 import qwix
+import numpy as np
 from tunix.sft import peft_trainer
-import tensorflow as tf
-import tensorflow_datasets as tfds
 ```
 
 +++ {"id": "cE0Rx6Q3_q4n"}
@@ -696,44 +697,71 @@ Previously we used Grain to load the Tiny Stories dataset. JAX is actually flexi
 ```{code-cell}
 :id: Mtzb0NXb8TVY
 
+!wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
+
 def load_shakespeare_dataset(batch_size, max_len, num_epochs):
-    # Load dataset from TFDS
-    train_ds_raw = tfds.load("tiny_shakespeare", split="train", as_supervised=False)
+    input_file = "TinyShakespeare.txt"
+    # Read the entire text file
+    with open(input_file, 'r', encoding='utf-8') as f:
+        text = f.read()
 
-    # Define a wrapper for the tokenizer to use in tf.data.map
-    def tokenize_fn(text_tensor):
-        text = text_tensor.numpy().decode("utf-8")
-        tokens = tokenizer.encode(text)
-        return tf.constant(tokens, dtype=tf.int32)
+    # Tokenize the entire text (assuming tokenizer is available in scope)
+    tokens = tokenizer.encode(text)
 
-    def py_tokenize_fn(text_tensor):
-        # tf.py_function is needed to run python code in a tf.data pipeline
-        return tf.py_function(tokenize_fn, [text_tensor], tf.int32)
+    # Create a simple data source from the tokens
+    class TokenDataSource(pygrain.RandomAccessDataSource):
+        def __init__(self, tokens, max_len):
+            self._tokens = np.array(tokens, dtype=np.int32)
+            self._max_len = max_len
+            # Calculate how many sequences we can create
+            self._length = len(self._tokens) // max_len
 
-    # Map to the final training input format for both datasets
-    def to_training_input_dict(batch):
-        return {
-            "input_tokens": batch,
-            "input_mask": tf.ones_like(batch)
-        }
+        def __len__(self):
+            return self._length
 
-    # Process Training Data in a single pipeline
-    train_dataset = (
-        train_ds_raw.map(lambda x: py_tokenize_fn(x['text']))
-        .flat_map(tf.data.Dataset.from_tensor_slices)
-        .batch(max_len, drop_remainder=True)
-        .shuffle(buffer_size=10000)
-        .repeat(num_epochs)
-        .batch(batch_size, drop_remainder=True)
-        .map(to_training_input_dict)
+        def __getitem__(self, index):
+            # Return a sequence of max_len tokens
+            start_idx = index * self._max_len
+            end_idx = start_idx + self._max_len
+            return self._tokens[start_idx:end_idx]
+
+    # Create the data source
+    data_source = TokenDataSource(tokens, max_len)
+
+    # Create a samplera
+    sampler = pygrain.IndexSampler(
+        num_records=len(data_source),
+        shuffle=True,
+        seed=42,
+        num_epochs=num_epochs,
+        shard_options=pygrain.NoSharding()
     )
 
-    def to_training_input(ds):
+    # Create transformations
+    class ToTrainingInputDict(pygrain.MapTransform):
+        def map(self, batch):
+            return {
+                "input_tokens": batch,
+                "input_mask": np.ones_like(batch)
+            }
+
+    # Create the data loader
+    loader = pygrain.DataLoader(
+        data_source=data_source,
+        sampler=sampler,
+        operations=[
+            pygrain.Batch(batch_size=batch_size, drop_remainder=True),
+            ToTrainingInputDict(),
+        ],
+        worker_count=0,  # Use main thread
+    )
+
+    def to_training_input(loader):
         # The trainer expects an iterable of `peft_trainer.TrainingInput`.
-        for item in tfds.as_numpy(ds):
+        for item in loader:
             yield peft_trainer.TrainingInput(**item)
 
-    return to_training_input(train_dataset)
+    return to_training_input(loader)
 
 lora_train_ds = load_shakespeare_dataset(lora_batch_size, maxlen, lora_num_epochs)
 ```

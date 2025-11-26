@@ -13,7 +13,6 @@ penzai
 scikit-learn
 tiktoken
 google-tunix[prod]
-tensorflow-datasets
 
 # install jax-ai-stack from current directory
 .
