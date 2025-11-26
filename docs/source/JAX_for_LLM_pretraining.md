@@ -850,13 +850,14 @@ colab:
   height: 799
 id: -uTeXvXaLCZb
 outputId: aa52154f-9583-46d3-896a-05e28de603de
+tags: [nbval-ignore-output]
 ---
 # Generate text with LoRA-finetuned model
 print("Generating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
 ```
 
-+++ {"id": "3813cbf2", "tags": ["nbval-ignore-output"]}
++++ {"id": "3813cbf2"}
 
 ## Xprof: profiling for hyperparameter tuning
 
