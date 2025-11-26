@@ -664,12 +664,15 @@ colab:
   base_uri: https://localhost:8080/
 id: uipLvy9E7eso
 outputId: 93cf001f-2964-467c-9848-b106be6cacf5
+tags: [nbval-ignore-output]
 ---
 !pip install google-tunix[prod]
 !pip install tensorflow
 ```
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 import qwix
 import numpy as np
 from tunix.sft import peft_trainer
@@ -696,6 +699,7 @@ Previously we used Grain to load the Tiny Stories dataset. JAX is actually flexi
 
 ```{code-cell}
 :id: Mtzb0NXb8TVY
+:tags: [nbval-ignore-output]
 
 !wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
 
@@ -813,6 +817,7 @@ Now we can start the finetuning.
 
 ```{code-cell}
 :id: pIQ5Obif8pfO
+:tags: [nbval-ignore-output]
 
 print("Starting LoRA Finetuning...")
 with mesh:
