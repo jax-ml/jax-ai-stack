@@ -856,7 +856,7 @@ print("Generating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
 ```
 
-+++ {"id": "3813cbf2"}
++++ {"id": "3813cbf2", "tags": ["nbval-ignore-output"]}
 
 ## Xprof: profiling for hyperparameter tuning
 
