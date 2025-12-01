@@ -29,7 +29,7 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
-[REVAMP 0]: Expand intro.
+[REVAMP -1]: Add a more general introduction, including what this tutorial is and what users should expect to get out of it.
 
 This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
@@ -114,6 +114,10 @@ import pandas as pd
 import tiktoken
 import time
 ```
+
+## JAX: High-performance array computing
+
+[REVAMP 0]: Brief introduction to JAX.
 
 +++ {"id": "rPyt7MV6prz1"}
 
@@ -809,3 +813,7 @@ By changing hyperparameters and comparing profiles, we're able to gain significa
 ```{code-cell}
 # TODO: Code example.
 ```
+
+## Wrapup
+
+[REVAMP 9]: Add a concluding section
