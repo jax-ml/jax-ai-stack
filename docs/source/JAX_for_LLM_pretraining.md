@@ -1003,6 +1003,8 @@ After training the miniGPT model, we can also serve it on Google TPUs for high-p
 
 [vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [documentation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
 
++++
+
 ## Wrapup
 
 [REVAMP 9]: Add a concluding section
