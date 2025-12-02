@@ -31,7 +31,7 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
-[REVAMP 0]: Expand intro.
+[REVAMP -1]: Add a more general introduction, including what this tutorial is and what users should expect to get out of it.
 
 This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
@@ -117,6 +117,10 @@ import pandas as pd
 import tiktoken
 import time
 ```
+
+## JAX: High-performance array computing
+
+[REVAMP 0]: Brief introduction to JAX.
 
 +++ {"id": "rPyt7MV6prz1"}
 
@@ -998,3 +1002,7 @@ By changing hyperparameters and comparing profiles, we're able to gain significa
 After training the miniGPT model, we can also serve it on Google TPUs for high-performance inference.
 
 [vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [documentation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
+
+## Wrapup
+
+[REVAMP 9]: Add a concluding section
