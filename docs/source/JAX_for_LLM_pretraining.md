@@ -245,7 +245,7 @@ class TransformerBlock(nnx.Module):
                                              nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
 
-
+    # Apply the Transformer block to the input sequence.
     def __call__(self, inputs, training: bool = False):
         input_shape = inputs.shape
         _, seq_len, _ = input_shape
@@ -667,7 +667,6 @@ outputId: 93cf001f-2964-467c-9848-b106be6cacf5
 tags: [nbval-ignore-output]
 ---
 !pip install google-tunix[prod]
-!pip install tensorflow
 ```
 
 ```{code-cell}
@@ -695,7 +694,7 @@ lora_batch_size = 80
 
 +++ {"id": "mfnj-S02_yM5"}
 
-Previously we used Grain to load the Tiny Stories dataset. JAX is actually flexible to work with other dataloaders as well. So for LoRA fintuning we use TensorFlow Datasets to load the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
+For LoRA fintuning we use the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
 
 ```{code-cell}
 :id: Mtzb0NXb8TVY
@@ -732,7 +731,7 @@ def load_shakespeare_dataset(batch_size, max_len, num_epochs):
     # Create the data source
     data_source = TokenDataSource(tokens, max_len)
 
-    # Create a samplera
+    # Create a sampler
     sampler = pygrain.IndexSampler(
         num_records=len(data_source),
         shuffle=True,
@@ -998,4 +997,4 @@ By changing hyperparameters and comparing profiles, we're able to gain significa
 
 After training the miniGPT model, we can also serve it on Google TPUs for high-performance inference.
 
-[vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [docuementation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
+[vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [documentation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
