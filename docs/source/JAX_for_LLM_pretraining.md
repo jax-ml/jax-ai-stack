@@ -11,9 +11,11 @@ kernelspec:
   name: python3
 ---
 
++++ {"id": "YdtfHhtq7esh"}
+
 # Train a miniGPT language model with JAX
 
-+++
++++ {"id": "dNvPJpcW7esj"}
 
 <table class="tfo-notebook-buttons" align="left">
   <td>
@@ -71,7 +73,7 @@ Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en
 colab:
   base_uri: https://localhost:8080/
 id: LS9sQEY3n0mB
-outputId: 9ffcf3a6-20ef-4f80-b006-f5d3c5644a15
+outputId: 6b9ee4b0-eed0-4bae-dd99-ffed14289ad7
 tags: [nbval-ignore-output]
 ---
 import jax
@@ -87,7 +89,7 @@ Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/
 colab:
   base_uri: https://localhost:8080/
 id: wUjQsgQEmI1N
-outputId: e6eff24e-5578-4277-a0f9-24e27bd91ee0
+outputId: a704b8b3-2a1e-48bc-8915-122329a5df52
 tags: [nbval-skip]
 ---
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
@@ -103,7 +105,8 @@ Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, panda
 import jax
 import jax.numpy as jnp
 
-from jax.sharding import PartitionSpec as P # For data and model parallelism (explained in more detail later)
+# For data and model parallelism (explained in more detail later)
+from jax.sharding import PartitionSpec as P, NamedSharding
 
 import flax.nnx as nnx
 import optax
@@ -184,7 +187,7 @@ tokenizer = tiktoken.get_encoding("gpt2")
 
 To leverage model parallelism, we need to instruct the JAX compiler how to shard the model tensors across the TPU devices. We'll use Flax NNX's [`flax.nnx.with_partitioning`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/spmd.html#flax.nnx.with_partitioning) to let each model layer know that the model weights or tensors need to be sharded according to our specification. We need to do this for every tensor/layer in the model.
 
-`nnx.with_partitioning` will take two arguments, such as the `initializer` (e.g. [`flax.nnx.initializers.xavier_uniform`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.xavier_uniform) and [`flax.nnx.initializers.zeros_init`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.zeros_init)), and a sharding tuple (e.g. `(None, 'model')` in our case). The sharding tuple describe how to shard a tensor across, for example, the `model` axis or be replicated on other dimensions (which is denoted by `None`).
+`nnx.with_partitioning` will take two arguments, such as the `initializer` (e.g. [`flax.nnx.initializers.xavier_uniform`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.xavier_uniform) and [`flax.nnx.initializers.zeros_init`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.zeros_init)), and a sharding tuple (e.g. `(None, 'model')` in our case) wrapped in [`jax.sharding.PartitionSpec`](https://docs.jax.dev/en/latest/jax.sharding.html#jax.sharding.PartitionSpec). The sharding tuple describe how to shard a tensor across, for example, the `model` axis or be replicated on other dimensions (which is denoted by `None`).
 
 For a more detailed discussion of Flax NNX sharding, please refer to [this SPMD guide](https://flax.readthedocs.io/en/latest/guides/flax_gspmd.html).
 
@@ -213,56 +216,61 @@ class TransformerBlock(nnx.Module):
         # where we shard the weights across devices for parallel computation.
         self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
-                                          bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
-                                          decode=True,
+                                          kernel_init=nnx.with_partitioning(
+                                              nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                          bias_init=nnx.with_partitioning(
+                                              nnx.initializers.zeros_init(), P('model')),
                                           rngs=rngs)
         # The first dropout with `flax.nnx.Dropout`.
-        self.dropout1 = nnx.Dropout(rate=rate)
-        # First layer normalization with `flax.nnx.LayerNorm`.
+        self.dropout1 = nnx.Dropout(rate=rate, rngs=rngs)
+         # First layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                         scale_init=nnx.with_partitioning(
+                                             nnx.initializers.ones_init(), P('model')),
+                                         bias_init=nnx.with_partitioning(
+                                             nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
         # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear1 = nnx.Linear(in_features=embed_dim,
                                   out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                  kernel_init=nnx.with_partitioning(
+                                      nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                  bias_init=nnx.with_partitioning(
+                                      nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
         # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear2 = nnx.Linear(in_features=ff_dim,
                                   out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                  kernel_init=nnx.with_partitioning(
+                                      nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                  bias_init=nnx.with_partitioning(
+                                      nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
         # The second dropout with `flax.nnx.Dropout`.
-        self.dropout2 = nnx.Dropout(rate=rate)
+        self.dropout2 = nnx.Dropout(rate=rate, rngs=rngs)
         # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                         scale_init=nnx.with_partitioning(
+                                             nnx.initializers.ones_init(), P('model')),
+                                         bias_init=nnx.with_partitioning(
+                                             nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
 
-
     # Apply the Transformer block to the input sequence.
-    def __call__(self, inputs, training: bool = False, decode: bool = False):
+    def __call__(self, inputs, training: bool = False):
         input_shape = inputs.shape
         _, seq_len, _ = input_shape
 
         # Instantiate the causal attention mask.
-        if decode:
-            mask = None
-        else:
-            mask = causal_attention_mask(seq_len)
+        mask = causal_attention_mask(seq_len)
 
         # Apply Multi-Head Attention with the causal attention mask.
         attention_output = self.mha(
             inputs_q=inputs,
             mask=mask,
-            decode=decode
+            decode=False
         )
         # Apply the first dropout.
         attention_output = self.dropout1(attention_output, deterministic=not training)
@@ -278,7 +286,6 @@ class TransformerBlock(nnx.Module):
         ffn_output = self.linear2(ffn_output)
         # Apply the second dropout.
         ffn_output = self.dropout2(ffn_output, deterministic=not training)
-        # Apply the second layer normalization and return the output of the Transformer block.
         return self.layer_norm2(out1 + ffn_output)
 
 class TokenAndPositionEmbedding(nnx.Module):
@@ -299,9 +306,9 @@ class TokenAndPositionEmbedding(nnx.Module):
         self.pos_emb = nnx.Embed(num_embeddings=maxlen, features=embed_dim, rngs=rngs)
 
     # Takes a token sequence (integers) and returns the combined token and positional embeddings.
-    def __call__(self, x, start_index=0):
+    def __call__(self, x):
         # Generate a sequence of positions for the input tokens.
-        positions = start_index + jnp.arange(x.shape[1], dtype=jnp.int32)
+        positions = jnp.arange(0, x.shape[1])[None, :]
         # Look up the positional embeddings for each position in the input sequence.
         position_embedding = self.pos_emb(positions)
         # Look up the token embeddings for each token in the input sequence.
@@ -321,7 +328,6 @@ class MiniGPT(nnx.Module):
         num_transformer_blocks (int): Number of transformer blocks. Each block contains attention and feed-forward networks.
         rngs (nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
     """
-    # Initialize miniGPT model components.
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int, feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
         # Initiliaze the `TokenAndPositionEmbedding` that combines token and positional embeddings.
         self.embedding_layer = TokenAndPositionEmbedding(
@@ -335,70 +341,60 @@ class MiniGPT(nnx.Module):
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(in_features=embed_dim,
                                        out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
-                                       bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),
+                                       kernel_init=nnx.with_partitioning(
+                                           nnx.initializers.xavier_uniform(), P(None, 'model')),
+                                       bias_init=nnx.with_partitioning(
+                                           nnx.initializers.zeros_init(), P('model')),
                                        rngs=rngs)
 
-    def __call__(self, inputs, training: bool = False, decode: bool = False):
+    def __call__(self, inputs, training: bool = False):
         # Pass the input tokens through the `embedding_layer` to get token embeddings.
         # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
-        if decode:
-            cache_index = self.transformer_blocks[0].mha.cache_index.value
-            x = self.embedding_layer(inputs, start_index=cache_index)
-        else:
-            x = self.embedding_layer(inputs)
+        x = self.embedding_layer(inputs)
         for transformer_block in self.transformer_blocks:
-            x = transformer_block(x, training=training, decode=decode)
+            x = transformer_block(x, training=training)
         # Pass the output of the transformer blocks through the output layer,
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
 
-    def init_cache(self, input_shape, dtype=jnp.float32):
-        for block in self.transformer_blocks:
-            block.mha.init_cache(input_shape, dtype)
+    # For Tunix use later
+    def get_model_input(self):
+        return dict(
+            inputs=jnp.zeros((batch_size, maxlen), dtype=jnp.int32),
+            training=False
+        )
 
     @nnx.jit
-    def sample_from(self, logits):
+    def sample_from(self, rng_key, logits):
         logits, indices = jax.lax.top_k(logits, k=top_k)
         logits = nnx.softmax(logits)
-        return jax.random.choice(jax.random.PRNGKey(0), indices, p=logits)
+        return jax.random.choice(rng_key, indices, p=logits)
 
     @nnx.jit
-    def decode_step(self, inputs):
-        logits = self(inputs, decode=True)
-        next_token = self.sample_from(logits[0, -1, :])
+    def generate_step(self, rng_key, padded_tokens, sample_index):
+        logits = self(padded_tokens)
+        next_token = self.sample_from(rng_key, logits[0][sample_index])
         return next_token
 
-    @nnx.jit
-    def prefill_step(self, token):
-        self(token, decode=True)
-
     def generate_text(self, max_tokens, start_tokens):
-        self.init_cache((1, maxlen, embed_dim))
         generated = []
+        rng_key = jax.random.PRNGKey(0) # Create the initial key
         print(tokenizer.decode(start_tokens), flush=True, end='')
-
-        # Prefill KV cache
-        if len(start_tokens) > 1:
-            prompt_tokens = jnp.array(start_tokens)[None, :-1]
-            # NNX built-in MHA only supports KV caching one token at a time
-            for i in range(prompt_tokens.shape[1]):
-                token = prompt_tokens[:, i:i+1]
-                self.prefill_step(token)
-
-        # Decode
-        next_input = jnp.array([start_tokens[-1]])[None, :]
         for i in range(max_tokens):
-            next_token = int(self.decode_step(next_input))
+            sample_index = len(start_tokens) + len(generated) - 1
+
+            # Split the key for each step
+            rng_key, step_key = jax.random.split(rng_key)
+
+            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
+            next_token = int(self.generate_step(step_key, padded_tokens, sample_index))
             if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
               break
             generated.append(next_token)
             print(tokenizer.decode([next_token]), flush=True, end='')
-            next_input = jnp.array([next_token])[None, :]
         return tokenizer.decode(start_tokens + generated)
 
-# Creates the miniGPT model with 4 transformer blocks.
 def create_model(rngs):
     return MiniGPT(maxlen, vocab_size, embed_dim, num_heads, feed_forward_dim, num_transformer_blocks=4, rngs=rngs)
 ```
@@ -477,6 +473,7 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 
 ```{code-cell}
 :cellView: form
+:id: b9tmfMzj7eso
 :tags: [hide-cell]
 
 # @title [hidden cell; used for testing]
@@ -525,6 +522,8 @@ if AI_STACK_TEST_MODE:
 ```
 
 ```{code-cell}
+:id: VnfW4Z7l7eso
+
 text_dl = load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen)
 ```
 
@@ -556,7 +555,7 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 [REVAMP 3]: Expand the intro to Optax.
 
-Start training. It takes ~50 minutes on Colab.
+Start training. It takes ~20 minutes on Colab TPU v5e-1.
 
 Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put`.
 
@@ -567,13 +566,12 @@ We are also using the `jax.vmap` transformation to produce the target sequences 
 colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
-outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
+outputId: ba3051ad-0e11-4570-a223-28f35ca505e0
 tags: [nbval-ignore-output]
 ---
 with mesh:
-    model = create_model(rngs=nnx.Rngs(0))
-    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
-
+  model = create_model(rngs=nnx.Rngs(0))
+  optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
@@ -600,15 +598,14 @@ for epoch in range(num_epochs):
             continue  # skip the remaining elements
         input_batch = jnp.array(jnp.array(batch).T)
         target_batch = prep_target_batch(input_batch)
-        with jax.set_mesh(mesh):
-          train_step(
-              model,
-              optimizer,
-              metrics,
-              jax.device_put(
-                  (input_batch, target_batch), P("batch", None)
-              ),
-          )
+        train_step(
+            model,
+            optimizer,
+            metrics,
+            jax.device_put(
+                (input_batch, target_batch), NamedSharding(mesh, P("batch", None))
+            ),
+        )
 
         if (step + 1) % 200 == 0:
             for metric, value in metrics.compute().items():
@@ -641,7 +638,7 @@ colab:
   base_uri: https://localhost:8080/
   height: 472
 id: B6Eg1Cz2y_iP
-outputId: 7cafe711-1ae4-4eb9-fd37-e1bde54cbfc5
+outputId: 60e54019-dcdc-425b-e95a-c03e301d688f
 tags: [nbval-ignore-output]
 ---
 import matplotlib.pyplot as plt
@@ -656,7 +653,7 @@ plt.show()
 
 As you can see, the model goes from generating completely random words at the beginning to generating sensible tiny stories at the end of the training. So essentially we have pretrained a small LLM to write tiny stories for us.
 
-+++
++++ {"id": "d1_l1Pr-7eso"}
 
 ## Debugging the model
 
@@ -675,7 +672,7 @@ Save the model checkpoint.
 colab:
   base_uri: https://localhost:8080/
 id: EkoFGCgSZ1yz
-outputId: 3467b8ba-ce05-42f0-fb89-75922cc91e31
+outputId: 593af986-77a7-4665-eee4-5deb2d891b7f
 tags: [nbval-skip]
 ---
 import orbax.checkpoint as orbax
@@ -689,13 +686,215 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 !ls /content/save/
 ```
 
++++ {"id": "azzwiMeP7eso"}
+
 ## Tunix: Fine-tuning
 
-[REVAMP 6] Introduce Tunix.
+[Tunix](https://github.com/google/tunix) is a JAX-native LLM post-training library open sourced by Google. It supports a range of post-training techniques including supervised finetuning, preference tuning, reinforcement learning and model distillation. In this section, we are going to use Tunix to finetune the miniGPT model we just pretrained using LoRA ([Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)) so that the finetuned model generates output of a different style.
+
++++ {"id": "-kJShd9n_iTl"}
+
+First we install Tunix and its dependencies, and import necessary libraries. Note that Colab will ask you to restart the runtime, but you can just ignore it.
 
 ```{code-cell}
-# TODO(windmaple): Code example.
+---
+colab:
+  base_uri: https://localhost:8080/
+id: uipLvy9E7eso
+outputId: 93cf001f-2964-467c-9848-b106be6cacf5
+tags: [nbval-ignore-output]
+---
+!pip install google-tunix[prod]
 ```
+
+```{code-cell}
+:tags: [nbval-ignore-output]
+
+import qwix
+import numpy as np
+from tunix.sft import peft_trainer
+```
+
++++ {"id": "cE0Rx6Q3_q4n"}
+
+We set some hyperparameters.
+
+```{code-cell}
+:id: YzEDIR_N7_D4
+
+# LoRA Hyperparameters
+lora_rank = 16
+lora_alpha = 2.0
+lora_max_steps = 400
+lora_num_epochs = 10
+lora_batch_size = 80
+```
+
++++ {"id": "mfnj-S02_yM5"}
+
+For LoRA fintuning we use the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
+
+```{code-cell}
+:id: Mtzb0NXb8TVY
+:tags: [nbval-ignore-output]
+
+!wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
+
+def load_shakespeare_dataset(batch_size, max_len, num_epochs):
+    input_file = "TinyShakespeare.txt"
+    # Read the entire text file
+    with open(input_file, 'r', encoding='utf-8') as f:
+        text = f.read()
+
+    # Tokenize the entire text (assuming tokenizer is available in scope)
+    tokens = tokenizer.encode(text)
+
+    # Create a simple data source from the tokens
+    class TokenDataSource(pygrain.RandomAccessDataSource):
+        def __init__(self, tokens, max_len):
+            self._tokens = np.array(tokens, dtype=np.int32)
+            self._max_len = max_len
+            # Calculate how many sequences we can create
+            self._length = len(self._tokens) // max_len
+
+        def __len__(self):
+            return self._length
+
+        def __getitem__(self, index):
+            # Return a sequence of max_len tokens
+            start_idx = index * self._max_len
+            end_idx = start_idx + self._max_len
+            return self._tokens[start_idx:end_idx]
+
+    # Create the data source
+    data_source = TokenDataSource(tokens, max_len)
+
+    # Create a sampler
+    sampler = pygrain.IndexSampler(
+        num_records=len(data_source),
+        shuffle=True,
+        seed=42,
+        num_epochs=num_epochs,
+        shard_options=pygrain.NoSharding()
+    )
+
+    # Create transformations
+    class ToTrainingInputDict(pygrain.MapTransform):
+        def map(self, batch):
+            return {
+                "input_tokens": batch,
+                "input_mask": np.ones_like(batch)
+            }
+
+    # Create the data loader
+    loader = pygrain.DataLoader(
+        data_source=data_source,
+        sampler=sampler,
+        operations=[
+            pygrain.Batch(batch_size=batch_size, drop_remainder=True),
+            ToTrainingInputDict(),
+        ],
+        worker_count=0,  # Use main thread
+    )
+
+    def to_training_input(loader):
+        # The trainer expects an iterable of `peft_trainer.TrainingInput`.
+        for item in loader:
+            yield peft_trainer.TrainingInput(**item)
+
+    return to_training_input(loader)
+
+lora_train_ds = load_shakespeare_dataset(lora_batch_size, maxlen, lora_num_epochs)
+```
+
++++ {"id": "qvxSxbbcBim7"}
+
+We define a few helper functions to create the LoRA model, loss, etc.
+
+```{code-cell}
+:id: oX9F-ZsN8ima
+
+def get_lora_model(base_model, mesh):
+  lora_provider = qwix.LoraProvider(
+      module_path=".*mha|.*linear1|.*linear2",
+      rank=lora_rank,
+      alpha=lora_alpha,
+  )
+
+  model_input = base_model.get_model_input()
+  lora_model = qwix.apply_lora_to_model(
+      base_model, lora_provider, **model_input
+  )
+
+  with mesh:
+    state = nnx.state(lora_model)
+    pspecs = nnx.get_partition_spec(state)
+    sharded_state = jax.lax.with_sharding_constraint(state, pspecs)
+    nnx.update(lora_model, sharded_state)
+
+  return lora_model
+
+def gen_model_input_fn(x: peft_trainer.TrainingInput):
+  return {
+      'inputs': x.input_tokens,
+      'training': True
+  }
+
+def lora_loss_fn(model, inputs, training):
+    inputs = inputs
+    targets = jnp.concatenate([inputs[:, 1:], jnp.zeros((inputs.shape[0], 1), dtype=jnp.int32)], axis=1)
+    logits = model(inputs, training=training)
+    loss = optax.softmax_cross_entropy_with_integer_labels(logits=logits, labels=targets).mean()
+    return loss
+```
+
++++ {"id": "h4Miifz_BpXf"}
+
+Now we can start the finetuning.
+
+```{code-cell}
+:id: pIQ5Obif8pfO
+:tags: [nbval-ignore-output]
+
+print("Starting LoRA Finetuning...")
+with mesh:
+    # Apply LoRA to the model
+    lora_model = get_lora_model(model, mesh)
+
+    # Setup Tunix PeftTrainer
+    training_config = peft_trainer.TrainingConfig(
+        eval_every_n_steps=None,
+        max_steps=lora_max_steps,
+        data_sharding_axis=('batch',),
+    )
+    lora_optimizer = optax.adamw(1e-2)
+    lora_trainer = peft_trainer.PeftTrainer(
+        lora_model, lora_optimizer, training_config
+    ).with_gen_model_input_fn(gen_model_input_fn).with_loss_fn(lora_loss_fn)
+
+    # Run LoRA training
+    lora_trainer.train(lora_train_ds)
+```
+
++++ {"id": "UWVdZGK9COj0"}
+
+After the finetuning, you can easily see that now the model produces text of a different style, kind of like Shakespeare's work, which means our finetuning works.
+
+```{code-cell}
+---
+colab:
+  base_uri: https://localhost:8080/
+  height: 799
+id: -uTeXvXaLCZb
+outputId: aa52154f-9583-46d3-896a-05e28de603de
+tags: [nbval-ignore-output]
+---
+# Generate text with LoRA-finetuned model
+print("Generating text after LoRA finetuning:\n\n")
+lora_model.generate_text(maxlen, start_tokens)
+```
+
++++ {"id": "3813cbf2"}
 
 ## Xprof: profiling for hyperparameter tuning
 
@@ -704,22 +903,34 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 **Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
-:tags: [nbval-skip]
-
+---
+colab:
+  base_uri: https://localhost:8080/
+id: b5d933c6
+outputId: f39e18fc-a25f-4202-ab39-9aadfb232522
+tags: [nbval-skip]
+---
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
+
++++ {"id": "2ac5fc4d"}
 
 Load the tensorboard colab extension.
 
 ```{code-cell}
+:id: 74f0c212
 :tags: [nbval-skip]
 
 %load_ext tensorboard
 ```
 
++++ {"id": "17c6131f"}
+
 As we're going to be running this model a number of times, we need some scaffolding to more easily compare our work. For a baseline, we'll need to perform some warmup to guarantee that our code is JIT'd and that our TPUs are warm. For improved comparability, we'll only start tracing after we've finished warmup.
 
 ```{code-cell}
+:id: ddfd576e
+
 trace_dir = "/tmp/jax-trace/"
 
 def loop_step(batch, step):
@@ -741,9 +952,12 @@ def generate_trace():
     jax.profiler.stop_trace()
 ```
 
++++ {"id": "de70f5b7"}
+
 Now we'll perform some traces to compare results of different batch sizes. This will take several minutes as we need to reprocess our input data to prepare new batches each time.
 
 ```{code-cell}
+:id: bc9452a6
 :tags: [nbval-skip]
 
 trace_dir = "/tmp/jax-trace-batch-comparison/"
@@ -757,6 +971,8 @@ text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, max
 generate_trace()
 ```
 
++++ {"id": "ea379965"}
+
 Run Tensorboard with the Profiler Plugin to compare our runs. Runs are listed in order from newest to oldest, so the top run in the list will be have `batch_size = 256`.
 
 The key metrics to focus on here for this hyperparameter are FLOPS Utilization and Average Step Time.
@@ -764,10 +980,13 @@ The key metrics to focus on here for this hyperparameter are FLOPS Utilization a
 In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from 64 -> 256 achieves both of those. FLOPS increases from 16% to 27%. Average Step Time increase from 100ms to 260ms, however we increased our batch size by 300%. This means we move from 1.5ms per training example to 1.02ms per training example.
 
 ```{code-cell}
+:id: b86c565a
 :tags: [nbval-skip]
 
 %tensorboard --logdir=$trace_dir
 ```
+
++++ {"id": "657967a5"}
 
 Next, we can explore alternative parallelism methods. In cell #4, we used 4-way data parallel and 2-way tensor parallel. 8-way data parallel is another popular way. Let's compare results between them. To switch to 8-way data parallel, we'll replace the `Mesh` definition with:
 
@@ -778,6 +997,7 @@ JAX will automatically figure out how to shard the model and data to use the new
 How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
 
 ```{code-cell}
+:id: 80daa8dc
 :tags: [nbval-skip]
 
 trace_dir = "/tmp/jax-trace-parallelism-comparison/"
@@ -790,6 +1010,8 @@ mesh = jax.make_mesh((jax.device_count(), 1), ('batch', 'model'))
 generate_trace()
 ```
 
++++ {"id": "ad96e72b"}
+
 Once again we'll run tensorboard.
 
 Looking at the results, we see that the step times are nearly the same, however the FLOPS Utilization is at 13% for 8-way data parallelism compared to 27% or 4-way data parallelism.
@@ -797,22 +1019,25 @@ Looking at the results, we see that the step times are nearly the same, however 
 By looking at the Trace Viewer tool and looking under each TPU's ops, we can see that the TPUs spend a large amount of time idle while waiting for the host, as well as spending a good amount of time in `reduce_sum` operations.
 
 ```{code-cell}
+:id: 780e9c72
 :tags: [nbval-skip]
 
 %tensorboard --logdir=$trace_dir
 ```
 
++++ {"id": "deca486e"}
+
 By changing hyperparameters and comparing profiles, we're able to gain significant insights into our bottlenecks and limitations. These are just two examples of hyperparameters to tune, but plenty more of them will have significant effects on training speed and resource utilization.
 
-+++
++++ {"id": "Q3Z_0hQu7est"}
 
 ## Inference with vLLM
 
-[REVAMP 8]: Introduce vLLM.
+After training the miniGPT model, we can also serve it on Google TPUs for high-performance inference.
 
-```{code-cell}
-# TODO: Code example.
-```
+[vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [documentation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
+
++++
 
 ## Wrapup
 

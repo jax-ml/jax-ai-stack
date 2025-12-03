@@ -12,6 +12,7 @@ pandas
 penzai
 scikit-learn
 tiktoken
+google-tunix[prod]
 
 # install jax-ai-stack from current directory
 .
