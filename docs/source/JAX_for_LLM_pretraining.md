@@ -211,6 +211,9 @@ class TransformerBlock(nnx.Module):
         rate (float): Dropout rate. Defaults to 0.1.
     """
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, *, rngs: nnx.Rngs, rate: float = 0.1):
+        # Multi-Head Attention (MHA) with `flax.nnx.MultiHeadAttention`.
+        # Specifies tensor sharding (depending on the mesh configuration)
+        # where we shard the weights across devices for parallel computation.
         self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
                                           in_features=embed_dim,
                                           kernel_init=nnx.with_partitioning(
@@ -218,7 +221,9 @@ class TransformerBlock(nnx.Module):
                                           bias_init=nnx.with_partitioning(
                                               nnx.initializers.zeros_init(), P('model')),
                                           rngs=rngs)
+        # The first dropout with `flax.nnx.Dropout`.
         self.dropout1 = nnx.Dropout(rate=rate, rngs=rngs)
+         # First layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
                                          scale_init=nnx.with_partitioning(
@@ -226,6 +231,7 @@ class TransformerBlock(nnx.Module):
                                          bias_init=nnx.with_partitioning(
                                              nnx.initializers.zeros_init(), P('model')),
                                          rngs=rngs)
+        # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear1 = nnx.Linear(in_features=embed_dim,
                                   out_features=ff_dim,
                                   kernel_init=nnx.with_partitioning(
@@ -233,6 +239,7 @@ class TransformerBlock(nnx.Module):
                                   bias_init=nnx.with_partitioning(
                                       nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
+        # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
         self.linear2 = nnx.Linear(in_features=ff_dim,
                                   out_features=embed_dim,
                                   kernel_init=nnx.with_partitioning(
@@ -240,7 +247,9 @@ class TransformerBlock(nnx.Module):
                                   bias_init=nnx.with_partitioning(
                                       nnx.initializers.zeros_init(), P('model')),
                                   rngs=rngs)
+        # The second dropout with `flax.nnx.Dropout`.
         self.dropout2 = nnx.Dropout(rate=rate, rngs=rngs)
+        # Second layer normalization with `flax.nnx.LayerNorm`.
         self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
                                          num_features=embed_dim,
                                          scale_init=nnx.with_partitioning(
@@ -254,19 +263,28 @@ class TransformerBlock(nnx.Module):
         input_shape = inputs.shape
         _, seq_len, _ = input_shape
 
+        # Instantiate the causal attention mask.
         mask = causal_attention_mask(seq_len)
 
+        # Apply Multi-Head Attention with the causal attention mask.
         attention_output = self.mha(
             inputs_q=inputs,
             mask=mask,
             decode=False
         )
+        # Apply the first dropout.
         attention_output = self.dropout1(attention_output, deterministic=not training)
+        # Apply the first layer normalization.
         out1 = self.layer_norm1(inputs + attention_output)
 
+        # The feed-forward network.
+        # Apply the first linear transformation.
         ffn_output = self.linear1(out1)
+        # Apply the ReLU activation with `flax.nnx.relu`.
         ffn_output = nnx.relu(ffn_output)
+        # Apply the second linear transformation.
         ffn_output = self.linear2(ffn_output)
+        # Apply the second dropout.
         ffn_output = self.dropout2(ffn_output, deterministic=not training)
         return self.layer_norm2(out1 + ffn_output)
 
@@ -281,13 +299,21 @@ class TokenAndPositionEmbedding(nnx.Module):
         rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
     """
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, *, rngs: nnx.Rngs):
+        # Initialize token embeddings (using `flax.nnx.Embed`).
+        # Each unique word has an embedding vector.
         self.token_emb = nnx.Embed(num_embeddings=vocab_size, features=embed_dim, rngs=rngs)
+        # Initialize positional embeddings (using `flax.nnx.Embed`).
         self.pos_emb = nnx.Embed(num_embeddings=maxlen, features=embed_dim, rngs=rngs)
 
+    # Takes a token sequence (integers) and returns the combined token and positional embeddings.
     def __call__(self, x):
+        # Generate a sequence of positions for the input tokens.
         positions = jnp.arange(0, x.shape[1])[None, :]
+        # Look up the positional embeddings for each position in the input sequence.
         position_embedding = self.pos_emb(positions)
+        # Look up the token embeddings for each token in the input sequence.
         token_embedding = self.token_emb(x)
+        # Combine token and positional embeddings.
         return token_embedding + position_embedding
 
 class MiniGPT(nnx.Module):
@@ -303,12 +329,16 @@ class MiniGPT(nnx.Module):
         rngs (nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
     """
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int, feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
+        # Initiliaze the `TokenAndPositionEmbedding` that combines token and positional embeddings.
         self.embedding_layer = TokenAndPositionEmbedding(
                     maxlen, vocab_size, embed_dim, rngs=rngs
                 )
+        # Create a list of `TransformerBlock` instances.
+        # Each block processes input sequences using attention and feed-forward networks.
         self.transformer_blocks = nnx.List([TransformerBlock(
             embed_dim, num_heads, feed_forward_dim, rngs=rngs
         ) for _ in range(num_transformer_blocks)])
+        # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(in_features=embed_dim,
                                        out_features=vocab_size,
                                        kernel_init=nnx.with_partitioning(
@@ -318,9 +348,13 @@ class MiniGPT(nnx.Module):
                                        rngs=rngs)
 
     def __call__(self, inputs, training: bool = False):
+        # Pass the input tokens through the `embedding_layer` to get token embeddings.
+        # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
         x = self.embedding_layer(inputs)
         for transformer_block in self.transformer_blocks:
             x = transformer_block(x, training=training)
+        # Pass the output of the transformer blocks through the output layer,
+        # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
 
