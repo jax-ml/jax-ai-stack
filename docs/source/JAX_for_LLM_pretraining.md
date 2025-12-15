@@ -5,13 +5,11 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3
   name: python3
 ---
-
-+++ {"id": "YdtfHhtq7esh"}
 
 # Train a miniGPT language model with JAX
 
@@ -695,6 +693,8 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 +++ {"id": "-kJShd9n_iTl"}
 
 First we install Tunix and its dependencies, and import necessary libraries. Note that Colab will ask you to restart the runtime, but you can just ignore it.
+
+**Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
 ---

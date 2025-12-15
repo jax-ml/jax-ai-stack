@@ -51,3 +51,4 @@ JAX AI Stack
    news
    events
    videos
+   more_learning
