@@ -155,6 +155,7 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 
 ```{code-cell}
 :id: xuMlCK3Q8WJD
+:tags: [nbval-ignore-output]
 
 # Create a `Mesh` object representing TPU device arrangement.
 # For example, for Kaggle TPU v5e-8:
