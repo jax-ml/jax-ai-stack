@@ -14,7 +14,6 @@
 
 
 import contextlib
-import platform
 import tempfile
 import unittest
 

@@ -61,7 +61,7 @@ class NNXQwixIntegrationTest(unittest.TestCase):
 
     @nnx.jit
     def predict(model, inputs):
-        return model(inputs)
+      return model(inputs)
 
     output = predict(fp_model, model_input)
     try:
@@ -70,7 +70,7 @@ class NNXQwixIntegrationTest(unittest.TestCase):
       self.assertTrue(np.all(np.isfinite(q_output)))
       self.assertFalse(np.any(q_output == output))
     except Exception as e:
-      self.fail(f"Forward pass with quantized model failed: {e}")
+      self.fail(f'Forward pass with quantized model failed: {e}')
 
 
 if __name__ == '__main__':
