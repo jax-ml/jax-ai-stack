@@ -5,13 +5,11 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.17.3
 kernelspec:
   display_name: Python 3
   name: python3
 ---
-
-+++ {"id": "YdtfHhtq7esh"}
 
 # Train a miniGPT language model with JAX
 
@@ -157,6 +155,7 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 
 ```{code-cell}
 :id: xuMlCK3Q8WJD
+:tags: [nbval-ignore-output]
 
 # Create a `Mesh` object representing TPU device arrangement.
 # For example, for Kaggle TPU v5e-8:
@@ -569,7 +568,7 @@ id: Ysl6CsfENeJN
 outputId: ba3051ad-0e11-4570-a223-28f35ca505e0
 tags: [nbval-ignore-output]
 ---
-with mesh:
+with jax.set_mesh(mesh):
   model = create_model(rngs=nnx.Rngs(0))
   optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
@@ -695,6 +694,8 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 +++ {"id": "-kJShd9n_iTl"}
 
 First we install Tunix and its dependencies, and import necessary libraries. Note that Colab will ask you to restart the runtime, but you can just ignore it.
+
+**Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
 ---
@@ -826,7 +827,7 @@ def get_lora_model(base_model, mesh):
       base_model, lora_provider, **model_input
   )
 
-  with mesh:
+  with jax.set_mesh(mesh):
     state = nnx.state(lora_model)
     pspecs = nnx.get_partition_spec(state)
     sharded_state = jax.lax.with_sharding_constraint(state, pspecs)
@@ -857,7 +858,7 @@ Now we can start the finetuning.
 :tags: [nbval-ignore-output]
 
 print("Starting LoRA Finetuning...")
-with mesh:
+with jax.set_mesh(mesh):
     # Apply LoRA to the model
     lora_model = get_lora_model(model, mesh)
 
