@@ -52,7 +52,9 @@ torch_model = maxvit_t(weights=MaxVit_T_Weights.IMAGENET1K_V1)
 We can use `flax.nnx.display` to display the model's architecture:
 
 ```{code-cell} ipython3
-# nnx.display(torch_model)
+:tags: [nbval-ignore-output]
+
+nnx.display(torch_model)
 ```
 
 We can see that there are four MaxViT blocks in the model and each block contains:
@@ -87,6 +89,8 @@ print(output.shape)  # (2, 1000)
 We can download an image of a Pembroke Corgy dog from [TorchVision's gallery](https://github.com/pytorch/vision/blob/main/gallery/assets/dog1.jpg?raw=true) together with [ImageNet classes dictionary](https://raw.githubusercontent.com/pytorch/vision/refs/heads/main/gallery/assets/imagenet_class_index.json):
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 %%bash
 if [ -f "dog1.jpg" ]; then
   echo "dog1.jpg already exists."
@@ -101,6 +105,8 @@ fi
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 import matplotlib.pyplot as plt
 
 import json
@@ -565,7 +571,7 @@ class RelativePositionalMultiHeadAttention(nnx.Module):
         self.relative_position_bias_table = nnx.Param(initializer(rngs.params(), shape, jnp.float32))
 
     def get_relative_positional_bias(self) -> jax.Array:
-        bias_index = self.relative_position_index.value.ravel()
+        bias_index = self.relative_position_index.ravel()
         relative_bias = self.relative_position_bias_table[bias_index].reshape((self.max_seq_len, self.max_seq_len, -1))
         relative_bias = jnp.permute_dims(relative_bias, (2, 0, 1))
         return jnp.expand_dims(relative_bias, axis=0)
@@ -1118,21 +1124,23 @@ class MaxVit(nnx.Module):
 
     def _init_weights(self, rngs):
         normal_initializer = nnx.initializers.normal(stddev=0.02)
-        for name, module in self.iter_modules():
+        for name, module in nnx.iter_modules(self):
             if isinstance(module, (nnx.Conv, nnx.Linear)):
                 module.kernel.value = normal_initializer(
-                    rngs(), module.kernel.value.shape, module.kernel.value.dtype
+                    rngs(), module.kernel.shape, module.kernel.dtype
                 )
-                if module.bias.value is not None:
-                    module.bias.value = jnp.zeros(
-                        module.bias.value.shape, dtype=module.bias.value.dtype
+                if module.bias is not None:
+                    module.bias[...] = jnp.zeros(
+                        module.bias.shape, dtype=module.bias.dtype
                     )
             elif isinstance(module, nnx.BatchNorm):
-                module.scale.value = jnp.ones(module.scale.value.shape, module.scale.value.dtype)
-                module.bias.value = jnp.zeros(module.bias.value.shape, module.bias.value.dtype)
+                module.scale[...] = jnp.ones(module.scale.shape, module.scale.dtype)
+                module.bias[...] = jnp.zeros(module.bias.shape, module.bias.dtype)
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 x = jnp.ones((4, 224, 224, 3))
 
 mod = MaxVit(
@@ -1165,7 +1173,7 @@ def maxvit_t(
         input_size=input_size,
         stem_channels=stem_channels,
         block_channels=block_channels,
-        block_layers=[2, 2, 5, 2],
+        block_layers=block_layers,
         head_dim=head_dim,
         stochastic_depth_prob=stochastic_depth_prob,
         partition_size=partition_size,
@@ -1182,6 +1190,19 @@ Let us import equivalent PyTorch modules and check our implementations against P
 PyTorch modules will contain random parameters and buffers that we need to set into our Flax implementations.
 
 Below we define a helper class `Torch2Flax` to copy parameters and buffers from a PyTorch module into equivalent Flax module.
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+
+# @title [hidden cell; used for testing]
+# This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
+import os
+AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
+if AI_STACK_TEST_MODE:
+    test_device = "cpu"
+else:
+    test_device = "cuda"
+```
 
 ```{code-cell} ipython3
 import torch.nn as nn
@@ -1268,19 +1289,18 @@ class Torch2Flax:
 
             torch_value = getattr(torch_nn_module, torch_key)
             nnx_param = getattr(nnx_module, nnx_key)
-            assert nnx_param is not None, (torch_key, nnx_key, nnx_module)
 
             if torch_value is None:
-                assert nnx_param.value is None, nnx_param
+                assert nnx_param is None, nnx_param
                 continue
 
             params_transform = module_mapping_info.get("params_transform", Torch2Flax.default_params_transform)
             torch_value = params_transform(torch_key, torch_value)
 
-            assert nnx_param.value.shape == torch_value.data.shape, (
-                nnx_key, nnx_param.value.shape, torch_key, torch_value.data.shape
+            assert nnx_param.shape == torch_value.data.shape, (
+                nnx_key, nnx_param.shape, torch_key, torch_value.data.shape
             )
-            nnx_param.value = jnp.asarray(torch_value.data)
+            nnx_param[...] = jnp.asarray(torch_value.data)
 
     def _copy_sequential(self, torch_nn_seq, nnx_seq, skip_modules=None):
         assert isinstance(torch_nn_seq, (nn.Sequential, nn.ModuleList)), type(torch_nn_seq)
@@ -1317,10 +1337,10 @@ class Torch2Flax:
                 nnx_buffer = getattr(nnx_module, name)
                 assert isinstance(nnx_buffer, nnx.Variable), (name, nnx_buffer, nnx_module)
 
-                assert nnx_buffer.value.shape == torch_buffer.shape, (
-                    name, nnx_buffer.value.shape, torch_buffer.shape
+                assert nnx_buffer.shape == torch_buffer.shape, (
+                    name, nnx_buffer.shape, torch_buffer.shape
                 )
-                nnx_buffer.value = jnp.asarray(torch_buffer)
+                nnx_buffer[...] = jnp.asarray(torch_buffer)
 
             for name, torch_param in torch_module.named_parameters():
                 if "." in name:
@@ -1329,14 +1349,14 @@ class Torch2Flax:
                 nnx_param = getattr(nnx_module, name)
                 assert isinstance(nnx_param, nnx.Param), (name, nnx_param, nnx_module)
 
-                assert nnx_param.value.shape == torch_param.data.shape, (
-                    name, nnx_param.value.shape, torch_param.data.shape
+                assert nnx_param.shape == torch_param.data.shape, (
+                    name, nnx_param.shape, torch_param.data.shape
                 )
-                nnx_param.value = jnp.asarray(torch_param.data)
+                nnx_param[...] = jnp.asarray(torch_param.data)
 
 
 def test_modules(
-    nnx_module, torch_module, torch_input, atol=1e-3, mode="eval", permute_torch_input=True, device="cuda"
+    nnx_module, torch_module, torch_input, atol=1e-3, mode="eval", permute_torch_input=True, device=test_device
 ):
     assert torch_input.ndim == 4
     assert mode in ("eval", "train")
@@ -1527,6 +1547,8 @@ test_modules(nnx_module, torch_module, torch.randn(4, 64, 56, 56), device="cpu")
 Finally, we can check the MaxVit implementation. Note that we raised the absolute tolerence to `1e-1` when comparing JAX output logits against PyTorch expected logits.
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 from torchvision.models.maxvit import MaxVit as PyTorchMaxVit
 
 
@@ -1567,6 +1589,8 @@ test_modules(nnx_module, torch_module, torch.randn(4, 3, 224, 224), device="cpu"
 Let us now reuse trained weights from TorchVision's MaxViT model to check output logits and the predictions on our example image:
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 from torchvision.models import maxvit_t as pytorch_maxvit_t, MaxVit_T_Weights
 
 torch_model = pytorch_maxvit_t(weights=MaxVit_T_Weights.IMAGENET1K_V1)
@@ -1579,6 +1603,8 @@ t2f.copy_module(torch_model, flax_model, skip_modules=[
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 import json
 from torchvision.io import read_image
 
@@ -1621,6 +1647,8 @@ plt.imshow(dog1.permute(1, 2, 0))
 Let's compute cosine distance between the logits:
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 expected = jnp.asarray(torch_output)
 
 cosine_dist = (expected * flax_output).sum() / (jnp.linalg.norm(flax_output) * jnp.linalg.norm(expected))

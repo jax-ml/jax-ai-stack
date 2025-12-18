@@ -46,4 +46,4 @@ jobs:
       env:
         AI_STACK_TEST_MODE: true
       run: |
-        pytest --tb=short --nbval docs/source/ --ignore=docs/source/data_loaders_on_cpu_with_jax.ipynb --ignore=docs/source/data_loaders_on_gpu_with_jax.ipynb --ignore=docs/source/JAX_for_PyTorch_users.ipynb --ignore=docs/source/JAX_porting_PyTorch_model.ipynb
+        pytest --tb=short --nbval docs/source/
