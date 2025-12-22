@@ -19,7 +19,7 @@ dependencies = [
     "chex==0.1.91",
     "grain==0.2.15",
     "jax==0.8.1",
-    "flax==0.12.1",
+    "flax==0.12.2",
     "ml_dtypes==0.5.4",
     "optax==0.2.6",
     "orbax-checkpoint==0.11.31",
