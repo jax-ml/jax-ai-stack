@@ -43,4 +43,5 @@ jobs:
         pip freeze
     - name: Run tests
       run: |
-        pytest -n auto jax_ai_stack
+        # pytest -n auto jax_ai_stack
+        pytest jax_ai_stack
