@@ -17,7 +17,7 @@ import unittest
 from flax import nnx
 import jax
 import numpy as np
-# import qwix
+import qwix
 
 
 class SimpleModel(nnx.Module):
@@ -47,30 +47,30 @@ class NNXQwixIntegrationTest(unittest.TestCase):
     fp_model = SimpleModel(din, dhidden, dout, rngs=nnx.Rngs(model_key))
     model_input = jax.random.uniform(input_key, (batch_size, din))
 
-    # # Define Qwix quantization rules
-    # rules = [
-    #     qwix.QuantizationRule(
-    #         module_path='.*',  # Apply to all modules
-    #         weight_qtype='int8',  # Quantize weights to int8
-    #     )
-    # ]
+    # Define Qwix quantization rules
+    rules = [
+        qwix.QuantizationRule(
+            module_path='.*',  # Apply to all modules
+            weight_qtype='int8',  # Quantize weights to int8
+        )
+    ]
 
-    # # Apply post-training quantization to the NNX model
-    # ptq_provider = qwix.PtqProvider(rules)
-    # q_model = qwix.quantize_model(fp_model, ptq_provider, model_input)
+    # Apply post-training quantization to the NNX model
+    ptq_provider = qwix.PtqProvider(rules)
+    q_model = qwix.quantize_model(fp_model, ptq_provider, model_input)
 
-    # @nnx.jit
-    # def predict(model, inputs):
-    #   return model(inputs)
+    @nnx.jit
+    def predict(model, inputs):
+      return model(inputs)
 
-    # output = predict(fp_model, model_input)
-    # try:
-    #   q_output = predict(q_model, model_input)
-    #   self.assertEqual(q_output.shape, (batch_size, dout))
-    #   self.assertTrue(np.all(np.isfinite(q_output)))
-    #   self.assertFalse(np.any(q_output == output))
-    # except Exception as e:
-    #   self.fail(f'Forward pass with quantized model failed: {e}')
+    output = predict(fp_model, model_input)
+    try:
+      q_output = predict(q_model, model_input)
+      self.assertEqual(q_output.shape, (batch_size, dout))
+      self.assertTrue(np.all(np.isfinite(q_output)))
+      self.assertFalse(np.any(q_output == output))
+    except Exception as e:
+      self.fail(f'Forward pass with quantized model failed: {e}')
 
 
 if __name__ == '__main__':
