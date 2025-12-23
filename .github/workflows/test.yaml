@@ -43,4 +43,4 @@ jobs:
         pip freeze
     - name: Run tests
       run: |
-        pytest -n auto jax_ai_stack --ignore=jax_ai_stack/tests/test_nnx_with_qwix.py --ignore-jax_ai_stack/tests/test_nnx_with_tunix.py
+        pytest -n auto jax_ai_stack --ignore=jax_ai_stack/tests/test_nnx_with_qwix.py --ignore=jax_ai_stack/tests/test_nnx_with_tunix.py
