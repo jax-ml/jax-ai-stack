@@ -38,7 +38,7 @@ jobs:
         pip install .[dev]
         pip install ipykernel nbval
         pip install -r docs/requirements.txt
-        pip install torch tensorflow
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip freeze
     - name: Register Python3 kernel
       run: |
