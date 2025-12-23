@@ -34,6 +34,7 @@ colab:
   base_uri: https://localhost:8080/
 id: f_hNMIu0sL5l
 outputId: 838ea182-2a22-4e9a-b3bc-3d91506e9ecf
+tags: [nbval-ignore-output]
 ---
 import jax
 import jax.numpy as jnp
@@ -110,6 +111,7 @@ colab:
   base_uri: https://localhost:8080/
 id: PQhflPwAImj1
 outputId: a75045a7-3a97-49d0-a215-42426f4e0ff4
+tags: [nbval-ignore-output]
 ---
 shape = (2, 3)
 ones_tensor = jnp.ones(shape)
@@ -148,14 +150,17 @@ For further discussion on random numbers in NumPy and JAX check [this tutorial](
 Finally, if you have a PyTorch tensor, you can use it to initialize a JAX Array:
 
 ```{code-cell} ipython3
+import torch
+```
+
+```{code-cell} ipython3
 ---
 colab:
   base_uri: https://localhost:8080/
 id: iWb6OdUpJvE0
 outputId: 7483461a-fb29-4e7f-d892-231397419834
+tags: [nbval-skip]
 ---
-import torch
-
 x_torch = torch.rand(3, 4)
 
 # Create JAX Array as a copy of x_torch tensor
@@ -181,6 +186,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 4AwolCS1OHw2
 outputId: 3defd0bb-4548-4afa-fe9c-3e84b446df24
+tags: [nbval-ignore-output]
 ---
 x_jax = jnp.ones((3, 4))
 print(f"Shape of tensor: {x_jax.shape}")
@@ -201,6 +207,7 @@ colab:
   base_uri: https://localhost:8080/
 id: cDVk9NjNKqJ2
 outputId: 3769b2fe-c241-447a-a9d9-c622b568e963
+tags: [nbval-ignore-output]
 ---
 try:
   x_jax[0, 0] = 100.0
@@ -234,6 +241,7 @@ colab:
   base_uri: https://localhost:8080/
 id: s0k84UEMQSwL
 outputId: 71b3658b-45ee-4fe1-a972-986f2e0da950
+tags: [nbval-skip]
 ---
 print(f"Available devices given a backend (gpu or tpu or cpu): {jax.devices()}")
 # Define CPU and CUDA devices
@@ -252,6 +260,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 9ZSyG8Q6Q5Jw
 outputId: 68da1b2b-6803-4382-c851-b1c1062c60dd
+tags: [nbval-skip]
 ---
 # create an array on CPU and check the device
 x_cpu = jnp.ones((3, 4), device=cpu_device)
@@ -264,6 +273,8 @@ print(x_gpu.device)
 In PyTorch we are used to device placement always being explicit. JAX can operate this way via explicit device placement as above, but unless the device is specified the array will remain *uncommitted*: i.e. it will be stored on the default device, but allow implicit movement to other devices when necessary:
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 x = jnp.ones((3, 4))
 
 x.device, (x_cpu + x).device
@@ -272,6 +283,8 @@ x.device, (x_cpu + x).device
 However, if we make a computation with two arrays with explicitly specified devices, e.g. CPU and CUDA, similarly to PyTorch, an error will be raised.
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 try:
     x_cpu + x_gpu
 except ValueError as e:
@@ -281,6 +294,8 @@ except ValueError as e:
 To move from one device to another, we can use `jax.device_put` function:
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 x = jnp.ones((3, 4))
 x_cpu = jax.device_put(x, device=jax.devices("cpu")[0])
 x_cuda = jax.device_put(x_cpu, device=jax.devices("cuda")[0])
@@ -407,6 +422,7 @@ colab:
   base_uri: https://localhost:8080/
 id: hzm2u1MpYmVN
 outputId: a55ae511-45b3-49ab-d7cf-816448b1b0e3
+tags: [nbval-ignore-output]
 ---
 import jax
 import jax.numpy as jnp
@@ -449,6 +465,7 @@ colab:
   base_uri: https://localhost:8080/
 id: glqqg02VvP-W
 outputId: 549934e4-823b-48e1-c7f0-04ecd2b6c0d5
+tags: [nbval-ignore-output]
 ---
 # Differentiate `compute_loss` with respect to the 0 and 1 positional arguments:
 w_grad, b_grad = jax.grad(compute_loss, argnums=(0, 1))(w, b, x, y_true)
@@ -457,6 +474,8 @@ print(f'{b_grad=}')
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 # Compute w_grad, b_grad and loss value:
 loss_value, (w_grad, b_grad) = jax.value_and_grad(compute_loss, argnums=(0, 1))(w, b, x, y_true)
 print(f'{w_grad=}')
@@ -483,6 +502,7 @@ def compute_loss2(net_params, x, y_true):
 
 ```{code-cell} ipython3
 :id: tiTLDUvjvO_s
+:tags: [nbval-ignore-output]
 
 jax.value_and_grad(compute_loss2, argnums=0)({"weights": w, "bias": b}, x, y_true)
 ```
@@ -593,6 +613,7 @@ class ResNet18(nnx.Module):
 
 ```{code-cell} ipython3
 :id: -dRZPUx-vLBk
+:tags: [nbval-ignore-output]
 
 model = ResNet18(10, rngs=nnx.Rngs(0))
 
@@ -624,6 +645,8 @@ Since JAX is a multithreaded framework, using it in multiple processes can cause
 As an alternative, one can use [grain](https://github.com/google/grain/tree/main) for data loading and [PIX](https://github.com/google-deepmind/dm_pix) for image data augmentations.
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 # CIFAR10 training/testing datasets setup
 import numpy as np
 
@@ -682,6 +705,8 @@ test_loader = DataLoader(
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 # Let us check training dataloader:
 trl_iter = iter(train_loader)
 batch = next(trl_iter)
@@ -703,7 +728,7 @@ import optax
 learning_rate = 0.005
 momentum = 0.9
 
-optimizer = nnx.ModelAndOptimizer(model, optax.adamw(learning_rate, momentum))
+optimizer = nnx.Optimizer(model, optax.adamw(learning_rate, momentum), wrt=nnx.Param)
 ```
 
 ```{code-cell} ipython3
@@ -726,7 +751,7 @@ def train_step(model: nnx.Module, optimizer: nnx.Optimizer, metrics: nnx.MultiMe
 
   metrics.update(loss=loss, logits=logits, labels=y_true)  # In-place updates.
 
-  optimizer.update(grads)  # In-place updates.
+  optimizer.update(model, grads)  # In-place updates.
   return loss
 
 
@@ -758,6 +783,8 @@ metrics_history = {
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 # Start the training
 
 num_epochs = 3
@@ -800,6 +827,22 @@ for epoch in range(num_epochs):
   )
 ```
 
+```{code-cell} ipython3
+:tags: [hide-cell]
+
+# @title [hidden cell; used for testing]
+# This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
+import os
+AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
+if AI_STACK_TEST_MODE:
+    model.train()
+    batch = next(iter(train_loader))
+    loss = train_step(model, optimizer, metrics, batch)
+    model.eval()
+    test_batch = next(iter(test_loader))
+    eval_step(model, metrics, test_batch)
+```
+
 ### Further reading
 
 More details about Flax NNX API, how to save and load the model's state and about available optimizers, we suggest to check out the links below:
@@ -836,6 +879,8 @@ y = jax.random.uniform(key2, (2500, 3000))
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 %%timeit
 matmul_relu_add(x, y)
 ```
@@ -847,6 +892,8 @@ _ = jit_matmul_relu(x, y)
 ```
 
 ```{code-cell} ipython3
+:tags: [nbval-skip]
+
 %%timeit
 jit_matmul_relu(x, y)
 ```

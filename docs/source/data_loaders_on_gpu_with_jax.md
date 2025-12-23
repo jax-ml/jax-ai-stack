@@ -56,6 +56,7 @@ colab:
   base_uri: https://localhost:8080/
 id: N3sqvaF3KJw1
 outputId: ab40f542-b8c0-422c-ca68-4ce292817889
+tags: [nbval-ignore-output]
 ---
 jax.devices()
 ```
@@ -90,6 +91,18 @@ data_dir = '/tmp/mnist_dataset'    # Directory for storing the dataset
 
 # Initialize network parameters using the defined layer sizes and a random seed
 params = init_network_params(layer_sizes, random.PRNGKey(0))
+```
+
+```{code-cell}
+:tags: [hide-cell]
+
+# @title [hidden cell; used for testing]
+# This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
+import os
+AI_STACK_TEST_MODE = os.getenv('AI_STACK_TEST_MODE') == 'true'
+if AI_STACK_TEST_MODE:
+    layer_sizes = [32, 8, 8, 10]
+    num_epochs = 1
 ```
 
 +++ {"id": "rHLdqeI7D2WZ"}
@@ -197,8 +210,9 @@ colab:
   base_uri: https://localhost:8080/
 id: uA7XY0OezHse
 outputId: 4c86f455-ff1d-474e-f8e3-7111d9b56996
+tags: [nbval-ignore-output]
 ---
-!pip install torch torchvision
+!pip install -Uq torch torchvision
 ```
 
 ```{code-cell}
@@ -261,6 +275,7 @@ Convert the entire training dataset to JAX arrays.
 
 ```{code-cell}
 :id: c9ZCJq_rzPck
+:tags: [nbval-ignore-output]
 
 train_images = np.array(mnist_dataset.data).reshape(len(mnist_dataset.data), -1)
 train_labels = one_hot(np.array(mnist_dataset.targets), n_targets)
@@ -274,6 +289,7 @@ Load and process the full test dataset.
 
 ```{code-cell}
 :id: brlLG4SqGphm
+:tags: [nbval-ignore-output]
 
 mnist_dataset_test = MNIST(data_dir, download=True, train=False)
 test_images = jnp.array(mnist_dataset_test.data.numpy().reshape(len(mnist_dataset_test.data), -1), dtype=jnp.float32)
@@ -320,6 +336,7 @@ colab:
   base_uri: https://localhost:8080/
 id: SqweRz_98sN8
 outputId: bdd45256-3f5a-48f7-e45c-378078ac4279
+tags: [nbval-ignore-output]
 ---
 train_model(num_epochs, params, pytorch_training_generator(mnist_dataset), data_loader_type='iterable')
 ```
@@ -332,6 +349,7 @@ This section demonstrates how to load the MNIST dataset using TFDS, fetch the fu
 
 ```{code-cell}
 :id: sGaQAk1DHMUx
+:tags: [nbval-skip]
 
 import tensorflow_datasets as tfds
 ```
@@ -344,6 +362,7 @@ Load the dataset with `tfds.load`, convert it to NumPy arrays, and process it fo
 
 ```{code-cell}
 :id: 1hOamw_7C8Pb
+:tags: [nbval-skip]
 
 # tfds.load returns tf.Tensors (or tf.data.Datasets if batch_size != -1)
 mnist_data, info = tfds.load(name="mnist", batch_size=-1, data_dir=data_dir, with_info=True)
@@ -367,6 +386,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Td3PiLdmEf7z
 outputId: b8c9a32a-9cf0-4dc3-cb51-db21d32c6545
+tags: [nbval-skip]
 ---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
@@ -380,6 +400,7 @@ Create a generator function to yield batches of data for training.
 
 ```{code-cell}
 :id: vX59u8CqEf4J
+:tags: [nbval-skip]
 
 def training_generator():
   # as_supervised=True gives us the (image, label) as a tuple instead of a dict
@@ -402,6 +423,7 @@ colab:
   base_uri: https://localhost:8080/
 id: h2sO13XDGvq1
 outputId: f30805bb-e725-46ee-e053-6e97f2af81c5
+tags: [nbval-ignore-output, nbval-skip]
 ---
 train_model(num_epochs, params, training_generator)
 ```
@@ -422,8 +444,9 @@ colab:
   base_uri: https://localhost:8080/
 id: L78o7eeyGvn5
 outputId: cb0ce6cf-243b-4183-8f63-646e00232caa
+tags: [nbval-ignore-output]
 ---
-!pip install grain
+!pip install -Uq grain
 ```
 
 +++ {"id": "66bH3ZDJ7Iat"}
@@ -533,6 +556,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 9-iANQ-9CcW_
 outputId: b0e19da2-9e34-4183-c5d8-af66de5efa5c
+tags: [nbval-ignore-output]
 ---
 train_model(num_epochs, params, pygrain_training_generator)
 ```
@@ -553,12 +577,14 @@ colab:
   base_uri: https://localhost:8080/
 id: 19ipxPhI6oSN
 outputId: b80b80cd-fc14-4a43-f8a8-2802de4faade
+tags: [nbval-ignore-output]
 ---
-!pip install datasets
+!pip install -Uq datasets
 ```
 
 ```{code-cell}
 :id: 8v1N59p76zn0
+:tags: [nbval-ignore-output]
 
 from datasets import load_dataset
 ```
@@ -569,6 +595,7 @@ Load the MNIST dataset from Hugging Face and format it as `numpy` arrays for qui
 
 ```{code-cell}
 :id: a22kTvgk6_fJ
+:tags: [nbval-ignore-output]
 
 mnist_dataset = load_dataset("mnist", cache_dir=data_dir).with_format("numpy")
 ```
@@ -588,14 +615,16 @@ test_images = mnist_dataset["test"]["image"]
 test_labels = mnist_dataset["test"]["label"]
 
 # Extract image shape
-image_shape = train_images.shape[1:]
+image_shape = train_images[0].shape
 num_features = image_shape[0] * image_shape[1]
 
 # Flatten the images
-train_images = train_images.reshape(-1, num_features)
-test_images = test_images.reshape(-1, num_features)
+train_images = np.array(train_images).reshape(-1, num_features)
+test_images = np.array(test_images).reshape(-1, num_features)
 
 # One-hot encode the labels
+train_labels = np.array(train_labels)
+test_labels = np.array(test_labels)
 train_labels = one_hot(train_labels, n_targets)
 test_labels = one_hot(test_labels, n_targets)
 ```
@@ -639,6 +668,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Ui6aLiZP7aLe
 outputId: c51529e0-563f-4af0-9793-76b5e6f323db
+tags: [nbval-ignore-output]
 ---
 train_model(num_epochs, params, hf_training_generator)
 ```
