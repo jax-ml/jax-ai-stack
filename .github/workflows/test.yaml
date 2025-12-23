@@ -39,9 +39,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install .[dev,tfds]
-        # pip install google-tunix[dev]  # do not merge
+        pip install google-tunix[dev]
         pip freeze
     - name: Run tests
       run: |
+        # do not merge
         # pytest -n auto jax_ai_stack
-        pytest jax_ai_stack
+        pytest jax_ai_stack/tests/test_nnx_with_qwix.py jax_ai_stack/tests/test_nnx_with_tunix.py
