@@ -645,6 +645,8 @@ Since JAX is a multithreaded framework, using it in multiple processes can cause
 As an alternative, one can use [grain](https://github.com/google/grain/tree/main) for data loading and [PIX](https://github.com/google-deepmind/dm_pix) for image data augmentations.
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 # CIFAR10 training/testing datasets setup
 import numpy as np
 

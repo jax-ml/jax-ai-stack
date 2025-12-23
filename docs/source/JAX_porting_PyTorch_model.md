@@ -21,6 +21,8 @@ kernelspec:
 In this tutorial we will learn how to port a PyTorch model to JAX and [Flax](https://flax.readthedocs.io/en/latest/nnx_basics.html). Flax provides an API very similar to the PyTorch `torch.nn` module and porting PyTorch models is rather straightforward. To install Flax, we can simply execute the following command: `pip install -U flax treescope`.
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 !pip install -Uq flax treescope
 ```
 
@@ -44,6 +46,8 @@ The MaxVit model is [implemented in TorchVision](https://github.com/pytorch/visi
 - [classifier](https://github.com/pytorch/vision/blob/945bdad7523806b15d3740ce6ace2fced9ef9d3b/torchvision/models/maxvit.py#L696-L703): adaptive average pooling, few linear layers and Tanh activation.
 
 ```{code-cell} ipython3
+:tags: [nbval-ignore-output]
+
 from torchvision.models import maxvit_t, MaxVit_T_Weights
 
 torch_model = maxvit_t(weights=MaxVit_T_Weights.IMAGENET1K_V1)

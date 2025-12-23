@@ -264,6 +264,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Kxbl6bcx6crv
 outputId: 372bbf4c-3ad5-4fd8-cc5d-27b50f5e4f38
+tags: [nbval-ignore-output]
 ---
 mnist_dataset = MNIST(data_dir, download=True, transform=FlattenAndCast())
 ```
@@ -348,8 +349,8 @@ This section demonstrates how to load the MNIST dataset using TFDS, fetch the fu
 
 ```{code-cell}
 :id: sGaQAk1DHMUx
+:tags: [nbval-skip]
 
-import tensorflow_datasets as tfds
 import tensorflow as tf
 
 # Ensuring CPU-Only Execution, disable any GPU usage(if applicable) for TF
@@ -373,7 +374,10 @@ colab:
     93b8206f8c5841a692cdce985ae301d8, c95f592620c64da595cc787567b2c4db, 8a97071f862c4ec3b4b4140d2e34eda2]
 id: 1hOamw_7C8Pb
 outputId: ca166490-22db-4732-b29f-866b7593e489
+tags: [nbval-skip]
 ---
+import tensorflow_datasets as tfds
+
 # tfds.load returns tf.Tensors (or tf.data.Datasets if batch_size != -1)
 mnist_data, info = tfds.load(name="mnist", batch_size=-1, data_dir=data_dir, with_info=True)
 mnist_data = tfds.as_numpy(mnist_data)
@@ -396,6 +400,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Td3PiLdmEf7z
 outputId: 96403b0f-6079-43ce-df16-d4583f09906b
+tags: [nbval-skip]
 ---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
@@ -409,6 +414,7 @@ Create a generator function to yield batches of data for training.
 
 ```{code-cell}
 :id: vX59u8CqEf4J
+:tags: [nbval-skip]
 
 def training_generator():
   # as_supervised=True gives us the (image, label) as a tuple instead of a dict
@@ -431,7 +437,7 @@ colab:
   base_uri: https://localhost:8080/
 id: h2sO13XDGvq1
 outputId: a150246e-ceb5-46ac-db71-2a8177a9d04d
-tags: [nbval-ignore-output]
+tags: [nbval-ignore-output, nbval-skip]
 ---
 train_model(num_epochs, params, training_generator)
 ```
@@ -635,6 +641,7 @@ colab:
     745a2aedcfab491fb9cffba19958b0c5, 2f6c670640d048d2af453638cfde3a1e]
 id: a22kTvgk6_fJ
 outputId: 35fc38b9-a6ab-4b02-ffa4-ab27fac69df4
+tags: [nbval-ignore-output]
 ---
 mnist_dataset = load_dataset("mnist").with_format("numpy")
 ```

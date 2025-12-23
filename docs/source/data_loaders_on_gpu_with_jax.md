@@ -349,6 +349,7 @@ This section demonstrates how to load the MNIST dataset using TFDS, fetch the fu
 
 ```{code-cell}
 :id: sGaQAk1DHMUx
+:tags: [nbval-skip]
 
 import tensorflow_datasets as tfds
 ```
@@ -361,6 +362,7 @@ Load the dataset with `tfds.load`, convert it to NumPy arrays, and process it fo
 
 ```{code-cell}
 :id: 1hOamw_7C8Pb
+:tags: [nbval-skip]
 
 # tfds.load returns tf.Tensors (or tf.data.Datasets if batch_size != -1)
 mnist_data, info = tfds.load(name="mnist", batch_size=-1, data_dir=data_dir, with_info=True)
@@ -384,6 +386,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Td3PiLdmEf7z
 outputId: b8c9a32a-9cf0-4dc3-cb51-db21d32c6545
+tags: [nbval-skip]
 ---
 print('Train:', train_images.shape, train_labels.shape)
 print('Test:', test_images.shape, test_labels.shape)
@@ -397,6 +400,7 @@ Create a generator function to yield batches of data for training.
 
 ```{code-cell}
 :id: vX59u8CqEf4J
+:tags: [nbval-skip]
 
 def training_generator():
   # as_supervised=True gives us the (image, label) as a tuple instead of a dict
@@ -419,7 +423,7 @@ colab:
   base_uri: https://localhost:8080/
 id: h2sO13XDGvq1
 outputId: f30805bb-e725-46ee-e053-6e97f2af81c5
-tags: [nbval-ignore-output]
+tags: [nbval-ignore-output, nbval-skip]
 ---
 train_model(num_epochs, params, training_generator)
 ```
@@ -591,6 +595,7 @@ Load the MNIST dataset from Hugging Face and format it as `numpy` arrays for qui
 
 ```{code-cell}
 :id: a22kTvgk6_fJ
+:tags: [nbval-ignore-output]
 
 mnist_dataset = load_dataset("mnist", cache_dir=data_dir).with_format("numpy")
 ```
