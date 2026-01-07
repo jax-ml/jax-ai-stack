@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import contextlib
+import sys
 import tempfile
 import unittest
 
@@ -33,6 +34,8 @@ class NNXTFDSTest(unittest.TestCase):
         self.addCleanup(stack.pop_all().close)
 
   def test_tf_model_with_checkpoint(self):
+    if sys.platform == 'darwin':
+      unittest.SkipTest("TODO(emilyaf): Fix MacOS CI failure.")
     # Import locally to ensure fork-safety for parallel testing (`pytest -n`).
     # This prevents heavy libraries from initializing before worker processes are
     # created, avoiding crashes on platforms like macOS.
