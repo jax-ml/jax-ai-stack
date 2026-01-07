@@ -14,6 +14,7 @@
 
 
 import contextlib
+import platform
 import tempfile
 import unittest
 
@@ -47,6 +48,10 @@ class NNXOrbaxTest(unittest.TestCase):
         stack.enter_context(self.tmp_dir)
         self.addCleanup(stack.pop_all().close)
 
+  # TODO(jakevdp): https://github.com/google/orbax/pull/1087
+  @unittest.skipIf(
+      platform.system() == 'Windows', 'orbax divide-by-zero error on Windows'
+  )
   def test_nnx_orbax_checkpoint(self):
     model = SimpleModel(nnx.Rngs(0))
 
