@@ -53,7 +53,9 @@ class NNXTFDSTest(unittest.TestCase):
         stack.enter_context(tfds.testing.mock_data(num_examples=5))
         self.addCleanup(stack.pop_all().close)
 
-  @unittest.skipIf(sys.platform == 'darwin', 'TODO(emilyaf): Fix MacOS CI failure.')
+  @unittest.skipIf(
+      sys.platform == 'darwin', 'TODO(emilyaf): Fix MacOS CI failure.'
+  )
   def test_nnx_with_tfds(self):
     train_ds = tfds.load('mnist', split='train')
     model = CNN(rngs=nnx.Rngs(0))
