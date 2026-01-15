@@ -64,6 +64,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
+          python -m pip install google-tunix[dev] 
           python -m pip install --upgrade --pre jax jaxlib -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
           python -m pip freeze
       - name: Run tests
@@ -90,6 +91,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
+          python -m pip install google-tunix[dev] 
           python -m pip install --upgrade git+https://github.com/google/flax.git
           python -m pip freeze
       - name: Run tests
@@ -116,6 +118,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
+          python -m pip install google-tunix[dev] 
           python -m pip install --upgrade git+https://github.com/google-deepmind/optax.git
           python -m pip freeze
       - name: Run tests
@@ -142,6 +145,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
+          python -m pip install google-tunix[dev] 
           python -m pip install --upgrade 'git+https://github.com/google/orbax/#subdirectory=checkpoint' 'git+https://github.com/google/orbax/#subdirectory=export'
           python -m pip freeze
       - name: Run tests
@@ -168,6 +172,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install .[dev,tfds]
+          python -m pip install google-tunix[dev] 
           python -m pip install --upgrade 'git+https://github.com/google-deepmind/chex/'
           python -m pip freeze
       - name: Run tests
