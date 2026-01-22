@@ -17,6 +17,7 @@ release = '0.0.0'
 extensions = [
     'myst_nb',
     'sphinx_copybutton',
+    'sphinx_design',
 ]
 
 templates_path = ['_templates']
