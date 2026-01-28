@@ -253,12 +253,12 @@ class TransformerBlock(nnx.Module):
         # First linear transformation for the feed-forward network using `flax.nnx.Linear`.
         self.dense_1 = nnx.Linear(in_features=embed_dim, out_features=ff_dim, rngs=rngs)
         # Second linear transformation for the feed-forward network with `flax.nnx.Linear`.
-        self.dense_2 = nnx.Linear(in_features=ff_dim, out_features=ff_dim, rngs=rngs)
+        self.dense_2 = nnx.Linear(in_features=ff_dim, out_features=embed_dim, rngs=rngs)
 
         # First layer normalization using `flax.nnx.LayerNorm`.
         self.layer_norm_1 = nnx.LayerNorm(num_features=embed_dim, epsilon=1e-6, rngs=rngs)
         # Second layer normalization with `flax.nnx.LayerNorm`.
-        self.layer_norm_2 = nnx.LayerNorm(num_features=ff_dim, epsilon=1e-6, rngs=rngs)
+        self.layer_norm_2 = nnx.LayerNorm(num_features=embed_dim, epsilon=1e-6, rngs=rngs)
 
         # First dropout using `flax.nnx.Dropout`.
         self.dropout_1 = nnx.Dropout(rate, rngs=rngs)
@@ -329,7 +329,7 @@ Next, we'll construct the transformer model, `MyModel()`, subclassing `flax.nnx.
 ```{code-cell} ipython3
 embed_dim = 32  # The embedding size for each token.
 num_heads = 2  # The number of attention heads.
-ff_dim = 32  # The hidden layer size in the feed-forward network inside the transformer.
+ff_dim = 64  # The hidden layer size in the feed-forward network inside the transformer.
 
 class MyModel(nnx.Module):
     def __init__(self, rngs: nnx.Rngs):
