@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.19.1
+    jupytext_version: 1.15.2
 kernelspec:
   display_name: Python 3
   name: python3
@@ -65,9 +65,9 @@ JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest
 
 ```{code-cell}
 ---
-id: 6zMsOIc7ouCO
 colab:
   base_uri: https://localhost:8080/
+id: 6zMsOIc7ouCO
 outputId: 734dbba3-4527-4bfc-b94e-a4289d66c76c
 ---
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
@@ -132,7 +132,6 @@ import optax
 
 from dataclasses import dataclass
 import grain.python as pygrain
-import pandas as pd
 import tiktoken
 import time
 ```
@@ -160,9 +159,9 @@ The three core JAX transforms you'll need understand are:
 
 ```{code-cell}
 ---
-id: 00mK9dhEMT3B
 colab:
   base_uri: https://localhost:8080/
+id: 00mK9dhEMT3B
 outputId: 84300405-2ae0-4a1c-f985-577096f7a742
 ---
 def slow_fn(x):
