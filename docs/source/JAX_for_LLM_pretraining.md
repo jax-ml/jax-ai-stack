@@ -45,7 +45,7 @@ By the end of this tutorial, you will be able to:
 - **Build transformer models with Flax NNX**: Define a GPT-style architecture using the modern Flax NNX API
 - **Process data efficiently with Grain**: Load and preprocess training data using Google's Grain data loading library
 - **Optimize models with Optax**: Implement training loops using JAX's gradient transformation library
-- **Train on cloud TPUs**: Execute training on free TPUs available through Kaggle or Google Colab
+- **Train on cloud TPUs or GPUs**: Execute training using available accelerators (TPU, GPU) , while still maintaining the ability to run on CPU if needed
 - **Fine-tune with LoRA**: Apply parameter-efficient fine-tuning using the Tunix library
 - **Profile and optimize**: Use JAX's profiling tools to identify bottlenecks and tune hyperparameters
 
@@ -69,6 +69,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 6zMsOIc7ouCO
 outputId: 734dbba3-4527-4bfc-b94e-a4289d66c76c
+tags: [nbval-skip, nbval-ignore-output]
 ---
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
@@ -85,6 +86,7 @@ colab:
   base_uri: https://localhost:8080/
 id: LS9sQEY3n0mB
 outputId: 29c2e1dc-e49c-484a-96db-3b6c0df901a5
+tags: [nbval-ignore-output]
 ---
 import jax
 jax.devices()
@@ -93,16 +95,17 @@ jax.devices()
 ```{code-cell}
 :id: _CVSP5IrI80R
 
-# Verify that an accelerator (GPU/TPU) is available
-# This tutorial requires hardware acceleration and cannot run on CPU
+# Check if an accelerator (GPU/TPU) is available
 accelerator_available = any(d.platform in ('gpu', 'tpu') for d in jax.devices())
 
 if not accelerator_available:
-    raise RuntimeError(
-        "No GPU or TPU accelerator found. This tutorial requires hardware acceleration.\n"
-        "Please select an accelerator in your runtime settings:\n"
-        "  - Kaggle: Settings → Accelerator → GPU or TPU\n"
-        "  - Colab: Runtime → Change runtime type → GPU or TPU"
+    import warnings
+    warnings.warn(
+        "WARNING: No GPU or TPU accelerator found. This notebook will still run, but using only the CPU can be much slower—training may take longer than intended.\n"
+        "For the best experience, it is highly recommended to use an accelerator:\n"
+        "  • Kaggle: Go to Settings → Accelerator → Choose GPU or TPU\n"
+        "  • Colab: Go to Runtime → Change runtime type → Select GPU or TPU\n"
+        "You can continue, but expect reduced performance."
     )
 ```
 
@@ -150,7 +153,7 @@ import time
 - **Automatic parallelization**: JAX can automatically distribute computations across multiple devices using SPMD (Single Program, Multiple Data) parallelism
 - **Functional programming**: JAX encourages pure functions, which enables reliable transformations and better performance
 
-For training large language models like our miniGPT, JAX's automatic parallelization capabilities are particularly valuable. They allow us to efficiently utilize multiple TPU cores without manually managing device placement and communication.
+For training large language models like our miniGPT, JAX's automatic parallelization capabilities are particularly valuable. They allow us to efficiently utilize multiple GPU or TPU cores without manually managing device placement and communication, making the most of whichever accelerator hardware is available.
 
 +++ {"id": "t4-gksXxMT3B"}
 
@@ -163,6 +166,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 00mK9dhEMT3B
 outputId: 84300405-2ae0-4a1c-f985-577096f7a742
+tags: [nbval-ignore-output]
 ---
 def slow_fn(x):
     for _ in range(5):
@@ -172,6 +176,11 @@ def slow_fn(x):
 fast_fn = jax.jit(slow_fn)
 
 x = jnp.ones((1000, 1000))
+
+# The first call to the jitted function triggers compilation for the given input shape/dtype
+# (in this case, shape (1000, 1000)). Subsequent calls with the same shape/dtype are fast,
+# as they use the cached compiled executable.
+fast_fn(x).block_until_ready()
 
 %timeit slow_fn(x).block_until_ready()
 %timeit fast_fn(x).block_until_ready()
@@ -187,6 +196,7 @@ colab:
   base_uri: https://localhost:8080/
 id: _eUx06xrMT3B
 outputId: 3a39f0b5-814b-42a8-e31d-0f147299f905
+tags: [nbval-ignore-output]
 ---
 def loss(x):
     return jnp.sum(x ** 2)
@@ -209,6 +219,7 @@ colab:
   base_uri: https://localhost:8080/
 id: MUodslgqMT3B
 outputId: 4f1dd710-1a8b-4962-ed78-5f040d34f33f
+tags: [nbval-ignore-output]
 ---
 # Function that operates on a single vector
 def normalize(x):
@@ -250,6 +261,7 @@ colab:
   base_uri: https://localhost:8080/
 id: sVon1P8RMT3B
 outputId: 2b8620ed-d738-482e-8a95-c54efcaa039b
+tags: [nbval-ignore-output]
 ---
 # A simple two-layer MLP in Flax NNX
 class SimpleMLP(nnx.Module):
@@ -307,6 +319,7 @@ colab:
   base_uri: https://localhost:8080/
 id: xuMlCK3Q8WJD
 outputId: b42e7f88-52f3-4525-d237-8e18bf97718e
+tags: [nbval-ignore-output]
 ---
 # Create a `Mesh` object representing TPU device arrangement.
 # The mesh defines how we distribute computation across devices.
@@ -611,6 +624,7 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 ```{code-cell}
 :cellView: form
 :id: b9tmfMzj7eso
+:tags: [hide-cell]
 
 # @title [hidden cell; used for testing]
 # This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
@@ -663,6 +677,7 @@ colab:
   base_uri: https://localhost:8080/
 id: VnfW4Z7l7eso
 outputId: 1ce0a9e8-31a6-4ba6-f255-a2e24ec0538f
+tags: [nbval-ignore-output]
 ---
 # Create the data loader
 # This will load, tokenize, and batch the TinyStories dataset
@@ -773,6 +788,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Ysl6CsfENeJN
 outputId: 442ae785-be4d-4fe6-99a2-05615c976d80
+tags: [nbval-ignore-output]
 ---
 # Initialize the model and optimizer within the mesh context
 # This ensures model parameters are properly sharded according to our partition specs
@@ -842,8 +858,8 @@ for epoch in range(num_epochs):
         # JAX automatically handles the distributed computation!
         train_step(model, optimizer, metrics, sharded_batch)
 
-        # Log metrics every 200 steps
-        if (step + 1) % 200 == 0:
+        # Log metrics every 1000 steps
+        if (step + 1) % 1000 == 0:
             # Compute and store current metrics
             for metric, value in metrics.compute().items():
                 metrics_history[f"train_{metric}"].append(value)
@@ -878,6 +894,7 @@ colab:
   height: 472
 id: B6Eg1Cz2y_iP
 outputId: 3169ac2b-5ef8-405a-d7b3-14413a3634dc
+tags: [nbval-ignore-output]
 ---
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
@@ -895,7 +912,7 @@ As you can see, the model goes from generating completely random words at the be
 
 ## Debugging the model
 
-When working with JAX and JIT-compiled functions, debugging requires different techniques than traditional Python debugging. Since JIT compilation traces your function and compiles it to XLA, standard `print()` statements won't work inside compiled functions.
+When working with JAX and JIT-compiled functions, debugging requires different techniques than traditional Python debugging. Since JIT compilation traces your function and compiles it to XLA, standard `print()` statements execute at trace time and won't work inside compiled functions.
 
 **JAX debugging tools:**
 
@@ -918,18 +935,19 @@ colab:
   base_uri: https://localhost:8080/
 id: zcALManWW3yn
 outputId: b249a88a-2656-4806-cbb2-8aef3bda5416
+tags: [nbval-ignore-output]
 ---
 # Demonstrate jax.debug.print inside a JIT-compiled function
 @jax.jit
 def debug_forward_pass(model, inputs):
     """Forward pass with debug prints to inspect intermediate values."""
-    # Inspect input
-    jax.debug.print("Input shape: {shape}", shape=inputs.shape)
+    # Inspect input shape (static and known, so use Python print)
+    print("Input shape:", inputs.shape)
 
     # Get embeddings and inspect
     x = model.embedding_layer(inputs)
-    jax.debug.print("After embedding - shape: {shape}, mean: {mean:.4f}, std: {std:.4f}",
-                    shape=x.shape, mean=jnp.mean(x), std=jnp.std(x))
+    jax.debug.print("After embedding - mean: {mean:.4f}, std: {std:.4f}",
+                    mean=jnp.mean(x), std=jnp.std(x))
 
     # Pass through transformer blocks
     for i, block in enumerate(model.transformer_blocks):
@@ -938,8 +956,8 @@ def debug_forward_pass(model, inputs):
                         i=i, mean=jnp.mean(x), std=jnp.std(x))
 
     logits = model.output_layer(x)
-    jax.debug.print("Output logits - shape: {shape}, mean: {mean:.4f}",
-                    shape=logits.shape, mean=jnp.mean(logits))
+    jax.debug.print("Output logits - mean: {mean:.4f}",
+                    mean=jnp.mean(logits))
     return logits
 
 # Run the debug forward pass with a sample input
@@ -949,9 +967,14 @@ _ = debug_forward_pass(model, sample_input)
 
 +++ {"id": "duapvyZAW3yn"}
 
-### Detecting NaN values with `jax.debug_nans`
+### Detecting NaN and Inf values with `jax.debug_nans` and `jax.debug_infs`
 
-A common issue during training is exploding gradients that result in NaN (Not a Number) values. JAX provides a convenient configuration flag to automatically detect NaNs and raise an error immediately when they occur.
+Exploding gradients during training can lead to either NaN ("Not a Number") or Inf (infinity) values, both of which can disrupt training and indicate numerical instability.
+
+JAX provides configuration flags to help catch these issues early: `jax_debug_nans` will automatically detect and raise an error if NaN values appear in your computations, and `jax_debug_infs` does the same for Inf values. Both can be invaluable tools for debugging numerical problems in your model.
+
+For more on detecting NaN and Inf in JAX computations, see the [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html)
+and the [JAX debugging flags](https://docs.jax.dev/en/latest/debugging/flags.html) for information on useful flags like `jax_debug_nans` and `jax_debug_infs`.
 
 ```{code-cell}
 ---
@@ -969,12 +992,18 @@ jax.config.update("jax_debug_nans", True)
 def safe_forward_pass(model, inputs):
     """Forward pass that will error if NaN is produced."""
     logits = model(inputs)
+    # Contrived example: taking log of a negative number to induce NaN and demonstrate the NaN checker.
+    logits = jnp.log(-jnp.abs(logits))
     return logits
 
-# Test with our model (should work fine with a trained model)
 sample_input = jnp.ones((1, maxlen), dtype=jnp.int32)
-_ = safe_forward_pass(model, sample_input)
-print("Forward pass completed without NaN values")
+
+try:
+    _ = safe_forward_pass(model, sample_input)
+    print("Forward pass completed without NaN values")
+except FloatingPointError as e:
+    print("NaN detected during forward pass! (as expected for demonstration)")
+    print(e)
 
 # Disable NaN debugging for the rest of the notebook
 # (It adds overhead and can slow down training)
@@ -1015,6 +1044,7 @@ colab:
   base_uri: https://localhost:8080/
 id: Ic06KGLiLC5M
 outputId: 875a2213-4b24-4d52-c245-be143a15f1ed
+tags: [nbval-ignore-output]
 ---
 import orbax.checkpoint as orbax
 
@@ -1039,6 +1069,7 @@ colab:
   base_uri: https://localhost:8080/
 id: mA6VC4jOW3yn
 outputId: 457867ff-56a1-469e-f596-76ca9721dadc
+tags: [nbval-ignore-output]
 ---
 # Restore the checkpoint with proper sharding info
 from orbax.checkpoint import checkpoint_utils
@@ -1078,6 +1109,7 @@ colab:
   base_uri: https://localhost:8080/
 id: KDf7R6SVLC5M
 outputId: 675a9255-1e33-4970-a4dd-57f397f4eff3
+tags: [nbval-ignore-output]
 ---
 !pip install -Uq google-tunix[prod]
 ```
@@ -1115,6 +1147,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 2ouP0hlHLC5M
 outputId: c4a145a9-422c-4b76-a512-0aed8732e5a4
+tags: [nbval-ignore-output]
 ---
 !wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
 
@@ -1244,6 +1277,7 @@ colab:
     456d4230468149bfa31bc3787ec91877, 012f4a89b5ab40dbaf31efe4e06fe88f, 5fb7bafefea141e5853e0e2adf06af61]
 id: M5xo6Z_VLC5M
 outputId: c3c14f84-034d-4a2d-bea1-2ce85316552b
+tags: [nbval-ignore-output]
 ---
 print("Starting LoRA Finetuning...")
 with jax.set_mesh(mesh):
@@ -1272,6 +1306,7 @@ colab:
   height: 487
 id: PvFPnu5VLC5M
 outputId: dc1dd87b-c91d-4014-f3a4-4dc1bb41b6a0
+tags: [nbval-ignore-output]
 ---
 # Generate text with LoRA-finetuned model
 print("Generating text after LoRA finetuning:\n\n")
@@ -1315,6 +1350,7 @@ colab:
   base_uri: https://localhost:8080/
 id: 0wYfbijKLC5M
 outputId: 989d7b76-52ac-4673-c949-fc6ab739a29f
+tags: [nbval-ignore-output]
 ---
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
@@ -1375,6 +1411,7 @@ colab:
   base_uri: https://localhost:8080/
 id: UhoHdcD8LC5M
 outputId: 949ed3d6-beb6-43f2-970a-90fcdd30c7b8
+tags: [nbval-ignore-output]
 ---
 batch_size = 32
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
@@ -1507,7 +1544,7 @@ Congratulations! You've successfully trained a miniGPT language model from scrat
 **JAX AI Stack libraries used:**
 
 | Library | Purpose |
-|---------|---------|
+|:--------|:--------|
 | [JAX](https://jax.readthedocs.io) | High-performance array computing with automatic differentiation |
 | [Flax NNX](https://flax.readthedocs.io) | Neural network definition with intuitive API |
 | [Optax](https://optax.readthedocs.io) | Gradient processing and optimization |
