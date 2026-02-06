@@ -1,5 +1,6 @@
 ---
 jupytext:
+  formats: ipynb,md:myst
   text_representation:
     extension: .md
     format_name: myst
@@ -37,7 +38,7 @@ This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io
 
 By the end of this tutorial, you will be able to:
 
-- **Understand JAX's parallelism capabilities**: Learn how to leverage data and tensor parallelism to distribute training across multiple TPU devices
+- **Understand JAX's parallelism capabilities**: Learn how to leverage data and tensor parallelism to distribute training across multiple TPU/GPU devices
 - **Build transformer models with Flax NNX**: Define a GPT-style architecture using the modern Flax NNX API
 - **Process data efficiently with Grain**: Load and preprocess training data using Google's Grain data loading library
 - **Optimize models with Optax**: Implement training loops using JAX's gradient transformation library
@@ -304,18 +305,23 @@ To leverage model parallelism, we need to instruct the JAX compiler how to shard
 For a more detailed discussion of Flax NNX sharding, please refer to [this SPMD guide](https://flax.readthedocs.io/en/latest/guides/flax_gspmd.html).
 
 ```{code-cell}
+# Define a triangular mask for causal attention with `jax.numpy.tril` and `jax.numpy.ones`.
 def causal_attention_mask(seq_len):
-    """Create a triangular mask for causal (autoregressive) attention.
-
-    This mask ensures each token can only attend to previous tokens and itself,
-    preventing the model from "cheating" by looking at future tokens during training.
-    """
     return jnp.tril(jnp.ones((seq_len, seq_len)))
 
 
 class TransformerBlock(nnx.Module):
-    """A single Transformer block with multi-head attention and feed-forward layers."""
+    """ A single Transformer block.
 
+    Each Transformer block processes input sequences via self-attention and feed-forward networks.
+
+    Args:
+        embed_dim (int): Embedding dimensionality.
+        num_heads (int): Number of attention heads.
+        ff_dim (int): Dimensionality of the feed-forward network.
+        rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+        rate (float): Dropout rate. Defaults to 0.1.
+    """
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, *, rngs: nnx.Rngs, rate: float = 0.1):
         # Sharding specs for model parallelism
         kernel_sharding = P(None, 'model')
@@ -362,45 +368,93 @@ class TransformerBlock(nnx.Module):
             rngs=rngs
         )
 
+    # Apply the Transformer block to the input sequence.
     def __call__(self, inputs, training: bool = False):
-        _, seq_len, _ = inputs.shape
+        input_shape = inputs.shape
+        _, seq_len, _ = input_shape
+
+        # Instantiate the causal attention mask.
         mask = causal_attention_mask(seq_len)
 
-        # Attention block
-        attn_output = self.mha(inputs_q=inputs, mask=mask, decode=False)
-        attn_output = self.dropout1(attn_output, deterministic=not training)
-        x = self.layer_norm1(inputs + attn_output)
+        # Apply Multi-Head Attention with the causal attention mask.
+        attention_output = self.mha(
+            inputs_q=inputs,
+            mask=mask,
+            decode=False
+        )
+        # Apply the first dropout.
+        attention_output = self.dropout1(attention_output, deterministic=not training)
+        # Apply the first layer normalization.
+        out1 = self.layer_norm1(inputs + attention_output)
 
-        # Feed-forward block
-        ff_output = self.linear1(x)
-        ff_output = nnx.relu(ff_output)
-        ff_output = self.linear2(ff_output)
-        ff_output = self.dropout2(ff_output, deterministic=not training)
-        return self.layer_norm2(x + ff_output)
+        # The feed-forward network.
+        # Apply the first linear transformation.
+        ffn_output = self.linear1(out1)
+        # Apply the ReLU activation with `flax.nnx.relu`.
+        ffn_output = nnx.relu(ffn_output)
+        # Apply the second linear transformation.
+        ffn_output = self.linear2(ffn_output)
+        # Apply the second dropout.
+        ffn_output = self.dropout2(ffn_output, deterministic=not training)
+        # Apply the second layer normalization and return the output of the Transformer block.
+        return self.layer_norm2(out1 + ffn_output)
 
 
 class TokenAndPositionEmbedding(nnx.Module):
-    """Combines token embeddings with positional embeddings."""
+    """ Combines token embeddings (words in an input sentence) with
+    positional embeddings (the position of each word in a sentence).
 
+    Args:
+        maxlen (int): Matimum sequence length.
+        vocal_size (int): Vocabulary size.
+        embed_dim (int): Embedding dimensionality.
+        rngs (flax.nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+    """
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, *, rngs: nnx.Rngs):
+        # Initialize token embeddings (using `flax.nnx.Embed`).
+        # Each unique word has an embedding vector.
         self.token_emb = nnx.Embed(num_embeddings=vocab_size, features=embed_dim, rngs=rngs)
+        # Initialize positional embeddings (using `flax.nnx.Embed`).
         self.pos_emb = nnx.Embed(num_embeddings=maxlen, features=embed_dim, rngs=rngs)
 
+    # Takes a token sequence (integers) and returns the combined token and positional embeddings.
     def __call__(self, x):
+        # Generate a sequence of positions for the input tokens.
         positions = jnp.arange(0, x.shape[1])[None, :]
-        return self.token_emb(x) + self.pos_emb(positions)
+        # Look up the positional embeddings for each position in the input sequence.
+        position_embedding = self.pos_emb(positions)
+        # Look up the token embeddings for each token in the input sequence.
+        token_embedding = self.token_emb(x)
+        # Combine token and positional embeddings.
+        return token_embedding + position_embedding
 
 
 class MiniGPT(nnx.Module):
-    """A miniature GPT-style transformer language model."""
+    """ A miniGPT transformer model, inherits from `flax.nnx.Module`.
 
+    Args:
+        maxlen (int): Maximum sequence length.
+        vocab_size (int): Vocabulary size.
+        embed_dim (int): Embedding dimensionality.
+        num_heads (int): Number of attention heads.
+        feed_forward_dim (int): Dimensionality of the feed-forward network.
+        num_transformer_blocks (int): Number of transformer blocks. Each block contains attention and feed-forward networks.
+        rngs (nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
+    """
+    # Initialize miniGPT model components.
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int,
                  feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
-        self.embedding_layer = TokenAndPositionEmbedding(maxlen, vocab_size, embed_dim, rngs=rngs)
-        self.transformer_blocks = nnx.List([
-            TransformerBlock(embed_dim, num_heads, feed_forward_dim, rngs=rngs)
-            for _ in range(num_transformer_blocks)
-        ])
+        # Initiliaze the `TokenAndPositionEmbedding` that combines token and positional embeddings.
+        self.embedding_layer = TokenAndPositionEmbedding(
+                    maxlen, vocab_size, embed_dim, rngs=rngs
+                )
+        # Create a Sequential container of `TransformerBlock` instances.
+        # Each block processes input sequences using attention and feed-forward networks.
+        # Use nnx.Sequential instead of a plain list for proper NNX 0.12.0+ compatibility
+        self.transformer_blocks = nnx.Sequential(*[TransformerBlock(
+            embed_dim, num_heads, feed_forward_dim, rngs=rngs
+        ) for _ in range(num_transformer_blocks)])
+        # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
         self.output_layer = nnx.Linear(
             in_features=embed_dim, out_features=vocab_size,
             kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
@@ -409,10 +463,17 @@ class MiniGPT(nnx.Module):
         )
 
     def __call__(self, inputs, training: bool = False):
+        # Pass the input tokens through the `embedding_layer` to get token embeddings.
+        # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
         x = self.embedding_layer(inputs)
-        for block in self.transformer_blocks:
+        # nnx.Sequential automatically applies each block in sequence
+        # We need to pass the training flag to each block manually
+        for block in self.transformer_blocks.layers:
             x = block(x, training=training)
-        return self.output_layer(x)
+        # Pass the output of the transformer blocks through the output layer,
+        # and obtain logits for each token in the vocabulary (for next token prediction).
+        outputs = self.output_layer(x)
+        return outputs
 
     def get_model_input(self):
         return dict(inputs=jnp.zeros((batch_size, maxlen), dtype=jnp.int32), training=False)
@@ -450,17 +511,9 @@ class MiniGPT(nnx.Module):
         return tokenizer.decode(start_tokens + generated)
 
 
+# Creates the miniGPT model with 4 transformer blocks.
 def create_model(rngs):
-    """Factory function to create a MiniGPT model with configured hyperparameters."""
-    return MiniGPT(
-        maxlen=maxlen,
-        vocab_size=vocab_size,
-        embed_dim=embed_dim,
-        num_heads=num_heads,
-        feed_forward_dim=feed_forward_dim,
-        num_transformer_blocks=num_transformer_blocks,
-        rngs=rngs
-    )
+    return MiniGPT(maxlen, vocab_size, embed_dim, num_heads, feed_forward_dim, num_transformer_blocks=4, rngs=rngs)
 ```
 
 +++ {"id": "igX_eoGNMTGR"}
@@ -848,7 +901,7 @@ def debug_forward_pass(model, inputs):
                     mean=jnp.mean(x), std=jnp.std(x))
 
     # Pass through transformer blocks
-    for i, block in enumerate(model.transformer_blocks):
+    for i, block in enumerate(model.transformer_blocks.layers):
         x = block(x, training=False)
         jax.debug.print("After block {i} - mean: {mean:.4f}, std: {std:.4f}",
                         i=i, mean=jnp.mean(x), std=jnp.std(x))
@@ -1009,6 +1062,8 @@ lora_batch_size = 80
 For LoRA fintuning we use the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 !wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
 
 def load_shakespeare_dataset(batch_size, max_len, num_epochs):
@@ -1339,7 +1394,7 @@ llm = LLM(model="./minigpt-jax", device="tpu")
 
 For more details, see the [vLLM documentation](https://docs.vllm.ai/) and [vLLM TPU guide](https://docs.vllm.ai/projects/tpu/).
 
-+++ {"id": "kp_z3QVbLC5M"}
++++ {"id": "kp_z3QVbLC5M", "tags": ["nbval-skip"]}
 
 ## Summary
 
@@ -1360,7 +1415,7 @@ Congratulations! You've successfully trained a miniGPT language model from scrat
 **JAX AI Stack libraries used:**
 
 | Library | Purpose |
-|:--------|:--------|
+| :------ | :------ |
 | [JAX](https://jax.readthedocs.io) | High-performance array computing with automatic differentiation |
 | [Flax NNX](https://flax.readthedocs.io) | Neural network definition with intuitive API |
 | [Optax](https://optax.readthedocs.io) | Gradient processing and optimization |
