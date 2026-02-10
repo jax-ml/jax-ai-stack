@@ -5,11 +5,10 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.17.3
-kernelspec:
-  display_name: Python 3
-  name: python3
+    jupytext_version: 1.15.2
 ---
+
++++ {"id": "dA5x53bGMT2w"}
 
 # Train a miniGPT language model with JAX
 
@@ -29,19 +28,31 @@ kernelspec:
 
 +++ {"id": "NIOXoY1xgiww"}
 
-[REVAMP -1]: Add a more general introduction, including what this tutorial is and what users should expect to get out of it.
+## Introduction
 
-This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for [Single-Program Multi-Data](https://en.wikipedia.org/wiki/Single_program,_multiple_data)). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
+Welcome to this comprehensive tutorial on training a miniGPT language model using JAX and its AI ecosystem. This hands-on guide will walk you through the complete process of building, training, and optimizing a small but functional GPT-style language model.
 
-Here, you will learn how to:
+**What you'll learn:**
 
-- Define the miniGPT model with Flax and JAX automatic parallelism
-- Load and preprocess the dataset
-- Create the loss and training step functions
-- Train the model on TPUs on Kaggle or Google Colab
-- Profile for hyperparameter tuning
+This tutorial demonstrates how to use JAX, [Flax NNX](http://flax.readthedocs.io) and [Optax](http://optax.readthedocs.io) for language model (pre)training using data and tensor [parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html). It was originally inspired by the [Keras miniGPT tutorial](https://keras.io/examples/generative/text_generation_with_miniature_gpt/).
 
-If you are new to JAX for AI, check out the [introductory tutorial](https://jax-ai-stack.readthedocs.io/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html).
+By the end of this tutorial, you will be able to:
+
+- **Understand JAX's parallelism capabilities**: Learn how to leverage data and tensor parallelism to distribute training across multiple TPU/GPU devices
+- **Build transformer models with Flax NNX**: Define a GPT-style architecture using the modern Flax NNX API
+- **Process data efficiently with Grain**: Load and preprocess training data using Google's Grain data loading library
+- **Optimize models with Optax**: Implement training loops using JAX's gradient transformation library
+- **Train on cloud TPUs or GPUs**: Execute training using available accelerators (TPU, GPU) , while still maintaining the ability to run on CPU if needed
+- **Fine-tune with LoRA**: Apply parameter-efficient fine-tuning using the Tunix library
+- **Profile and optimize**: Use JAX's profiling tools to identify bottlenecks and tune hyperparameters
+
+**What to expect:**
+
+You'll train a miniGPT model from scratch on the TinyStories dataset, watch it progress from generating random text to coherent short stories, and then fine-tune it on Shakespeare's works to change its writing style. The entire training process takes approximately 20 minutes on a free Colab TPU.
+
+**Prerequisites:**
+
+If you are new to JAX for AI, check out the [introductory tutorial](https://docs.jaxstack.ai/en/latest/neural_net_basics.html), which covers neural network building with [Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html). Basic familiarity with Python, neural networks, and transformers is helpful but not required.
 
 +++ {"id": "hTmz5Cbco7n_"}
 
@@ -50,13 +61,8 @@ If you are new to JAX for AI, check out the [introductory tutorial](https://jax-
 JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. We will use [Tiktoken](https://github.com/openai/tiktoken) for tokenization and [Grain](https://google-grain.readthedocs.io/en/latest/index.html) for data loading.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: 6zMsOIc7ouCO
-outputId: 037d56a9-b18f-4504-f80a-3a4fa2945068
-tags: [nbval-skip]
----
+:tags: [nbval-skip]
+
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
@@ -67,15 +73,27 @@ tags: [nbval-skip]
 Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html). The output of the cell below will show a list of 8 (eight) devices.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: LS9sQEY3n0mB
-outputId: 6b9ee4b0-eed0-4bae-dd99-ffed14289ad7
-tags: [nbval-ignore-output]
----
+:tags: [nbval-ignore-output]
+
 import jax
 jax.devices()
+```
+
+```{code-cell}
+:tags: [nbval-skip]
+
+# Check if an accelerator (GPU/TPU) is available
+accelerator_available = any(d.platform in ('gpu', 'tpu') for d in jax.devices())
+
+if not accelerator_available:
+    import warnings
+    warnings.warn(
+        "WARNING: No GPU or TPU accelerator found. This notebook will still run, but using only the CPU can be much slower—training may take longer than intended.\n"
+        "For the best experience, it is highly recommended to use an accelerator:\n"
+        "  • Kaggle: Go to Settings → Accelerator → Choose GPU or TPU\n"
+        "  • Colab: Go to Runtime → Change runtime type → Select GPU or TPU\n"
+        "You can continue, but expect reduced performance."
+    )
 ```
 
 +++ {"id": "OHzJ_bokoovZ"}
@@ -83,13 +101,8 @@ jax.devices()
 Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/roneneldan/TinyStories). We only use the training split.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: wUjQsgQEmI1N
-outputId: a704b8b3-2a1e-48bc-8915-122329a5df52
-tags: [nbval-skip]
----
+:tags: [nbval-skip]
+
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
 
@@ -98,12 +111,8 @@ tags: [nbval-skip]
 Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, pandas, and Tiktoken:
 
 ```{code-cell}
-:id: MKYFNOhdLq98
-
 import jax
 import jax.numpy as jnp
-
-# For data and model parallelism (explained in more detail later)
 from jax.sharding import PartitionSpec as P, NamedSharding
 
 import flax.nnx as nnx
@@ -111,25 +120,137 @@ import optax
 
 from dataclasses import dataclass
 import grain.python as pygrain
-import pandas as pd
 import tiktoken
 import time
 ```
 
++++ {"id": "0XhqjGAFMT2w"}
+
 ## JAX: High-performance array computing
 
-[REVAMP 0]: Brief introduction to JAX.
+[JAX](https://jax.readthedocs.io) is a Python library for high-performance numerical computing and machine learning research. It combines the familiar NumPy API with powerful program transformations to enable automatic differentiation, vectorization, and parallelization.
+
+**Key features of JAX:**
+
+- **NumPy compatibility**: JAX provides `jax.numpy`, a drop-in replacement for NumPy that runs on accelerators like GPUs and TPUs
+- **Automatic differentiation**: The `jax.grad()` function computes gradients automatically, making it easy to implement gradient-based optimization
+- **JIT compilation**: `jax.jit()` compiles Python functions to optimized machine code for faster execution
+- **Automatic parallelization**: JAX can automatically distribute computations across multiple devices using SPMD (Single Program, Multiple Data) parallelism
+- **Functional programming**: JAX encourages pure functions, which enables reliable transformations and better performance
+
+For training large language models like our miniGPT, JAX's automatic parallelization capabilities are particularly valuable. They allow us to efficiently utilize multiple GPU or TPU cores without manually managing device placement and communication, making the most of whichever accelerator hardware is available.
+
++++ {"id": "t4-gksXxMT3B"}
+
+The three core JAX transforms you'll need understand are:
+- **[`jax.jit`](https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html)**: Just-in-time compilation via XLA for fast execution
+
+```{code-cell}
+:tags: [nbval-ignore-output]
+
+def slow_fn(x):
+    for _ in range(5):
+        x = x @ x
+    return x
+
+fast_fn = jax.jit(slow_fn)
+
+x = jnp.ones((1000, 1000))
+
+# The first call to the jitted function triggers compilation for the given input shape/dtype
+# (in this case, shape (1000, 1000)). Subsequent calls with the same shape/dtype are fast,
+# as they use the cached compiled executable.
+fast_fn(x).block_until_ready()
+
+%timeit slow_fn(x).block_until_ready()
+%timeit fast_fn(x).block_until_ready()
+```
+
++++ {"id": "Binla6QaMT3B"}
+
+- **[`jax.grad`](https://jax.readthedocs.io/en/latest/jax-101/04-advanced-autodiff.html)**: Automatic differentiation for computing gradients
+
+```{code-cell}
+def loss(x):
+    return jnp.sum(x ** 2)
+
+grad_loss = jax.grad(loss)
+
+x = jnp.array([1.0, 2.0, 3.0])
+print(f"x = {x}")
+print(f"loss(x) = {loss(x)}")
+print(f"grad(loss)(x) = {grad_loss(x)}")  # Derivative of x^2 is 2x
+```
+
++++ {"id": "aLr9GIPhMT3B"}
+
+- **[`jax.vmap`](https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html)**: Automatic vectorization to batch operations efficiently
+
+```{code-cell}
+:tags: [nbval-ignore-output]
+
+# Function that operates on a single vector
+def normalize(x):
+    return x / jnp.linalg.norm(x)
+
+# Create a batch of vectors
+batch = jnp.array([[1.0, 2.0, 3.0],
+                   [4.0, 5.0, 6.0],
+                   [7.0, 8.0, 9.0]])
+
+# vmap automatically vectorizes over the batch dimension
+batch_normalize = jax.vmap(normalize)
+print(batch_normalize(batch))
+```
+
++++ {"id": "Finf-IGrMT3B"}
+
+For a deeper introduction to JAX fundamentals, see the [JAX 101 tutorials](https://jax.readthedocs.io/en/latest/jax-101/index.html).
 
 +++ {"id": "rPyt7MV6prz1"}
 
 ## Define the miniGPT model with NNX and JAX automatic parallelism
 
 ### NNX: A JAX-based neural network library
-[REVAMP 1]: Introduce NNX.
+
+[Flax NNX](https://flax.readthedocs.io/en/latest/nnx_basics.html) is the next-generation neural network library for JAX, designed to make building and training models more intuitive and Pythonic. NNX is part of the Flax ecosystem and represents a modernized approach to neural network development.
+
+**Why NNX?**
+
+- **Stateful and intuitive**: Unlike the original Flax (Linen), NNX uses a stateful, object-oriented API that feels more natural for Python developers
+- **Familiar syntax**: Define models using standard Python classes with `__init__` and `__call__` methods, similar to PyTorch
+- **Seamless JAX integration**: NNX works smoothly with JAX transformations like `jit`, `grad`, and `vmap`
+- **Built-in modules**: Provides common layers like `nnx.Linear`, `nnx.MultiHeadAttention`, and `nnx.LayerNorm` out of the box
+- **Flexible state management**: Easily separate and manage different types of state (parameters, batch statistics, etc.)
+
+```{code-cell}
+# A simple two-layer MLP in Flax NNX
+class SimpleMLP(nnx.Module):
+    def __init__(self, in_features, hidden_size, out_features, rngs: nnx.Rngs):
+        self.linear1 = nnx.Linear(in_features, hidden_size, rngs=rngs)
+        self.linear2 = nnx.Linear(hidden_size, out_features, rngs=rngs)
+
+    def __call__(self, x):
+        x = self.linear1(x)
+        x = nnx.relu(x)
+        x = self.linear2(x)
+        return x
+
+# Create model and run a forward pass
+simple_model = SimpleMLP(in_features=3, hidden_size=16, out_features=2, rngs=nnx.Rngs(0))
+x = jnp.ones((4, 3))  # batch of 4 samples, 3 features each
+print(f"Output shape: {simple_model(x).shape}")  # (4, 2)
+```
+
++++ {"id": "oB-CSHQGMT3B"}
+
+In this tutorial, we'll use NNX to define our transformer architecture, leveraging its clean API to build the attention mechanisms, feed-forward networks, and embeddings that make up our miniGPT model.
+
++++ {"id": "GGBhVn4HMT3B"}
 
 ### Leveraging JAX's data and tensor parallelism
 
-One of the most powerful features of JAX is [device parallelism](https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization) for SPMD.
+One of the most powerful features of JAX is [device parallelism](https://docs.jax.dev/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html) for SPMD.
 
 - The data parallelism technique enables, for example, the training data to run via multiple parts (this is called sharding) - batches - in parallel and simultaneously across different devices, such as GPUs and Google TPUs. This allows to use larger batch sizes to speed up training.
 - Tensor parallelism allows us to split the model parameter tensors across several devices (sharding model tensors).
@@ -154,22 +275,31 @@ This matches the structure in the Kaggle TPU v5e setup.
 Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define how data and model parameters are distributed across the devices:
 
 ```{code-cell}
-:id: xuMlCK3Q8WJD
 :tags: [nbval-ignore-output]
 
 # Create a `Mesh` object representing TPU device arrangement.
-# For example, for Kaggle TPU v5e-8:
+# The mesh defines how we distribute computation across devices.
+
 if jax.device_count() == 8:
+    # For Kaggle TPU v5e-8 or similar 8-core TPUs:
+    # Split 8 devices into a 4x2 grid for data and model parallelism
     mesh = jax.make_mesh((4, 2), ('batch', 'model'))
 
-    ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
-    ### JAX enables quick experimentation with different partitioning strategies
-    ### like this. We will come back to this point at the end of this tutorial.
-    mesh = jax.make_mesh((8, 1), ('batch', 'model'))
+    # Alternative: Use 8-way data parallelism (no model parallelism)
+    # Uncomment the line below to experiment with this configuration:
+    # mesh = jax.make_mesh((8, 1), ('batch', 'model'))
 
-### For free-tier Colab TPU, which only has a single TPU core
-if jax.device_count() == 1:
-    mesh = jax.make_mesh((1, 1), ("batch", "model"))
+elif jax.device_count() == 1:
+    # For free-tier Colab TPU v5e-1 (single core)
+    # No parallelism is possible, but we still create a mesh for consistency
+    mesh = jax.make_mesh((1, 1), ('batch', 'model'))
+
+else:
+    # For other device counts, use all devices for data parallelism
+    mesh = jax.make_mesh((jax.device_count(), 1), ('batch', 'model'))
+
+print(f"Created mesh with {jax.device_count()} devices: {mesh}")
+print(f"Mesh shape: {mesh.shape} (batch={mesh.shape['batch']}, model={mesh.shape['model']})")
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -177,8 +307,6 @@ if jax.device_count() == 1:
 We will use the GPT-2 tokenizer from the [Tiktoken](https://github.com/openai/tiktoken) library:
 
 ```{code-cell}
-:id: iWbkk1V7-Isg
-
 tokenizer = tiktoken.get_encoding("gpt2")
 ```
 
@@ -191,11 +319,10 @@ To leverage model parallelism, we need to instruct the JAX compiler how to shard
 For a more detailed discussion of Flax NNX sharding, please refer to [this SPMD guide](https://flax.readthedocs.io/en/latest/guides/flax_gspmd.html).
 
 ```{code-cell}
-:id: z0p-IHurrB9i
-
 # Define a triangular mask for causal attention with `jax.numpy.tril` and `jax.numpy.ones`.
 def causal_attention_mask(seq_len):
     return jnp.tril(jnp.ones((seq_len, seq_len)))
+
 
 class TransformerBlock(nnx.Module):
     """ A single Transformer block.
@@ -210,52 +337,50 @@ class TransformerBlock(nnx.Module):
         rate (float): Dropout rate. Defaults to 0.1.
     """
     def __init__(self, embed_dim: int, num_heads: int, ff_dim: int, *, rngs: nnx.Rngs, rate: float = 0.1):
-        # Multi-Head Attention (MHA) with `flax.nnx.MultiHeadAttention`.
-        # Specifies tensor sharding (depending on the mesh configuration)
-        # where we shard the weights across devices for parallel computation.
-        self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
-                                          in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(
-                                              nnx.initializers.xavier_uniform(), P(None, 'model')),
-                                          bias_init=nnx.with_partitioning(
-                                              nnx.initializers.zeros_init(), P('model')),
-                                          rngs=rngs)
-        # The first dropout with `flax.nnx.Dropout`.
+        # Sharding specs for model parallelism
+        kernel_sharding = P(None, 'model')
+        bias_sharding = P('model')
+
+        # Multi-Head Attention
+        self.mha = nnx.MultiHeadAttention(
+            num_heads=num_heads,
+            in_features=embed_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), kernel_sharding),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), bias_sharding),
+            rngs=rngs
+        )
+
+        # First residual path
         self.dropout1 = nnx.Dropout(rate=rate, rngs=rngs)
-         # First layer normalization with `flax.nnx.LayerNorm`.
-        self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
-                                         num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), P('model')),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), P('model')),
-                                         rngs=rngs)
-        # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
-        self.linear1 = nnx.Linear(in_features=embed_dim,
-                                  out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), P(None, 'model')),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), P('model')),
-                                  rngs=rngs)
-        # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
-        self.linear2 = nnx.Linear(in_features=ff_dim,
-                                  out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(
-                                      nnx.initializers.xavier_uniform(), P(None, 'model')),
-                                  bias_init=nnx.with_partitioning(
-                                      nnx.initializers.zeros_init(), P('model')),
-                                  rngs=rngs)
-        # The second dropout with `flax.nnx.Dropout`.
+        self.layer_norm1 = nnx.LayerNorm(
+            epsilon=1e-6, num_features=embed_dim,
+            scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), bias_sharding),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), bias_sharding),
+            rngs=rngs
+        )
+
+        # Feed-forward network
+        self.linear1 = nnx.Linear(
+            in_features=embed_dim, out_features=ff_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), kernel_sharding),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), bias_sharding),
+            rngs=rngs
+        )
+        self.linear2 = nnx.Linear(
+            in_features=ff_dim, out_features=embed_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), kernel_sharding),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), bias_sharding),
+            rngs=rngs
+        )
+
+        # Second residual path
         self.dropout2 = nnx.Dropout(rate=rate, rngs=rngs)
-        # Second layer normalization with `flax.nnx.LayerNorm`.
-        self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
-                                         num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(
-                                             nnx.initializers.ones_init(), P('model')),
-                                         bias_init=nnx.with_partitioning(
-                                             nnx.initializers.zeros_init(), P('model')),
-                                         rngs=rngs)
+        self.layer_norm2 = nnx.LayerNorm(
+            epsilon=1e-6, num_features=embed_dim,
+            scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), bias_sharding),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), bias_sharding),
+            rngs=rngs
+        )
 
     # Apply the Transformer block to the input sequence.
     def __call__(self, inputs, training: bool = False):
@@ -285,7 +410,9 @@ class TransformerBlock(nnx.Module):
         ffn_output = self.linear2(ffn_output)
         # Apply the second dropout.
         ffn_output = self.dropout2(ffn_output, deterministic=not training)
+        # Apply the second layer normalization and return the output of the Transformer block.
         return self.layer_norm2(out1 + ffn_output)
+
 
 class TokenAndPositionEmbedding(nnx.Module):
     """ Combines token embeddings (words in an input sentence) with
@@ -315,6 +442,7 @@ class TokenAndPositionEmbedding(nnx.Module):
         # Combine token and positional embeddings.
         return token_embedding + position_embedding
 
+
 class MiniGPT(nnx.Module):
     """ A miniGPT transformer model, inherits from `flax.nnx.Module`.
 
@@ -327,73 +455,77 @@ class MiniGPT(nnx.Module):
         num_transformer_blocks (int): Number of transformer blocks. Each block contains attention and feed-forward networks.
         rngs (nnx.Rngs): A Flax NNX stream of JAX PRNG keys.
     """
-    def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int, feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
+    # Initialize miniGPT model components.
+    def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int,
+                 feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
         # Initiliaze the `TokenAndPositionEmbedding` that combines token and positional embeddings.
         self.embedding_layer = TokenAndPositionEmbedding(
                     maxlen, vocab_size, embed_dim, rngs=rngs
                 )
-        # Create a list of `TransformerBlock` instances.
+        # Create a Sequential container of `TransformerBlock` instances.
         # Each block processes input sequences using attention and feed-forward networks.
-        self.transformer_blocks = nnx.List([TransformerBlock(
+        # Use nnx.Sequential instead of a plain list for proper NNX 0.12.0+ compatibility
+        self.transformer_blocks = nnx.Sequential(*[TransformerBlock(
             embed_dim, num_heads, feed_forward_dim, rngs=rngs
         ) for _ in range(num_transformer_blocks)])
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
-        self.output_layer = nnx.Linear(in_features=embed_dim,
-                                       out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(
-                                           nnx.initializers.xavier_uniform(), P(None, 'model')),
-                                       bias_init=nnx.with_partitioning(
-                                           nnx.initializers.zeros_init(), P('model')),
-                                       rngs=rngs)
+        self.output_layer = nnx.Linear(
+            in_features=embed_dim, out_features=vocab_size,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), P(None, 'model')),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), P('model')),
+            rngs=rngs
+        )
 
     def __call__(self, inputs, training: bool = False):
         # Pass the input tokens through the `embedding_layer` to get token embeddings.
         # Apply each transformer block sequentially to the embedded input, use the `training` flag for the behavior of `flax.nnx.Dropout`.
         x = self.embedding_layer(inputs)
-        for transformer_block in self.transformer_blocks:
-            x = transformer_block(x, training=training)
+        # nnx.Sequential automatically applies each block in sequence
+        # We need to pass the training flag to each block manually
+        for block in self.transformer_blocks.layers:
+            x = block(x, training=training)
         # Pass the output of the transformer blocks through the output layer,
         # and obtain logits for each token in the vocabulary (for next token prediction).
         outputs = self.output_layer(x)
         return outputs
 
-    # For Tunix use later
     def get_model_input(self):
-        return dict(
-            inputs=jnp.zeros((batch_size, maxlen), dtype=jnp.int32),
-            training=False
-        )
+        return dict(inputs=jnp.zeros((batch_size, maxlen), dtype=jnp.int32), training=False)
 
     @nnx.jit
     def sample_from(self, rng_key, logits):
         logits, indices = jax.lax.top_k(logits, k=top_k)
-        logits = nnx.softmax(logits)
-        return jax.random.choice(rng_key, indices, p=logits)
+        return jax.random.choice(rng_key, indices, p=nnx.softmax(logits))
 
     @nnx.jit
     def generate_step(self, rng_key, padded_tokens, sample_index):
         logits = self(padded_tokens)
-        next_token = self.sample_from(rng_key, logits[0][sample_index])
-        return next_token
+        return self.sample_from(rng_key, logits[0][sample_index])
 
     def generate_text(self, max_tokens, start_tokens):
         generated = []
-        rng_key = jax.random.PRNGKey(0) # Create the initial key
+        rng_key = jax.random.PRNGKey(0)
         print(tokenizer.decode(start_tokens), flush=True, end='')
+
         for i in range(max_tokens):
             sample_index = len(start_tokens) + len(generated) - 1
-
-            # Split the key for each step
             rng_key, step_key = jax.random.split(rng_key)
 
-            padded_tokens = jnp.array((start_tokens + generated + [0] * (maxlen - len(start_tokens) - len(generated))))[None, :]
-            next_token = int(self.generate_step(step_key, padded_tokens, sample_index))
-            if next_token == tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]:
-              break
+            current_seq = start_tokens + generated
+            padded = jnp.array(current_seq + [0] * (maxlen - len(current_seq)))[None, :]
+            next_token = int(self.generate_step(step_key, padded, sample_index))
+
+            end_token = tokenizer.encode('<|endoftext|>', allowed_special={'<|endoftext|>'})[0]
+            if next_token == end_token:
+                break
+
             generated.append(next_token)
             print(tokenizer.decode([next_token]), flush=True, end='')
+
         return tokenizer.decode(start_tokens + generated)
 
+
+# Creates the miniGPT model with 4 transformer blocks.
 def create_model(rngs):
     return MiniGPT(maxlen, vocab_size, embed_dim, num_heads, feed_forward_dim, num_transformer_blocks=4, rngs=rngs)
 ```
@@ -403,34 +535,48 @@ def create_model(rngs):
 Set some hyperparameters.
 
 ```{code-cell}
-:id: GRhiDsCrMZRp
+# Model architecture hyperparameters
+vocab_size = tokenizer.n_vocab              # Size of GPT-2 vocabulary
+num_transformer_blocks = 4                  # Number of transformer layers
+maxlen = 128                                # Maximum sequence length
+embed_dim = 128                             # Embedding dimension
+num_heads = 4                               # Number of attention heads
+feed_forward_dim = 256                      # Hidden dimension in feed-forward network
 
-vocab_size = tokenizer.n_vocab
-num_transformer_blocks = 8
-maxlen = 256
-embed_dim = 256
-num_heads = 8
-feed_forward_dim = 256
-batch_size = 144 * jax.device_count() / 2  # divide by 2 in case of model parallelism
-if jax.device_count() == 1:
-    batch_size = 144
-num_epochs = 1
-top_k = 10
+# Training hyperparameters
+batch_size = 32                             # Batch size
+num_epochs = 1                              # Number of passes through the dataset
+top_k = 10                                  # Top-k sampling for text generation
 ```
 
 +++ {"id": "mI1ci-HyMspJ"}
 
 ## Grain: Load and preprocess the data
 
-[REVAMP 2]: Expand the intro to Grain.
+[Grain](https://google-grain.readthedocs.io/en/latest/) is Google's high-performance data loading library designed specifically for machine learning workloads in JAX. It provides efficient data pipelines that can keep up with the demanding throughput requirements of modern accelerators like TPUs and GPUs.
 
-Data loading and preprocessing with [Grain](https://github.com/google/grain).
+**Why Grain for data loading?**
+
+- **Performance optimized**: Grain is designed from the ground up for high-throughput data loading, minimizing bottlenecks between data processing and model training
+- **Deterministic and reproducible**: Grain ensures deterministic iteration order even with shuffling and multiple workers, which is crucial for reproducible experiments
+- **JAX integration**: Seamlessly works with JAX's device parallelism, automatically handling data sharding across multiple devices
+- **Flexible transformations**: Provides composable operations for batching, shuffling, and preprocessing data
+- **Multi-epoch support**: Built-in support for iterating over datasets multiple times without manual reinitialization
+
+**Key Grain concepts:**
+
+In this tutorial, we use three main Grain components:
+
+1. **Data source**: A custom `TextDataset` class that tokenizes and pads text sequences to a fixed length
+2. **Sampler**: An `IndexSampler` that determines the order in which examples are accessed from the data source
+3. **DataLoader**: Combines the data source, sampler, and operations (like batching) into an efficient pipeline
+
+Grain handles the complexity of data loading, allowing us to focus on model development while ensuring our TPUs stay fully utilized during training.
 
 ```{code-cell}
-:id: rGUFsn1GMuzh
-
 @dataclass
 class TextDataset:
+    """A simple dataset for tokenized text sequences."""
     data: list
     maxlen: int
 
@@ -438,20 +584,25 @@ class TextDataset:
         return len(self.data)
 
     def __getitem__(self, idx: int):
-        # Use Tiktoken for tokenization
-        encoding = tokenizer.encode(self.data[idx], allowed_special={'<|endoftext|>'})[:self.maxlen]  # Tokenize and truncate
-        return encoding + [0] * (self.maxlen - len(encoding))  # Pad to maxlen
+        # Tokenize and truncate
+        encoding = tokenizer.encode(self.data[idx], allowed_special={'<|endoftext|>'})[:self.maxlen]
+        # Pad to maxlen
+        return encoding + [0] * (self.maxlen - len(encoding))
+
 
 def load_and_preprocess_data(file_path, batch_size, maxlen):
+    """Load the TinyStories dataset and create a Grain DataLoader."""
 
+    # Read the file
     with open(file_path, 'r') as f:
-      text = f.read()
+        text = f.read(1 << 29)
 
+    # Split into stories
     stories = text.split('<|endoftext|>')
-    stories = [story+'<|endoftext|>' for story in stories if story.strip()]
-    df = pd.DataFrame({'text': stories})
-    data = df['text'].dropna().tolist()
-    dataset = TextDataset(data, maxlen)
+    stories = [story + '<|endoftext|>' for story in stories if story.strip()]
+    print(f"Loaded {len(stories):,} stories")
+
+    dataset = TextDataset(stories, maxlen)
 
     sampler = pygrain.IndexSampler(
         len(dataset),
@@ -471,10 +622,6 @@ def load_and_preprocess_data(file_path, batch_size, maxlen):
 ```
 
 ```{code-cell}
-:cellView: form
-:id: b9tmfMzj7eso
-:tags: [hide-cell]
-
 # @title [hidden cell; used for testing]
 # This cell is run only in the JAX AI Stack's CI testing and should otherwise be ignored.
 import os
@@ -521,9 +668,13 @@ if AI_STACK_TEST_MODE:
 ```
 
 ```{code-cell}
-:id: VnfW4Z7l7eso
+:tags: [nbval-skip]
 
-text_dl = load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen)
+# Create the data loader
+# This will load, tokenize, and batch the TinyStories dataset
+print(f"Loading TinyStories dataset with batch_size={int(batch_size)}, maxlen={maxlen}...")
+text_dl = load_and_preprocess_data('TinyStories-train.txt', int(batch_size), maxlen)
+print("Dataset loaded successfully!")
 ```
 
 +++ {"id": "BKVSD8KSM1um"}
@@ -531,20 +682,60 @@ text_dl = load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen)
 ## Defining the loss function and training step function
 
 ```{code-cell}
-:id: 8rRuTmABNV4b
-
-# Defines the loss function using `optax.softmax_cross_entropy_with_integer_labels`.
 def loss_fn(model, batch):
-    logits = model(batch[0])
-    loss = optax.softmax_cross_entropy_with_integer_labels(logits=logits, labels=batch[1]).mean()
+    """Compute the cross-entropy loss for language modeling.
+
+    Args:
+        model: The MiniGPT model
+        batch: A tuple of (input_tokens, target_tokens)
+
+    Returns:
+        A tuple of (loss, logits) where:
+        - loss: Scalar cross-entropy loss
+        - logits: Model predictions (returned as auxiliary output for metrics)
+    """
+    input_tokens, target_tokens = batch
+
+    # Forward pass: get logits for each position
+    logits = model(input_tokens)
+
+    # Compute cross-entropy loss between predictions and targets
+    # This measures how well the model predicts the next token
+    loss = optax.softmax_cross_entropy_with_integer_labels(
+        logits=logits,
+        labels=target_tokens
+    ).mean()
+
     return loss, logits
 
-# Define the training step with the `flax.nnx.jit` transformation decorator.
-@nnx.jit
+
+@nnx.jit  # JIT-compile for performance (runs once, then cached)
 def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetric, batch):
+    """Perform a single training step.
+
+    This function:
+    1. Computes the loss and gradients
+    2. Updates model parameters using the optimizer
+    3. Updates metrics for tracking
+
+    Args:
+        model: The MiniGPT model to train
+        optimizer: The Optax optimizer (wrapped in nnx.Optimizer)
+        metrics: Metrics tracker for monitoring training
+        batch: A tuple of (input_tokens, target_tokens)
+    """
+    # Create a function that computes both loss value and gradients
+    # has_aux=True means loss_fn returns (loss, auxiliary_data)
     grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
+
+    # Compute loss, logits, and gradients in one go
     (loss, logits), grads = grad_fn(model, batch)
-    metrics.update(loss=loss, logits=logits, lables=batch[1])
+
+    # Update metrics for tracking
+    metrics.update(loss=loss, logits=logits, labels=batch[1])
+
+    # Update model parameters using the computed gradients
+    # The optimizer applies the Adam update rule
     optimizer.update(model, grads)
 ```
 
@@ -552,78 +743,127 @@ def train_step(model: MiniGPT, optimizer: nnx.Optimizer, metrics: nnx.MultiMetri
 
 ## Optax: Train the model
 
-[REVAMP 3]: Expand the intro to Optax.
+[Optax](https://optax.readthedocs.io) is a gradient processing and optimization library for JAX. It provides composable components for building custom optimizers and a collection of popular optimization algorithms used in deep learning.
 
-Start training. It takes ~20 minutes on Colab TPU v5e-1.
+**Why Optax?**
+
+- **Modular design**: Optax uses a functional, composable approach where optimizers are built by chaining together simple transformations
+- **Rich optimizer collection**: Includes popular optimizers like Adam, SGD, AdamW, and many more advanced variants
+- **Gradient transformations**: Provides utilities for gradient clipping, normalization, and other preprocessing steps
+- **JAX compatibility**: Designed specifically for JAX, working seamlessly with `jax.grad()` and other transformations
+- **Stateless and functional**: Optimizer state is explicitly managed, making it easy to understand and debug
+
+**Key Optax concepts:**
+
+In this tutorial, we use:
+
+1. **Loss function**: We define a `loss_fn` that computes cross-entropy loss using `optax.softmax_cross_entropy_with_integer_labels`
+2. **Optimizer**: We use `optax.adam(1e-3)`, the Adam optimizer with a learning rate of 0.001
+3. **NNX Optimizer wrapper**: `nnx.Optimizer` integrates Optax optimizers with Flax NNX models, handling parameter updates automatically
+
+The training loop combines these components: we compute gradients with `nnx.value_and_grad`, then use the optimizer to update model parameters based on those gradients.
+
+**Training details:**
+
+Start training. It takes approximately 20 minutes on Colab TPU v5e-1.
 
 Note that for data parallel, we are sharding the training data along the `batch` axis using `jax.device_put`.
 
 We are also using the `jax.vmap` transformation to produce the target sequences faster.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: Ysl6CsfENeJN
-outputId: ba3051ad-0e11-4570-a223-28f35ca505e0
-tags: [nbval-ignore-output]
----
+:tags: [nbval-skip]
+
+# Initialize the model and optimizer within the mesh context
+# This ensures model parameters are properly sharded according to our partition specs
 with jax.set_mesh(mesh):
-  model = create_model(rngs=nnx.Rngs(0))
-  optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+    model = create_model(rngs=nnx.Rngs(0))
+    # Create Adam optimizer with learning rate 1e-3
+    # wrt=nnx.Param means we only optimize parameters (not other state like batch stats)
+    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+
+# Initialize metrics tracking
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
+
+# Initialize random number generator (not used in current training but good practice)
 rng = jax.random.PRNGKey(0)
 
+# Test the model before training by generating some text
 start_prompt = "Once upon a time"
 start_tokens = tokenizer.encode(start_prompt)[:maxlen]
-print("Initial generated text:")
+print("Initial generated text (before training):")
 generated_text = model.generate_text(maxlen, start_tokens)
+print("\n")
 
+# Dictionary to store training metrics over time
 metrics_history = {
     "train_loss": [],
 }
 
+# Helper function to create target sequences from input sequences
+# In language modeling, the target is the input shifted by one position
+# Uses jax.vmap to vectorize the operation across the batch dimension efficiently
 prep_target_batch = jax.vmap(
     lambda tokens: jnp.concatenate((tokens[1:], jnp.array([0])))
 )
 
+# Training loop
 step = 0
 for epoch in range(num_epochs):
     start_time = time.time()
+
     for batch in text_dl:
+        # Skip batches that don't divide evenly across devices
+        # This ensures each device gets the same amount of data
         if len(batch) % len(jax.devices()) != 0:
-            continue  # skip the remaining elements
+            continue
+
+        # Prepare input and target batches
+        # Transpose to get shape (batch_size, seq_len)
         input_batch = jnp.array(jnp.array(batch).T)
+
+        # Create targets by shifting inputs left by one position
+        # E.g., if input is [1, 2, 3, 4], target is [2, 3, 4, 0]
         target_batch = prep_target_batch(input_batch)
-        train_step(
-            model,
-            optimizer,
-            metrics,
-            jax.device_put(
-                (input_batch, target_batch), NamedSharding(mesh, P("batch", None))
-            ),
+
+        # Shard the data across devices for data parallelism
+        # NamedSharding with P("batch", None) means:
+        # - Shard along the batch dimension (first axis)
+        # - Replicate along the sequence dimension (second axis)
+        # jax.device_put moves the data to the devices with the specified sharding
+        sharded_batch = jax.device_put(
+            (input_batch, target_batch),
+            NamedSharding(mesh, P("batch", None))
         )
 
-        if (step + 1) % 200 == 0:
+        # Perform one training step
+        # JAX automatically handles the distributed computation!
+        train_step(model, optimizer, metrics, sharded_batch)
+
+        # Log metrics every 1000 steps
+        if (step + 1) % 1000 == 0:
+            # Compute and store current metrics
             for metric, value in metrics.compute().items():
                 metrics_history[f"train_{metric}"].append(value)
             metrics.reset()
 
+            # Print progress
             elapsed_time = time.time() - start_time
-            print(
-                f"\n\nStep {step + 1}, Loss: {metrics_history['train_loss'][-1]}, Elapsed Time: {elapsed_time:.2f} seconds"
-            )
+            print(f"\nStep {step + 1}, Loss: {metrics_history['train_loss'][-1]:.4f}, "
+                  f"Elapsed Time: {elapsed_time:.2f}s")
             start_time = time.time()
 
+            # Generate sample text to see progress
             print("Generated text:")
             generated_text = model.generate_text(maxlen, start_tokens)
+            print("\n")
 
         step += 1
 
-# Final text generation
-print("Final generated text:")
+# Final text generation to see the fully trained model
+print("\nFinal generated text (after training):")
 generated_text = model.generate_text(maxlen, start_tokens)
 ```
 
@@ -632,14 +872,8 @@ generated_text = model.generate_text(maxlen, start_tokens)
 Visualize the training loss.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 472
-id: B6Eg1Cz2y_iP
-outputId: 60e54019-dcdc-425b-e95a-c03e301d688f
-tags: [nbval-ignore-output]
----
+:tags: [nbval-skip]
+
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
 plt.title('Training Loss')
@@ -652,28 +886,130 @@ plt.show()
 
 As you can see, the model goes from generating completely random words at the beginning to generating sensible tiny stories at the end of the training. So essentially we have pretrained a small LLM to write tiny stories for us.
 
-+++ {"id": "d1_l1Pr-7eso"}
++++ {"id": "WDCVkgMTLC5M"}
 
 ## Debugging the model
 
-[REVAMP 4]: Add a debugging section.
+When working with JAX and JIT-compiled functions, debugging requires different techniques than traditional Python debugging. Since JIT compilation traces your function and compiles it to XLA, standard `print()` statements execute at trace time and won't work inside compiled functions.
 
-+++ {"id": "soPqiR1JNmjf"}
+**JAX debugging tools:**
 
-## Orbax: Save the checkpoint
+- **`jax.debug.print()`**: Print intermediate values from inside JIT-compiled functions
+- **`jax.debug_nans`**: Automatically detect and raise errors when NaN values appear in computations
 
-[REVAMP 5] Introduce Orbax.
+For more debugging techniques, see the [JAX debugging documentation](https://jax.readthedocs.io/en/latest/debugging/index.html).
 
-Save the model checkpoint.
+Let's explore these debugging techniques with our miniGPT model.
+
++++ {"id": "lhgaK7w0W3yn"}
+
+### Using `jax.debug.print()` inside JIT-compiled functions
+
+The `jax.debug.print()` function lets you inspect intermediate values during execution. Unlike regular `print()`, it works inside `@jax.jit` decorated functions. This is invaluable for understanding what's happening inside your model.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: EkoFGCgSZ1yz
-outputId: 593af986-77a7-4665-eee4-5deb2d891b7f
-tags: [nbval-skip]
----
+:tags: [nbval-skip]
+
+# Demonstrate jax.debug.print inside a JIT-compiled function
+@jax.jit
+def debug_forward_pass(model, inputs):
+    """Forward pass with debug prints to inspect intermediate values."""
+    # Inspect input shape (static and known, so use Python print)
+    print("Input shape:", inputs.shape)
+
+    # Get embeddings and inspect
+    x = model.embedding_layer(inputs)
+    jax.debug.print("After embedding - mean: {mean:.4f}, std: {std:.4f}",
+                    mean=jnp.mean(x), std=jnp.std(x))
+
+    # Pass through transformer blocks
+    for i, block in enumerate(model.transformer_blocks.layers):
+        x = block(x, training=False)
+        jax.debug.print("After block {i} - mean: {mean:.4f}, std: {std:.4f}",
+                        i=i, mean=jnp.mean(x), std=jnp.std(x))
+
+    logits = model.output_layer(x)
+    jax.debug.print("Output logits - mean: {mean:.4f}",
+                    mean=jnp.mean(logits))
+    return logits
+
+# Run the debug forward pass with a sample input
+sample_input = jnp.ones((1, maxlen), dtype=jnp.int32)
+_ = debug_forward_pass(model, sample_input)
+```
+
++++ {"id": "duapvyZAW3yn"}
+
+### Detecting NaN and Inf values with `jax.debug_nans` and `jax.debug_infs`
+
+Exploding gradients during training can lead to either NaN ("Not a Number") or Inf (infinity) values, both of which can disrupt training and indicate numerical instability.
+
+JAX provides configuration flags to help catch these issues early: `jax_debug_nans` will automatically detect and raise an error if NaN values appear in your computations, and `jax_debug_infs` does the same for Inf values. Both can be invaluable tools for debugging numerical problems in your model.
+
+For more on detecting NaN and Inf in JAX computations, see the [Debugging runtime values](https://jax.readthedocs.io/en/latest/debugging/index.html)
+and the [JAX debugging flags](https://docs.jax.dev/en/latest/debugging/flags.html) for information on useful flags like `jax_debug_nans` and `jax_debug_infs`.
+
+```{code-cell}
+:tags: [nbval-skip]
+
+# Enable NaN debugging globally - any NaN will raise an error with a traceback
+# This is useful during development to catch numerical issues early
+jax.config.update("jax_debug_nans", True)
+
+# Example: This function would raise an error if it produced NaN
+@jax.jit
+def safe_forward_pass(model, inputs):
+    """Forward pass that will error if NaN is produced."""
+    logits = model(inputs)
+    # Contrived example: taking log of a negative number to induce NaN and demonstrate the NaN checker.
+    logits = jnp.log(-jnp.abs(logits))
+    return logits
+
+sample_input = jnp.ones((1, maxlen), dtype=jnp.int32)
+
+try:
+    _ = safe_forward_pass(model, sample_input)
+    print("Forward pass completed without NaN values")
+except FloatingPointError as e:
+    print("NaN detected during forward pass! (as expected for demonstration)")
+    print(e)
+
+# Disable NaN debugging for the rest of the notebook
+# (It adds overhead and can slow down training)
+jax.config.update("jax_debug_nans", False)
+```
+
++++ {"id": "cuLzhlyoW3yn"}
+
+**Tip:** You can also use `jax.debug.print()` inside your loss function or training step to monitor gradient health and intermediate values. This is demonstrated in the code cell above showing the forward pass with debug prints.
+
++++ {"id": "JNxCVBVeLC5M"}
+
+## Orbax: Save and restore model checkpoints
+
+[Orbax](https://orbax.readthedocs.io/) is Google's checkpointing library designed for JAX workloads. It provides efficient, scalable, and flexible checkpoint management for machine learning models.
+
+**Why Orbax?**
+
+- **JAX-native**: Designed specifically for JAX's pytree structures and distributed arrays
+- **Asynchronous saving**: Non-blocking checkpoint saves that don't interrupt training
+- **Scalable**: Handles large models efficiently with support for sharded checkpoints across devices
+- **Flexible**: Works with any pytree structure, including Flax NNX models
+- **Cloud-ready**: Integrates with cloud storage backends like Google Cloud Storage (GCS)
+
+**Key concepts:**
+
+In this tutorial, we use:
+
+1. **`nnx.state()`**: Extracts the model's state (parameters, batch stats, etc.) as a pytree
+2. **`PyTreeCheckpointer`**: The main checkpointer class for saving and loading pytrees
+3. **`PyTreeSave` / `PyTreeRestore`**: Arguments specifying how to save or restore the checkpoint
+
+Let's save our trained model checkpoint.
+
+```{code-cell}
+:tags: [nbval-skip]
+
 import orbax.checkpoint as orbax
 
 state = nnx.state(model)
@@ -685,59 +1021,80 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 !ls /content/save/
 ```
 
-+++ {"id": "azzwiMeP7eso"}
++++ {"id": "ZC2fVGlTW3yn"}
+
+### Restoring a checkpoint
+
+To resume training or use a saved model for inference, restore the checkpoint using `PyTreeRestore`. The restored state can be applied to a new model instance using `nnx.update()`.
+
+```{code-cell}
+:tags: [nbval-skip]
+
+# Restore the checkpoint with proper sharding info
+from orbax.checkpoint import checkpoint_utils
+
+# Create restore args from the target state to provide sharding info
+restore_args = checkpoint_utils.construct_restore_args(state)
+restored_state = checkpointer.restore(
+    '/content/save',
+    args=orbax.args.PyTreeRestore(state, restore_args=restore_args)
+)
+
+# Create a fresh model instance and update it with restored state
+with jax.set_mesh(mesh):
+    restored_model = create_model(rngs=nnx.Rngs(42))  # Different seed to prove restoration works
+    nnx.update(restored_model, restored_state)
+
+# Verify restoration works by generating text
+print("Text generated by restored model:")
+_ = restored_model.generate_text(maxlen, start_tokens)
+```
+
++++ {"id": "kT28EUaDLC5M"}
 
 ## Tunix: Fine-tuning
 
 [Tunix](https://github.com/google/tunix) is a JAX-native LLM post-training library open sourced by Google. It supports a range of post-training techniques including supervised finetuning, preference tuning, reinforcement learning and model distillation. In this section, we are going to use Tunix to finetune the miniGPT model we just pretrained using LoRA ([Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)) so that the finetuned model generates output of a different style.
 
-+++ {"id": "-kJShd9n_iTl"}
++++ {"id": "uxnW69mnLC5M"}
 
 First we install Tunix and its dependencies, and import necessary libraries. Note that Colab will ask you to restart the runtime, but you can just ignore it.
 
 **Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: uipLvy9E7eso
-outputId: 93cf001f-2964-467c-9848-b106be6cacf5
-tags: [nbval-ignore-output]
----
-!pip install google-tunix[prod]
+:tags: [nbval-skip]
+
+!pip install -Uq google-tunix[prod]
 ```
 
 ```{code-cell}
-:tags: [nbval-ignore-output]
+:tags: [nbval-skip]
 
 import qwix
 import numpy as np
 from tunix.sft import peft_trainer
 ```
 
-+++ {"id": "cE0Rx6Q3_q4n"}
++++ {"id": "Od2XV7hyLC5M"}
 
 We set some hyperparameters.
 
 ```{code-cell}
-:id: YzEDIR_N7_D4
-
 # LoRA Hyperparameters
 lora_rank = 16
 lora_alpha = 2.0
 lora_max_steps = 400
-lora_num_epochs = 10
+lora_num_epochs = 20
 lora_batch_size = 80
 ```
 
-+++ {"id": "mfnj-S02_yM5"}
++++ {"id": "kOlfgGu8LC5M"}
 
 For LoRA fintuning we use the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
 
 ```{code-cell}
-:id: Mtzb0NXb8TVY
-:tags: [nbval-ignore-output]
+:tags: [nbval-skip]
 
 !wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
 
@@ -808,23 +1165,26 @@ def load_shakespeare_dataset(batch_size, max_len, num_epochs):
 lora_train_ds = load_shakespeare_dataset(lora_batch_size, maxlen, lora_num_epochs)
 ```
 
-+++ {"id": "qvxSxbbcBim7"}
++++ {"id": "VWAHNKMYLC5M"}
 
 We define a few helper functions to create the LoRA model, loss, etc.
 
 ```{code-cell}
-:id: oX9F-ZsN8ima
+:tags: [nbval-skip]
 
 def get_lora_model(base_model, mesh):
   lora_provider = qwix.LoraProvider(
-      module_path=".*mha|.*linear1|.*linear2",
+      # Target only feed-forward layers (standard 2D linear layers)
+      # Note: MultiHeadAttention uses LinearGeneral with 3D weights,
+      # which qwix LoRA doesn't support
+      module_path=".*linear1|.*linear2",
       rank=lora_rank,
       alpha=lora_alpha,
   )
 
   model_input = base_model.get_model_input()
   lora_model = qwix.apply_lora_to_model(
-      base_model, lora_provider, **model_input
+      base_model, lora_provider, rngs=nnx.Rngs(0), **model_input
   )
 
   with jax.set_mesh(mesh):
@@ -849,13 +1209,12 @@ def lora_loss_fn(model, inputs, training):
     return loss
 ```
 
-+++ {"id": "h4Miifz_BpXf"}
++++ {"id": "UIyxXBo2LC5M"}
 
 Now we can start the finetuning.
 
 ```{code-cell}
-:id: pIQ5Obif8pfO
-:tags: [nbval-ignore-output]
+:tags: [nbval-skip]
 
 print("Starting LoRA Finetuning...")
 with jax.set_mesh(mesh):
@@ -877,68 +1236,79 @@ with jax.set_mesh(mesh):
     lora_trainer.train(lora_train_ds)
 ```
 
-+++ {"id": "UWVdZGK9COj0"}
-
-After the finetuning, you can easily see that now the model produces text of a different style, kind of like Shakespeare's work, which means our finetuning works.
-
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-  height: 799
-id: -uTeXvXaLCZb
-outputId: aa52154f-9583-46d3-896a-05e28de603de
-tags: [nbval-ignore-output]
----
+:tags: [nbval-skip]
+
 # Generate text with LoRA-finetuned model
 print("Generating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
 ```
 
-+++ {"id": "3813cbf2"}
++++ {"id": "HcaKF4WTLC5M"}
 
-## Xprof: profiling for hyperparameter tuning
+## Xprof: Profiling for hyperparameter tuning
 
-[REVAMP 7]: Intro xprof
+[Xprof](https://openxla.org/xprof) (integrated via TensorBoard's profiler plugin) is essential for understanding and optimizing JAX/TPU performance. Profiling helps identify bottlenecks and guides hyperparameter decisions.
 
-**Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
+**Why profile your training?**
+
+- **Identify bottlenecks**: See whether you're limited by compute, memory, or host-device communication
+- **Optimize utilization**: Maximize FLOPS utilization on expensive accelerators
+- **Compare configurations**: Quantitatively evaluate different batch sizes, parallelism strategies, etc.
+- **Debug performance**: Understand why training is slower than expected
+
+**Key profiling concepts:**
+
+1. **FLOPS Utilization**: Percentage of theoretical compute capacity being used (higher is better)
+2. **Step Time**: Time per training step (lower is better, but consider batch size)
+3. **Trace Viewer**: Visual timeline showing operations on each device
+4. **Memory Profile**: Track memory usage to avoid out-of-memory (OOM) errors
+
+**How to profile in JAX:**
+
+JAX provides built-in profiling through `jax.profiler`:
+- `jax.profiler.start_trace(log_dir)`: Begin recording a trace
+- `jax.profiler.StepTraceAnnotation`: Annotate training steps for easier analysis
+- `jax.profiler.stop_trace()`: Stop recording and save the trace to disk
+
+The traces can be visualized using TensorBoard with the profiler plugin.
+
+**Note:** This section assumes multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run these examples.
 
 ```{code-cell}
----
-colab:
-  base_uri: https://localhost:8080/
-id: b5d933c6
-outputId: f39e18fc-a25f-4202-ab39-9aadfb232522
-tags: [nbval-skip]
----
+:tags: [nbval-skip]
+
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
 
-+++ {"id": "2ac5fc4d"}
++++ {"id": "-eEyPE7iLC5M"}
 
 Load the tensorboard colab extension.
 
 ```{code-cell}
-:id: 74f0c212
 :tags: [nbval-skip]
 
 %load_ext tensorboard
 ```
 
-+++ {"id": "17c6131f"}
++++ {"id": "BoMR295JLC5M"}
 
 As we're going to be running this model a number of times, we need some scaffolding to more easily compare our work. For a baseline, we'll need to perform some warmup to guarantee that our code is JIT'd and that our TPUs are warm. For improved comparability, we'll only start tracing after we've finished warmup.
 
 ```{code-cell}
-:id: ddfd576e
-
 trace_dir = "/tmp/jax-trace/"
+```
 
+```{code-cell}
 def loop_step(batch, step):
     input_batch = jnp.array(jnp.array(batch).T)
     target_batch = prep_target_batch(input_batch)
     with jax.set_mesh(mesh):
-        train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), P('batch', None)))
+        sharded_batch = jax.device_put(
+            (input_batch, target_batch),
+            NamedSharding(mesh, P("batch", None))
+        )
+        train_step(model, optimizer, metrics, sharded_batch)
 
 def generate_trace():
     tracing_steps = 30
@@ -953,93 +1323,163 @@ def generate_trace():
     jax.profiler.stop_trace()
 ```
 
-+++ {"id": "de70f5b7"}
++++ {"id": "YRsyWzRYLC5M"}
 
 Now we'll perform some traces to compare results of different batch sizes. This will take several minutes as we need to reprocess our input data to prepare new batches each time.
 
 ```{code-cell}
-:id: bc9452a6
 :tags: [nbval-skip]
 
-trace_dir = "/tmp/jax-trace-batch-comparison/"
-
-batch_size = 64
+batch_size = 32
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
 generate_trace()
 
-batch_size = 256
+batch_size = 128
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
 generate_trace()
 ```
 
-+++ {"id": "ea379965"}
++++ {"id": "RS-BbP-5LC5M"}
 
-Run Tensorboard with the Profiler Plugin to compare our runs. Runs are listed in order from newest to oldest, so the top run in the list will be have `batch_size = 256`.
+Run Tensorboard with the Profiler Plugin to compare our runs. Runs are listed in order from newest to oldest, so the top run in the list will be have `batch_size = 128`.
 
 The key metrics to focus on here for this hyperparameter are FLOPS Utilization and Average Step Time.
 
-In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from 64 -> 256 achieves both of those. FLOPS increases from 16% to 27%. Average Step Time increase from 100ms to 260ms, however we increased our batch size by 300%. This means we move from 1.5ms per training example to 1.02ms per training example.
+In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from `32` -> `128` achieves both of those.
 
 ```{code-cell}
-:id: b86c565a
 :tags: [nbval-skip]
 
-%tensorboard --logdir=$trace_dir
+%tensorboard --logdir=/tmp/jax-trace/
 ```
 
-+++ {"id": "657967a5"}
-
-Next, we can explore alternative parallelism methods. In cell #4, we used 4-way data parallel and 2-way tensor parallel. 8-way data parallel is another popular way. Let's compare results between them. To switch to 8-way data parallel, we'll replace the `Mesh` definition with:
-
-`mesh = jax.make_mesh((8, 1), ('batch', 'model'))`
-
-JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
-
-How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
-
-```{code-cell}
-:id: 80daa8dc
-:tags: [nbval-skip]
-
-trace_dir = "/tmp/jax-trace-parallelism-comparison/"
-
-mesh_dims = (4, 2) if jax.device_count() == 8 else (1, 1)
-mesh = jax.make_mesh(mesh_dims, ('batch', 'model'))
-generate_trace()
-
-mesh = jax.make_mesh((jax.device_count(), 1), ('batch', 'model'))
-generate_trace()
-```
-
-+++ {"id": "ad96e72b"}
-
-Once again we'll run tensorboard.
-
-Looking at the results, we see that the step times are nearly the same, however the FLOPS Utilization is at 13% for 8-way data parallelism compared to 27% or 4-way data parallelism.
-
-By looking at the Trace Viewer tool and looking under each TPU's ops, we can see that the TPUs spend a large amount of time idle while waiting for the host, as well as spending a good amount of time in `reduce_sum` operations.
-
-```{code-cell}
-:id: 780e9c72
-:tags: [nbval-skip]
-
-%tensorboard --logdir=$trace_dir
-```
-
-+++ {"id": "deca486e"}
-
-By changing hyperparameters and comparing profiles, we're able to gain significant insights into our bottlenecks and limitations. These are just two examples of hyperparameters to tune, but plenty more of them will have significant effects on training speed and resource utilization.
-
-+++ {"id": "Q3Z_0hQu7est"}
++++ {"id": "dfhZbpiZZYod"}
 
 ## Inference with vLLM
 
-After training the miniGPT model, we can also serve it on Google TPUs for high-performance inference.
+After training a language model, you need an efficient way to serve it for inference. While our simple `generate_text()` method works for experimentation, production deployments require optimizations like batched inference, KV-cache management, and continuous batching.
 
-[vLLM TPU](https://github.com/vllm-project/tpu-inference/) supports running LLMs on TPUs. It takes some additional work to make it work, which is beyond the scope of this tutorial. But feel free to checkout vLLM TPU [documentation](https://docs.vllm.ai/projects/tpu/en/latest/developer_guides/jax_model_development/) if you want to learn more about it.
+[vLLM](https://docs.vllm.ai/) is a high-throughput inference engine that addresses these challenges:
 
-+++
+**Why vLLM?**
 
-## Wrapup
+- **PagedAttention**: Efficient memory management for KV-cache, reducing memory waste by up to 90%
+- **Continuous batching**: Dynamically batches incoming requests for higher throughput
+- **Optimized kernels**: Hardware-specific optimizations for fast inference
+- **Simple API**: Just a few lines of code to serve any HuggingFace model
 
-[REVAMP 9]: Add a concluding section
+**Basic vLLM usage:**
+
+```python
+# Install: pip install vllm
+from vllm import LLM, SamplingParams
+
+# Load a model (downloads from HuggingFace automatically)
+llm = LLM(model="distilgpt2")
+
+# Configure generation parameters
+sampling_params = SamplingParams(
+    temperature=0.8,
+    top_p=0.95,
+    max_tokens=100,
+)
+
+# Generate text - vLLM handles batching automatically
+prompts = ["Once upon a time", "The quick brown fox"]
+outputs = llm.generate(prompts, sampling_params)
+
+for output in outputs:
+    print(f"Prompt: {output.prompt!r}")
+    print(f"Generated: {output.outputs[0].text!r}")
+```
+
+**Serving our trained miniGPT model:**
+
+To use our JAX-trained miniGPT with vLLM, we need to convert it to a format vLLM understands. There are two approaches:
+
+**Option 1: Convert to HuggingFace format**
+
+Save the model weights and config in HuggingFace format, then load with vLLM:
+
+```python
+# Save miniGPT in HuggingFace format
+from transformers import GPT2Config, GPT2LMHeadModel
+import torch
+
+# Create HF config matching our architecture
+config = GPT2Config(
+    vocab_size=vocab_size,
+    n_positions=maxlen,
+    n_embd=embed_dim,
+    n_layer=num_transformer_blocks,
+    n_head=num_heads,
+)
+
+# Create HF model and copy weights from JAX
+hf_model = GPT2LMHeadModel(config)
+# ... (copy weights from JAX arrays to PyTorch tensors)
+
+# Save and load with vLLM
+hf_model.save_pretrained("./minigpt-hf")
+llm = LLM(model="./minigpt-hf")
+```
+
+**Option 2: Use vLLM's JAX/TPU support**
+
+For TPU deployment, vLLM provides a [dedicated TPU backend](https://docs.vllm.ai/projects/tpu/):
+
+```python
+# Install vLLM TPU: follow https://docs.vllm.ai/projects/tpu/
+from vllm import LLM
+
+# vLLM TPU supports JAX models directly
+llm = LLM(model="./minigpt-jax", device="tpu")
+```
+
+**Note:** vLLM requires a dedicated GPU or TPU runtime and cannot run in the same Python session after JAX has been initialized with a different backend. To experiment with vLLM, start a fresh runtime.
+
+For more details, see the [vLLM documentation](https://docs.vllm.ai/) and [vLLM TPU guide](https://docs.vllm.ai/projects/tpu/).
+
++++ {"id": "kp_z3QVbLC5M", "tags": ["nbval-skip"]}
+
+## Summary
+
+Congratulations! You've successfully trained a miniGPT language model from scratch using JAX and its AI ecosystem. Let's recap what you've accomplished:
+
+**Key accomplishments:**
+
+- **Built a transformer architecture** using Flax NNX's intuitive, Pythonic API
+- **Loaded data efficiently** with Grain's high-performance data pipeline
+- **Trained with Optax** using the Adam optimizer and cross-entropy loss
+- **Leveraged parallelism** with JAX's automatic SPMD for data and tensor parallelism
+- **Debugged your model** using `jax.debug.print()` and `jax.debug_nans`
+- **Saved checkpoints** using Orbax for model persistence
+- **Fine-tuned with LoRA** using Tunix for parameter-efficient adaptation
+- **Profiled performance** with Xprof to optimize hyperparameters
+- **Explored production inference** with vLLM for high-throughput serving
+
+**JAX AI Stack libraries used:**
+
+| Library | Purpose |
+| :------ | :------ |
+| [JAX](https://jax.readthedocs.io) | High-performance array computing with automatic differentiation |
+| [Flax NNX](https://flax.readthedocs.io) | Neural network definition with intuitive API |
+| [Optax](https://optax.readthedocs.io) | Gradient processing and optimization |
+| [Grain](https://google-grain.readthedocs.io) | Efficient data loading |
+| [Orbax](https://orbax.readthedocs.io) | Checkpoint management |
+| [Tunix](https://github.com/google/tunix) | LLM fine-tuning (LoRA, RLHF, etc.) |
+
+**Next steps:**
+
+- **Scale up**: Try larger model dimensions, more transformer blocks, or longer sequences
+- **Experiment with datasets**: Train on different text corpora for varied outputs
+- **Explore advanced techniques**: Implement learning rate schedules, gradient clipping, or mixed precision training
+- **Deploy to production**: Integrate your model with vLLM for production serving
+
+**Additional resources:**
+
+- [JAX Documentation](https://jax.readthedocs.io)
+- [Flax NNX Guide](https://flax.readthedocs.io/en/latest/nnx_basics.html)
+- [JAX AI Stack Tutorials](https://docs.jaxstack.ai)
+- [Google Cloud TPU Documentation](https://cloud.google.com/tpu/docs)
+- [vLLM TPU Documentation](https://docs.vllm.ai/projects/tpu/)
