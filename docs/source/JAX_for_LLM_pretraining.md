@@ -61,6 +61,8 @@ If you are new to JAX for AI, check out the [introductory tutorial](https://docs
 JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest/installation.html) on the JAX documentation site. We will use [Tiktoken](https://github.com/openai/tiktoken) for tokenization and [Grain](https://google-grain.readthedocs.io/en/latest/index.html) for data loading.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 !pip install -Uq tiktoken jax-ai-stack[grain] matplotlib
 ```
 
@@ -71,11 +73,15 @@ JAX installation is covered in [this guide](https://jax.readthedocs.io/en/latest
 Check the available JAX devices, or [`jax.Device`](https://jax.readthedocs.io/en/latest/_autosummary/jax.Device.html), with [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html). The output of the cell below will show a list of 8 (eight) devices.
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 import jax
 jax.devices()
 ```
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Check if an accelerator (GPU/TPU) is available
 accelerator_available = any(d.platform in ('gpu', 'tpu') for d in jax.devices())
 
@@ -95,6 +101,8 @@ if not accelerator_available:
 Get the [TinyStories dataset from Hugging Face](https://huggingface.co/datasets/roneneldan/TinyStories). We only use the training split.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 !wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStories-train.txt?download=true -O TinyStories-train.txt
 ```
 
@@ -138,6 +146,8 @@ The three core JAX transforms you'll need understand are:
 - **[`jax.jit`](https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html)**: Just-in-time compilation via XLA for fast execution
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 def slow_fn(x):
     for _ in range(5):
         x = x @ x
@@ -177,6 +187,8 @@ print(f"grad(loss)(x) = {grad_loss(x)}")  # Derivative of x^2 is 2x
 - **[`jax.vmap`](https://jax.readthedocs.io/en/latest/jax-101/03-vectorization.html)**: Automatic vectorization to batch operations efficiently
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 # Function that operates on a single vector
 def normalize(x):
     return x / jnp.linalg.norm(x)
@@ -263,6 +275,8 @@ This matches the structure in the Kaggle TPU v5e setup.
 Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define how data and model parameters are distributed across the devices:
 
 ```{code-cell}
+:tags: [nbval-ignore-output]
+
 # Create a `Mesh` object representing TPU device arrangement.
 # The mesh defines how we distribute computation across devices.
 
@@ -654,6 +668,8 @@ if AI_STACK_TEST_MODE:
 ```
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Create the data loader
 # This will load, tokenize, and batch the TinyStories dataset
 print(f"Loading TinyStories dataset with batch_size={int(batch_size)}, maxlen={maxlen}...")
@@ -756,6 +772,8 @@ Note that for data parallel, we are sharding the training data along the `batch`
 We are also using the `jax.vmap` transformation to produce the target sequences faster.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Initialize the model and optimizer within the mesh context
 # This ensures model parameters are properly sharded according to our partition specs
 with jax.set_mesh(mesh):
@@ -854,6 +872,8 @@ generated_text = model.generate_text(maxlen, start_tokens)
 Visualize the training loss.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 import matplotlib.pyplot as plt
 plt.plot(metrics_history['train_loss'])
 plt.title('Training Loss')
@@ -888,6 +908,8 @@ Let's explore these debugging techniques with our miniGPT model.
 The `jax.debug.print()` function lets you inspect intermediate values during execution. Unlike regular `print()`, it works inside `@jax.jit` decorated functions. This is invaluable for understanding what's happening inside your model.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Demonstrate jax.debug.print inside a JIT-compiled function
 @jax.jit
 def debug_forward_pass(model, inputs):
@@ -928,6 +950,8 @@ For more on detecting NaN and Inf in JAX computations, see the [Debugging runtim
 and the [JAX debugging flags](https://docs.jax.dev/en/latest/debugging/flags.html) for information on useful flags like `jax_debug_nans` and `jax_debug_infs`.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Enable NaN debugging globally - any NaN will raise an error with a traceback
 # This is useful during development to catch numerical issues early
 jax.config.update("jax_debug_nans", True)
@@ -984,6 +1008,8 @@ In this tutorial, we use:
 Let's save our trained model checkpoint.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 import orbax.checkpoint as orbax
 
 state = nnx.state(model)
@@ -1002,6 +1028,8 @@ checkpointer.save('/content/save', args=orbax.args.PyTreeSave(state), force=True
 To resume training or use a saved model for inference, restore the checkpoint using `PyTreeRestore`. The restored state can be applied to a new model instance using `nnx.update()`.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Restore the checkpoint with proper sharding info
 from orbax.checkpoint import checkpoint_utils
 
@@ -1035,10 +1063,14 @@ First we install Tunix and its dependencies, and import necessary libraries. Not
 **Note:** this section assume multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run here.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 !pip install -Uq google-tunix[prod]
 ```
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 import qwix
 import numpy as np
 from tunix.sft import peft_trainer
@@ -1062,7 +1094,7 @@ lora_batch_size = 80
 For LoRA fintuning we use the [Tiny Shakespeare](https://www.tensorflow.org/datasets/catalog/tiny_shakespeare) dataset.
 
 ```{code-cell}
-:tags: [nbval-ignore-output]
+:tags: [nbval-skip]
 
 !wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O TinyShakespeare.txt
 
@@ -1138,6 +1170,8 @@ lora_train_ds = load_shakespeare_dataset(lora_batch_size, maxlen, lora_num_epoch
 We define a few helper functions to create the LoRA model, loss, etc.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 def get_lora_model(base_model, mesh):
   lora_provider = qwix.LoraProvider(
       # Target only feed-forward layers (standard 2D linear layers)
@@ -1180,6 +1214,8 @@ def lora_loss_fn(model, inputs, training):
 Now we can start the finetuning.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 print("Starting LoRA Finetuning...")
 with jax.set_mesh(mesh):
     # Apply LoRA to the model
@@ -1201,6 +1237,8 @@ with jax.set_mesh(mesh):
 ```
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 # Generate text with LoRA-finetuned model
 print("Generating text after LoRA finetuning:\n\n")
 lora_model.generate_text(maxlen, start_tokens)
@@ -1238,6 +1276,8 @@ The traces can be visualized using TensorBoard with the profiler plugin.
 **Note:** This section assumes multiple TPU cores. Free-tier Colab TPU v5e-1 cannot run these examples.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 !pip install -Uq tensorboard-plugin-profile tensorflow tensorboard
 ```
 
@@ -1246,6 +1286,8 @@ The traces can be visualized using TensorBoard with the profiler plugin.
 Load the tensorboard colab extension.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 %load_ext tensorboard
 ```
 
@@ -1286,6 +1328,8 @@ def generate_trace():
 Now we'll perform some traces to compare results of different batch sizes. This will take several minutes as we need to reprocess our input data to prepare new batches each time.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 batch_size = 32
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
 generate_trace()
@@ -1304,6 +1348,8 @@ The key metrics to focus on here for this hyperparameter are FLOPS Utilization a
 In general, we want to maximize FLOPS Utilization while minimizing the step time per training example. In this case, we can see that increasing the batch size from `32` -> `128` achieves both of those.
 
 ```{code-cell}
+:tags: [nbval-skip]
+
 %tensorboard --logdir=/tmp/jax-trace/
 ```
 
