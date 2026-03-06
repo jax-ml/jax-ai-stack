@@ -15,6 +15,20 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
+   :caption: The stack
+   :maxdepth: 1
+
+   stack_overview
+   stack_jax
+   stack_flax
+   stack_optax
+   stack_orbax_checkpoint
+   stack_orbax_export
+   stack_grain
+   stack_chex
+
+.. toctree::
+   :hidden:
    :caption: Tutorials
    :maxdepth: 1
 
