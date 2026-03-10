@@ -24,6 +24,12 @@ dependencies = [
     "optax==0.2.6",
     "orbax-checkpoint==0.11.31",
     "orbax-export==0.0.8",
+    "tiktoken==0.12.0",
+    "google-tunix==0.1.5",
+    "qwix==0.1.5",
+    "matplotlib==3.10.8",
+    "tensorboard==2.20.0",
+    "tensorboard-plugin-profile==2.21.6",
 ]
 
 [project.urls]
@@ -37,6 +43,7 @@ repository = "https://github.com/jax-ml/jax-ai-stack"
 dev = [
     "pytest",
     "pytest-xdist",
+    "nbval",
 ]
 
 # TensorFlow datasets is an extra because it has a large install footprint.
