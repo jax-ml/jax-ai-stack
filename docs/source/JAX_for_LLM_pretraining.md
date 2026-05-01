@@ -98,8 +98,7 @@ Import the necessary modules, including JAX NumPy, Flax NNX, Optax, Grain, panda
 import jax
 import jax.numpy as jnp
 
-from jax.sharding import Mesh, PartitionSpec as P, NamedSharding # For data and model parallelism (explained in more detail later)
-from jax.experimental import mesh_utils
+from jax.sharding import PartitionSpec as P, NamedSharding # For data and model parallelism (explained in more detail later)
 
 import flax.nnx as nnx
 import optax
@@ -127,19 +126,19 @@ In this example, we'll utilize a 4-way data parallel and 2-way tensor parallel s
 
 Note that as of October 2025, free-tier Colab only offers TPU v5e-1, which can no longer support SPMD.
 
-### jax.sharding.Mesh
+### jax.make_mesh
 
-Earlier, we imported [`jax.sharding.Mesh`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.Mesh) - is a multidimensional NumPy array of JAX devices, where each axis of the mesh has a name, such as `'x'` or `'y'`. This will help encapsulate the information about the TPU resource organization for distributing computations across the devices.
+To distribute computations across multiple devices, JAX uses the concept of a device mesh—a multidimensional array of JAX devices where each axis has a name. We use [`jax.make_mesh`](https://docs.jax.dev/en/latest/_autosummary/jax.make_mesh.html) to create an efficient mesh that automatically computes a good mapping from logical axes to physical devices, taking into account the hardware topology for optimal performance (e.g., ordering devices into a ring for efficient all-reduces on TPUs).
 
-Our `Mesh` will have two arguments:
-- `devices`: This will take the value of [`jax.experimental.mesh_utils((4, 2))`](https://jax.readthedocs.io/en/latest/jax.experimental.mesh_utils.html), enabling us to build a device mesh. It is a NumPy ndarray with JAX devices (a list of devices from the JAX backend as obtained from [`jax.devices()`](https://jax.readthedocs.io/en/latest/_autosummary/jax.devices.html#jax.devices))..
+[`jax.make_mesh`](https://docs.jax.dev/en/latest/_autosummary/jax.make_mesh.html) takes two main arguments:
+- `axis_shapes`: A sequence specifying the shape of the mesh. For example, (4, 2) creates a 4×2 grid of 8 devices. A sequence of names for each axis. In our case:
 - `axis_names`, where:
-  - `batch`: 4 devices along the first axis - i.e. sharded into 4 - for data parallelism; and
-  - `model`: 2 devices along the second axis - i.e. sharded into 2 -  for tensor parallism
+  - `batch`: 4 devices along the first axis for data parallelism; and
+  - `model`: 2 devices along the second axis for tensor parallelism
 
-This matches the structure in the Kaggle TPU v5e setup.
+This configuration matches the Kaggle TPU v5e-8 setup.
 
-Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define how data and model parameters are distributed across the devices:
+Let's create our mesh to define how data and model parameters are distributed across the devices:
 
 ```{code-cell}
 :id: xuMlCK3Q8WJD
@@ -147,16 +146,16 @@ Let's instantiate `Mesh` as `mesh` and declare the TPU configuration to define h
 # Create a `Mesh` object representing TPU device arrangement.
 # For example, for Kaggle TPU v5e-8:
 if jax.device_count() == 8:
-    mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
+    mesh = jax.make_mesh((4, 2), ('batch', 'model'))
 
     ### Alternatively, we could use the 8-way data parallelism with only one line of code change.
     ### JAX enables quick experimentation with different partitioning strategies
     ### like this. We will come back to this point at the end of this tutorial.
-    # mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
+    # mesh = jax.make_mesh((8, 1), ('batch', 'model'))
 
 ### For free-tier Colab TPU, which only has a single TPU core
 if jax.device_count() == 1:
-    mesh = Mesh(mesh_utils.create_device_mesh((1, 1)), ("batch", "model"))
+    mesh = jax.make_mesh((1, 1), ('batch', 'model'))
 ```
 
 +++ {"id": "_ZKdhNo98NgG"}
@@ -171,14 +170,37 @@ tokenizer = tiktoken.get_encoding("gpt2")
 
 +++ {"id": "0XHQ0BQ9-KIj"}
 
-To leverage model parallelism, we need to instruct the JAX compiler how to shard the model tensors across the TPU devices. Earlier, we also imported [`jax.sharding.PartitionSpec`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.PartitionSpec) and [`jax.sharding.NamedSharding`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.NamedSharding):
-- [`PartitionSpec`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.PartitionSpec) (using alias `P`) defines how tensors are sharded across the devices in our `Mesh`. Its elements describe how an input dimension is partitioned across mesh dimensions. For example, in `PartitionSpec('x', 'y')` the first dimension of data is sharded across `x` axis of the mesh, and the second one - across the `y` axis.
-  - We'll use `PartitionSpec` to describe how to shard a tensor across, for example, the `model` axis or be replicated on other dimensions (which is denoted by `None`).
-- [`NamedSharding`](https://jax.readthedocs.io/en/latest/jax.sharding.html#jax.sharding.NamedSharding) is a (`Mesh`, `PartitionSpec`) pair that describes how to shard a model tensor across our `mesh`.
-- We combine `Mesh` (the TPU resources) with `PartitionSpec` and create a `NamedSharding`, which instructs how to shard each model tensor across the TPU devices.
+To leverage model parallelism, we need to instruct JAX how to shard model tensors across TPU devices. There are two sharding approaches we'll use: one for model parameters and another for input data.
 
-Additionally, we'll use Flax NNX's [`flax.nnx.with_partitioning`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/spmd.html#flax.nnx.with_partitioning) to let each model layer know that the model weights or tensors need to be sharded according to our specification. We need to do this for every tensor/layer in the model.
-- `nnx.with_partitioning` will take two arguments, such as the `initializer` (such as [`flax.nnx.initializers.xavier_uniform`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.xavier_uniform) and [`flax.nnx.initializers.zeros_init`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/nn/initializers.html#flax.nnx.initializers.zeros_init)) and `sharding` (e.g. `NamedSharding(Mesh, PartitionSpec)` or `NamedSharding(mesh, P('model')` in our case).
+### Sharding model parameters with Flax NNX
+
+For model parameters, Flax NNX provides [`flax.nnx.with_partitioning`](https://flax.readthedocs.io/en/latest/api_reference/flax.nnx/spmd.html#flax.nnx.with_partitioning), which wraps a parameter initializer (such as `flax.nnx.initializers.xavier_uniform` or `flax.nnx.initializers.zeros_init`) and specifies how the resulting tensor should be sharded using `sharding_names`.
+
+The `sharding_names` argument is a tuple of mesh axis names that indicates how each tensor dimension should be partitioned:
+
+- Each element in the tuple corresponds to a dimension of the tensor
+- An axis name (like 'model' or 'batch') means that dimension is sharded across devices along that mesh axis
+- None means that dimension is replicated (not sharded) across all devices
+
+For example:
+
+- `(None, 'model')` for a 2D weight matrix: the first dimension (input features) is replicated, while the second dimension (output features) is sharded across the model axis
+- `('model', None)` for a 2D weight matrix: the first dimension is sharded, the second is replicated
+- `('model',)` for a 1D bias vector: sharded across the model axis (note the trailing comma to make it a tuple)
+- `(None,)` for a 1D bias vector: fully replicated across all devices
+
+#### Important considerations:
+- The tuple length must match the tensor's rank (number of dimensions)
+- Any dimension you shard must be evenly divisible by the number of devices along that mesh axis. For instance, if 'model' spans 2 devices, the sharded dimension size must be divisible by 2
+- The model must be created within a jax.set_mesh() context so that Flax knows how to map axis names to physical devices
+
+### Sharding input data with NamedSharding
+For input data, we use [`jax.sharding.NamedSharding`](https://docs.jax.dev/en/latest/jax.sharding.html#jax.sharding.NamedSharding) combined with [`jax.sharding.PartitionSpec`](https://docs.jax.dev/en/latest/jax.sharding.html#jax.sharding.PartitionSpec) (imported with the alias `P`) to specify how data should be distributed across devices.
+
+- `PartitionSpec` defines how each dimension of a tensor maps to mesh axes. For example, `P('batch', None)` shards the first dimension across the `batch` axis while replicating the second dimension.
+- `NamedSharding` pairs a Mesh with a PartitionSpec to fully specify the sharding strategy.
+
+We use this combination with [`jax.device_put`](https://docs.jax.dev/en/latest/_autosummary/jax.device_put.html) to place training batches on devices. For example, `jax.device_put(batch, NamedSharding(mesh, P('batch', None))` distributes the batch across devices along the batch axis, enabling data parallelism.
 
 ```{code-cell}
 :id: z0p-IHurrB9i
@@ -203,39 +225,49 @@ class TransformerBlock(nnx.Module):
         # Multi-Head Attention (MHA) with `flax.nnx.MultiHeadAttention`.
         # Specifies tensor sharding (depending on the mesh configuration)
         # where we shard the weights across devices for parallel computation.
-        self.mha = nnx.MultiHeadAttention(num_heads=num_heads,
-                                          in_features=embed_dim,
-                                          kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                          bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
-                                          rngs=rngs)
+        self.mha = nnx.MultiHeadAttention(
+            num_heads=num_heads,
+            in_features=embed_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),  # 1D: single-element tuple
+            rngs=rngs
+        )
         # The first dropout with `flax.nnx.Dropout`.
         self.dropout1 = nnx.Dropout(rate=rate)
         # First layer normalization with `flax.nnx.LayerNorm`.
-        self.layer_norm1 = nnx.LayerNorm(epsilon=1e-6,
-                                         num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), NamedSharding(mesh, P('model'))),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
-                                         rngs=rngs)
+        self.layer_norm1 = nnx.LayerNorm(
+            epsilon=1e-6,
+            num_features=embed_dim,
+            scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),   # 1D
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),   # 1D
+            rngs=rngs
+        )
         # The first linear transformation for the feed-forward network with `flax.nnx.Linear`.
-        self.linear1 = nnx.Linear(in_features=embed_dim,
-                                  out_features=ff_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
-                                  rngs=rngs)
+        self.linear1 = nnx.Linear(
+            in_features=embed_dim,
+            out_features=ff_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),   # 1D
+            rngs=rngs
+        )
         # The second linear transformation for the feed-forward network with `flax.nnx.Linear`.
-        self.linear2 = nnx.Linear(in_features=ff_dim,
-                                  out_features=embed_dim,
-                                  kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                  bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P('model'))),
-                                  rngs=rngs)
+        self.linear2 = nnx.Linear(
+            in_features=ff_dim,
+            out_features=embed_dim,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), (None, 'model')),
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),   # 1D
+            rngs=rngs
+        )
         # The second dropout with `flax.nnx.Dropout`.
         self.dropout2 = nnx.Dropout(rate=rate)
         # Second layer normalization with `flax.nnx.LayerNorm`.
-        self.layer_norm2 = nnx.LayerNorm(epsilon=1e-6,
-                                         num_features=embed_dim,
-                                         scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), NamedSharding(mesh, P(None, 'model'))),
-                                         bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model'))),
-                                         rngs=rngs)
+        self.layer_norm2 = nnx.LayerNorm(
+            epsilon=1e-6,
+            num_features=embed_dim,
+            scale_init=nnx.with_partitioning(nnx.initializers.ones_init(), ('model',)),   # 1D
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), ('model',)),   # 1D
+            rngs=rngs
+        )
 
 
     # Apply the Transformer block to the input sequence.
@@ -312,20 +344,21 @@ class MiniGPT(nnx.Module):
     # Initialize miniGPT model components.
     def __init__(self, maxlen: int, vocab_size: int, embed_dim: int, num_heads: int, feed_forward_dim: int, num_transformer_blocks: int, rngs: nnx.Rngs):
         # Initiliaze the `TokenAndPositionEmbedding` that combines token and positional embeddings.
-        self.embedding_layer = TokenAndPositionEmbedding(
-                    maxlen, vocab_size, embed_dim, rngs=rngs
-                )
+        self.embedding_layer = TokenAndPositionEmbedding(maxlen, vocab_size, embed_dim, rngs=rngs)
         # Create a list of `TransformerBlock` instances.
         # Each block processes input sequences using attention and feed-forward networks.
-        self.transformer_blocks = [TransformerBlock(
-            embed_dim, num_heads, feed_forward_dim, rngs=rngs
-        ) for _ in range(num_transformer_blocks)]
+        self.transformer_blocks = nnx.List([
+            TransformerBlock(embed_dim, num_heads, feed_forward_dim, rngs=rngs)
+            for _ in range(num_transformer_blocks)
+        ])
         # Initialize the output `flax.nnx.Linear` layer producing logits over the vocabulary for next-token prediction.
-        self.output_layer = nnx.Linear(in_features=embed_dim,
-                                       out_features=vocab_size,
-                                       kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), NamedSharding(mesh, P(None, 'model'))),
-                                       bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), NamedSharding(mesh, P(None, 'model'))),
-                                       rngs=rngs)
+        self.output_layer = nnx.Linear(
+            in_features=embed_dim,
+            out_features=vocab_size,
+            kernel_init=nnx.with_partitioning(nnx.initializers.xavier_uniform(), ('model', None)), # Shard dim 0
+            bias_init=nnx.with_partitioning(nnx.initializers.zeros_init(), (None,)),  # 1D
+            rngs=rngs
+        )
 
     def __call__(self, inputs, training: bool = False):
         # Pass the input tokens through the `embedding_layer` to get token embeddings.
@@ -383,7 +416,7 @@ maxlen = 256
 embed_dim = 256
 num_heads = 8
 feed_forward_dim = 256
-batch_size = 144 * jax.device_count() / 2  # divide by 2 in case of model parallelism
+batch_size = 144 * jax.device_count() // 2  # divide by 2 in case of model parallelism
 if jax.device_count() == 1:
     batch_size = 144
 num_epochs = 1
@@ -481,8 +514,9 @@ colab:
 id: Ysl6CsfENeJN
 outputId: 5dd06dca-f030-4927-a9b6-35d412da535c
 ---
-model = create_model(rngs=nnx.Rngs(0))
-optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+with jax.set_mesh(mesh):
+  model = create_model(rngs=nnx.Rngs(0))
+  optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
 metrics = nnx.MultiMetric(
     loss=nnx.metrics.Average("loss"),
 )
@@ -606,12 +640,17 @@ As we're going to be running this model a number of times, we need some scaffold
 ```{code-cell}
 trace_dir = "/tmp/jax-trace/"
 
-def loop_step(batch, step):
+def loop_step(batch, step, mesh):
     input_batch = jnp.array(jnp.array(batch).T)
     target_batch = prep_target_batch(input_batch)
-    train_step(model, optimizer, metrics, jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None))))
+    train_step(
+        model,
+        optimizer,
+        metrics,
+        jax.device_put((input_batch, target_batch), NamedSharding(mesh, P('batch', None)))
+    )
 
-def generate_trace():
+def generate_trace(mesh):
     tracing_steps = 30
     warmup_steps = 5
     for current_step in range(warmup_steps + tracing_steps):
@@ -619,7 +658,7 @@ def generate_trace():
             jax.profiler.start_trace(trace_dir)
         with jax.profiler.StepTraceAnnotation("train", step_num=current_step):
             batch = next(text_dl)
-            loop_step(batch, current_step)
+            loop_step(batch, current_step, mesh)
 
     jax.profiler.stop_trace()
 ```
@@ -631,11 +670,11 @@ trace_dir = "/tmp/jax-trace-batch-comparison/"
 
 batch_size = 64
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
-generate_trace()
+generate_trace(mesh)
 
 batch_size = 256
 text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
-generate_trace()
+generate_trace(mesh)
 ```
 
 Run Tensorboard with the Profiler Plugin to compare our runs. Runs are listed in order from newest to oldest, so the top run in the list will be have `batch_size = 256`.
@@ -648,22 +687,34 @@ In general, we want to maximize FLOPS Utilization while minimizing the step time
 %tensorboard --logdir=$trace_dir
 ```
 
-Next, we can explore alternative parallelism methods. In cell #4, we used 4-way data parallel and 2-way tensor parallel. 8-way data parallel is another popular way. Let's compare results between them. To switch to 8-way data parallel, we'll replace the `Mesh` definition with:
+Next, we can explore alternative parallelism methods. Earlier, we used 4-way data parallel and 2-way tensor parallel. Another popular configuration is 8-way data parallel with no tensor parallelism. Let's compare the results between them.
+To switch to 8-way data parallel, we simply change the mesh shape from `(4, 2)` to `(8, 1)`:
 
-`mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))`
+`mesh = jax.make_mesh((8, 1), ('batch', 'model'))`
 
-JAX will automatically figure out how to shard the model and data to use the new partition strategy and nothing else need to be done. Re-connect the TPU runtime and run it again to see how it runs.
+Because we defined our model using `sharding_names` tuples (like `(None, 'model')`) rather than hardcoding specific device arrangements, JAX automatically figures out how to shard the model and data for the new partition strategy. The model code remains exactly the same—we only need to recreate the model within the new mesh context.
+This flexibility is one of the key benefits of JAX's automatic parallelism: you can quickly experiment with different sharding strategies to find the optimal configuration for your hardware and model, without rewriting any model code.
 
 How simple and powerful is this! And that's the beauty of JAX automatic parallelism.
 
 ```{code-cell}
 trace_dir = "/tmp/jax-trace-parallelism-comparison/"
 
-mesh = Mesh(mesh_utils.create_device_mesh((4, 2)), ('batch', 'model'))
-generate_trace()
+# 4-way data parallel, 2-way tensor parallel
+mesh = jax.make_mesh((4, 2), ('batch', 'model'))
+with jax.set_mesh(mesh):
+    model = create_model(rngs=nnx.Rngs(0))
+    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+    text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
+    generate_trace(mesh)
 
-mesh = Mesh(mesh_utils.create_device_mesh((8, 1)), ('batch', 'model'))
-generate_trace()
+# 8-way data parallel, no tensor parallel
+mesh = jax.make_mesh((8, 1), ('batch', 'model'))
+with jax.set_mesh(mesh):
+    model = create_model(rngs=nnx.Rngs(0))
+    optimizer = nnx.Optimizer(model, optax.adam(1e-3), wrt=nnx.Param)
+    text_dl = iter(load_and_preprocess_data('TinyStories-train.txt', batch_size, maxlen))
+    generate_trace(mesh)
 ```
 
 Once again we'll run tensorboard.
