@@ -5,6 +5,7 @@ myst-nb
 myst-parser[linkify]
 sphinx-book-theme
 sphinx-copybutton
+sphinx-design
 
 # Packages required for notebook execution
 matplotlib
