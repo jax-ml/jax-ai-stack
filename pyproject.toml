@@ -42,7 +42,7 @@ dev = [
 # TensorFlow datasets is an extra because it has a large install footprint.
 tfds = [
     "tensorflow==2.21.0",
-    "tensorflow_datasets==4.9.9",
+    "tensorflow_datasets==4.9.10",
 ]
 
 # Grain is now part of the default installation; keep this for
