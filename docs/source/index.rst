@@ -37,6 +37,15 @@ JAX AI Stack
 
 .. toctree::
    :hidden:
+   :caption: Learn more about the JAX AI Ecosystem
+   :maxdepth: 1
+
+   learn_ecosystem
+   jax_tpu_casml
+   megablocks
+
+.. toctree::
+   :hidden:
    :caption: Developer resources
    :maxdepth: 1
 
