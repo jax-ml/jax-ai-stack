@@ -44,7 +44,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +71,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -98,7 +98,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -125,7 +125,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -152,7 +152,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -179,7 +179,7 @@ jobs:
         run: |
           pytest -n auto jax_ai_stack
       - name: Notify failed build
-        uses: jayqi/failed-build-issue-action@1a893bbf43ef1c2a8705e2b115cd4f0fe3c5649b  # v1.2.0
+        uses: jayqi/failed-build-issue-action@940568ce50eeef3f31a920614cefcc6102d2f930  # v1.3.0
         if: failure() && github.event.pull_request == null
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
